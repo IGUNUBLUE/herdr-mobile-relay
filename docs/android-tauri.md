@@ -14,10 +14,20 @@ F-Droid is possible later but needs a reproducible-build recipe in
 - Everything the PWA does: pairing, E2EE, WSS/WebRTC to the relay, terminal,
   approvals, uploads, Tailscale endpoints (`wss://host.tailnet.ts.net` works —
   the Tailscale Android app provides the VPN underneath).
-- Blocked-agent alerts post **local notifications** through
-  `tauri-plugin-notification`, driven by the live socket — no FCM roundtrip.
+- Blocked-agent, finished, and relay-status alerts post **local
+  notifications** through `tauri-plugin-notification`, driven by the live
+  socket — no FCM roundtrip. Channels (`agents-attention`,
+  `agents-finished`, `relay-status`) are registered in `lib.rs` at startup;
+  attention alerts group under one shade entry with inbox lines.
 - Haptics run through `tauri-plugin-haptics`; the web `navigator.vibrate`
   fallback stays for the PWA.
+- **Scan QR** opens the in-app camera scanner
+  (`tauri-plugin-barcode-scanner`); CAMERA is requested at use time, not at
+  install. **Paste setup link** reads the clipboard
+  (`tauri-plugin-clipboard-manager` — `read_text` returns the raw string,
+  not an object). Both feed the same `setup-link.ts` parser as the URL.
+- **Require device unlock** uses `tauri-plugin-biometric` — the system
+  fingerprint/face/screen-lock prompt — while the PWA keeps WebAuthn.
 - The Android back button follows the app's `pushState` history — back from
   a terminal view returns to the agent list; back at the root exits.
 
@@ -28,12 +38,13 @@ F-Droid is possible later but needs a reproducible-build recipe in
 | Web Push via service worker | Local notifications from live events |
 | `setAppBadge` icon count | Not available in WebView (notification shade carries it) |
 | Install via "Add to Home Screen" | APK sideload from GitHub Releases |
-| Pairing by scanning a QR link | Paste the setup link in Settings → import device invitation |
+| Pairing by scanning a QR link | Scan QR in-app or paste the setup link in Settings |
+| WebAuthn device unlock | System biometric / screen-lock prompt |
 
 Pairing links are `https://<relay-host>/#…` with user-specific hosts, so
 Android App Links cannot intercept them (domain verification is per-host).
-Open the app and paste the link in Settings; the QR path keeps working for
-the browser PWA.
+Open the app and scan or paste the link — both land in the same import
+path; the QR path keeps working for the browser PWA.
 
 ## Build requirements
 
@@ -131,8 +142,10 @@ maps cleanly onto F-Droid's build variants.
   is visible on the local network. Prefer `wss://` (Tailscale Serve,
   gateway) whenever possible.
 - Capabilities (`src-tauri/capabilities/default.json`) grant only
-  `core:default`, notification notify/permission, and haptics vibrate —
-  nothing else. Audit before adding plugins.
+  `core:default` plus each plugin's `default` set: notification,
+  haptics, barcode-scanner (camera check/request + scan + cancel),
+  biometric (status + authenticate), and clipboard-manager (read/write
+  text) — nothing else. Audit before adding plugins.
 - `src-tauri/gen/` (generated Android Studio project) and `target/` are
   gitignored; regenerate with `cargo tauri android init` after pulling.
 - Background behavior: Android may suspend the WebView's WebSocket when the

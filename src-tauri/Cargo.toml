@@ -1,6 +1,6 @@
 [package]
 name = "herdr-mobile"
-version = "0.23.1"
+version = "0.24.0"
 description = "Native Android shell for the Herdr Mobile Relay web app"
 edition = "2021"
 rust-version = "1.77.2"
@@ -16,6 +16,9 @@ tauri-build = { version = "2", features = [] }
 tauri = { version = "2", features = [] }
 tauri-plugin-notification = "2"
 tauri-plugin-haptics = "2"
+tauri-plugin-barcode-scanner = "2"
+tauri-plugin-biometric = "2"
+tauri-plugin-clipboard-manager = "2"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 

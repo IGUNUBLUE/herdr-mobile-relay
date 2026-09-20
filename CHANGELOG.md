@@ -5,6 +5,48 @@ project follows [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.24.0] - 2026-09-20
+
+### Added
+
+- **Pairing without typing** in the Android shell: `Scan QR` opens the
+  in-app camera scanner (`tauri-plugin-barcode-scanner`, asks CAMERA at use
+  time) and `Paste setup link` reads the system clipboard
+  (`tauri-plugin-clipboard-manager`). Both live in the onboarding empty
+  state and in Settings → Relays, and feed the same setup-link parser as
+  the browser URL.
+- **Native device lock** via `tauri-plugin-biometric`: inside the shell the
+  "require unlock" toggle enrolls the system fingerprint/face/screen-lock
+  prompt instead of WebAuthn, which stays the browser path.
+- **Android notification channels** (`agents-attention`, `agents-finished`,
+  `relay-status`) registered at startup, with shade groups and inbox lines
+  on attention alerts. Settings → Notifications gains a native section:
+  attention and relay-status switches, plus the finished toggle shared with
+  the PWA.
+- **Relay status notifications**: connecting/connected/disconnected changes
+  post to the low-importance `relay-status` channel (silent).
+- **About card** in Settings shows the app build id and whether it runs in
+  the Tauri shell.
+- **Keyboard resize**: the Android manifest sets
+  `windowSoftInputMode="adjustResize"` (`make android-init` patches the
+  generated manifest), so the composer rides above the keyboard instead of
+  panning the whole WebView.
+- **Material 3-inspired pass**: larger button/card/input radii, ~44 px
+  minimum touch targets, spring-like press transitions, and an animated
+  M3-style switch thumb.
+
+### Fixed
+
+- **Paste setup link silently no-oped** — the clipboard plugin's
+  `read_text` returns the raw string, not `{ text }`; the bridge now
+  accepts both shapes.
+- **Finished/attention notifications never fired in the shell** — they were
+  gated on the browser `Notification.permission`, which the Tauri WebView
+  never reports as granted. Native alerts now gate on their own local
+  preferences.
+- **Lock switch stayed on after a failed enrolment** — `AppSwitch` now
+  binds `checked` so the async failure snaps it back.
+
 ## [0.23.1] - 2026-09-20
 
 ### Fixed

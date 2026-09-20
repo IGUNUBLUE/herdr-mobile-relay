@@ -2,6 +2,8 @@ import { get, writable } from 'svelte/store';
 import { base64UrlDecode, base64UrlEncode } from './base64url';
 import {
   APP_PROTOCOL_VERSION,
+  NATIVE_ATTENTION_NOTIFY_KEY,
+  NATIVE_RELAY_STATUS_NOTIFY_KEY,
   PUSH_ENABLED_KEY,
   PUSH_FINISHED_KEY,
   PUSH_VAPID_KEY_PREFIX,
@@ -85,6 +87,35 @@ export function pushOptedIn(): boolean {
 
 export function finishedNotificationsEnabled(): boolean {
   return localStorage.getItem(PUSH_FINISHED_KEY) === 'true';
+}
+
+/**
+ * The native shell has no PushManager, so its alerts are local notifications
+ * driven by live socket events. These preferences gate them independently of
+ * the web push path. Attention alerts default on — surfacing a blocked agent
+ * is the app's core job — and the first alert is what prompts for the OS
+ * permission, in context.
+ */
+export function nativeAttentionNotificationsEnabled(): boolean {
+  return localStorage.getItem(NATIVE_ATTENTION_NOTIFY_KEY) !== 'false';
+}
+
+export function nativeRelayStatusNotificationsEnabled(): boolean {
+  return localStorage.getItem(NATIVE_RELAY_STATUS_NOTIFY_KEY) !== 'false';
+}
+
+/** Local "finished" toggle for the shell — the web path syncs it per relay. */
+export function setLocalFinishedNotifications(enabled: boolean): void {
+  localStorage.setItem(PUSH_FINISHED_KEY, enabled ? 'true' : 'false');
+  refreshPushPreferences();
+}
+
+export function setNativeAttentionNotifications(enabled: boolean): void {
+  localStorage.setItem(NATIVE_ATTENTION_NOTIFY_KEY, enabled ? 'true' : 'false');
+}
+
+export function setNativeRelayStatusNotifications(enabled: boolean): void {
+  localStorage.setItem(NATIVE_RELAY_STATUS_NOTIFY_KEY, enabled ? 'true' : 'false');
 }
 
 function readPushPreferences(): PushPreferences {

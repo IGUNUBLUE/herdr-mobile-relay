@@ -3,6 +3,19 @@
   import Button from '$components/ui/Button.svelte';
   import Card from '$components/ui/Card.svelte';
   import {
+    isNativeShell,
+    nativeNotificationPermissionState,
+    requestNativeNotificationPermission,
+  } from '$lib/native';
+  import {
+    finishedNotificationsEnabled,
+    nativeAttentionNotificationsEnabled,
+    nativeRelayStatusNotificationsEnabled,
+    setLocalFinishedNotifications,
+    setNativeAttentionNotifications,
+    setNativeRelayStatusNotifications,
+  } from '$lib/push';
+  import {
     clearSnooze,
     pushPolicyScopeKey,
     withGlobalSnooze,
@@ -53,6 +66,36 @@
   let localPolicies = $state<Record<string, DevicePushPolicy>>({});
   let saving = $state(false);
   let policyError = $state('');
+
+  const nativeShell = isNativeShell();
+  let nativePermission = $state<'granted' | 'prompt' | 'denied' | null>(null);
+  let nativeAttention = $state(nativeAttentionNotificationsEnabled());
+  let nativeFinished = $state(finishedNotificationsEnabled());
+  let nativeRelayStatus = $state(nativeRelayStatusNotificationsEnabled());
+
+  $effect(() => {
+    if (nativeShell) void nativeNotificationPermissionState().then(state => { nativePermission = state; });
+  });
+
+  async function allowNativeNotifications(): Promise<void> {
+    const granted = await requestNativeNotificationPermission();
+    nativePermission = granted ? 'granted' : 'denied';
+  }
+
+  function changeNativeAttention(checked: boolean): void {
+    nativeAttention = checked;
+    setNativeAttentionNotifications(checked);
+  }
+
+  function changeNativeFinished(checked: boolean): void {
+    nativeFinished = checked;
+    setLocalFinishedNotifications(checked);
+  }
+
+  function changeNativeRelayStatus(checked: boolean): void {
+    nativeRelayStatus = checked;
+    setNativeRelayStatusNotifications(checked);
+  }
 
   const selectedScope = $derived.by(() => {
     const exact = scopes.find(scope => pushPolicyScopeKey(scope.relay_id, scope.device_id) === selectedKey);
@@ -145,6 +188,49 @@
 
 <Card aria-labelledby="notification-settings-title">
   <h3 id="notification-settings-title">Notifications</h3>
+  {#if nativeShell}
+    <p class="hint" role="status">
+      {#if nativePermission === 'granted'}
+        Android notifications are on for this app.
+      {:else if nativePermission === 'denied'}
+        Notifications are blocked for this app. Allow them from Android settings.
+      {:else}
+        Allow notifications to hear about agents while the app is closed.
+      {/if}
+    </p>
+    {#if nativePermission !== 'granted'}
+      <Button disabled={nativePermission === null} onclick={() => void allowNativeNotifications()}>Allow notifications</Button>
+    {/if}
+    <fieldset aria-label="Notification categories">
+      <div class="setting-row">
+        <AppSwitch
+          checked={nativeAttention}
+          label="Agents needing you"
+          descriptionId="native-attention-hint"
+          onchange={changeNativeAttention}
+        />
+        <p id="native-attention-hint" class="hint">An agent needs approval, an answer, or inspection.</p>
+      </div>
+      <div class="setting-row">
+        <AppSwitch
+          checked={nativeFinished}
+          label="Finished"
+          descriptionId="native-finished-hint"
+          onchange={changeNativeFinished}
+        />
+        <p id="native-finished-hint" class="hint">An agent completed its task.</p>
+      </div>
+      <div class="setting-row">
+        <AppSwitch
+          checked={nativeRelayStatus}
+          label="Relay status"
+          descriptionId="native-relay-status-hint"
+          onchange={changeNativeRelayStatus}
+        />
+        <p id="native-relay-status-hint" class="hint">A computer disconnected or reconnected.</p>
+      </div>
+    </fieldset>
+  {:else}
   <Button
     disabled={busy || !platform.supports_push}
     onclick={() => void ontoggle?.()}
@@ -250,6 +336,7 @@
         <p class="hint">Use your browser's site permissions and your system's notification settings.</p>
       {/if}
     </section>
+  {/if}
   {/if}
 </Card>
 

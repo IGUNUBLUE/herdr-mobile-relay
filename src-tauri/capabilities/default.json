@@ -10,6 +10,10 @@
     "notification:allow-request-permission",
     "notification:allow-is-permission-granted",
     "haptics:default",
-    "haptics:allow-vibrate"
+    "haptics:allow-vibrate",
+    "barcode-scanner:default",
+    "biometric:default",
+    "clipboard-manager:allow-read-text",
+    "clipboard-manager:allow-write-text"
   ]
 }

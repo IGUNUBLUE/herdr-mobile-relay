@@ -101,11 +101,15 @@ android-dev:
 # Regenerate the Android project, then permit cleartext WS/HTTP in release
 # builds too: relays are user-configured and can be plain ws:// on a LAN —
 # the same thing the browser PWA allows. E2EE still encrypts the payload;
-# cleartext only opens the pipe.
+# cleartext only opens the pipe. The manifest patch switches soft-input
+# handling to adjustResize so the composer stays pinned above the keyboard
+# instead of the whole window panning.
 android-init:
 	cargo tauri android init
 	sed -i 's/manifestPlaceholders\["usesCleartextTraffic"\] = "false"/manifestPlaceholders["usesCleartextTraffic"] = "true"/' \
 	  src-tauri/gen/android/app/build.gradle.kts
+	sed -i 's/android:launchMode="singleTask"/android:launchMode="singleTask"\n            android:windowSoftInputMode="adjustResize"/' \
+	  src-tauri/gen/android/app/src/main/AndroidManifest.xml
 
 # The blind gateway is deployed separately from the relay bundle: one static
 # binary a user can self-host.

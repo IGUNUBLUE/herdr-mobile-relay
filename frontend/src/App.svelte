@@ -37,8 +37,16 @@
     paneAgentViewOverrides,
   } from '$lib/preferences';
   import { initializeSpeech, stopSpeech } from '$lib/speech';
-  import { initializePush, notificationsEnabled, pushOptedIn, showPageNotification } from '$lib/push';
-  import { nativeNotify } from '$lib/native';
+  import {
+    finishedNotificationsEnabled,
+    initializePush,
+    nativeAttentionNotificationsEnabled,
+    nativeRelayStatusNotificationsEnabled,
+    notificationsEnabled,
+    pushOptedIn,
+    showPageNotification,
+  } from '$lib/push';
+  import { isNativeShell, nativeNotify } from '$lib/native';
   import { parsePushOpenTarget, RELAY_PROTOCOL_VERSION } from '$lib/protocol';
   import { targetRefForAgent, targetRefMatchesAgent } from '$lib/resource-id';
   import {
@@ -234,6 +242,44 @@
     if (added.length && navigator.vibrate) navigator.vibrate([120, 80, 120]);
     for (const agent of added) void notifyBlockedAgent(agent);
     lastBlocked = new Set(blocked.map(attentionKey));
+  });
+
+  // Working → done/idle transitions are the "agent finished" signal: the relay
+  // only pushes those to subscribed browsers, so the native shell detects them
+  // locally from the live inventory instead.
+  let lastStatusGroup = new Map<string, string>();
+  $effect(() => {
+    for (const agent of $agents) {
+      const key = `${agent.relay_id}:${agent.pane_id}`;
+      const previous = lastStatusGroup.get(key);
+      const current = agentStatusGroup(agent);
+      lastStatusGroup.set(key, current);
+      if (!previous || previous === current) continue;
+      const wasActive = previous === 'working' || previous === 'attention' || previous === 'blocked';
+      if (wasActive && (current === 'done' || current === 'ready')) {
+        void notifyAgentFinished(agent);
+      }
+    }
+  });
+
+  // Relay flapping matters to an operator; connected/disconnected transitions
+  // surface as low-importance status alerts in the shell (silent by design).
+  let lastConnectionStatus = new Map<string, string>();
+  $effect(() => {
+    for (const [relayId, connection] of $connections) {
+      const previous = lastConnectionStatus.get(relayId);
+      const current = connection.status;
+      lastConnectionStatus.set(relayId, current);
+      if (!previous || previous === current) continue;
+      if (current !== 'connected' && current !== 'disconnected') continue;
+      if (!nativeRelayStatusNotificationsEnabled()) continue;
+      const label = $relays.find((relay) => relay.id === relayId)?.label || relayId;
+      void nativeNotify({
+        title: current === 'connected' ? `${label} reconnected` : `${label} disconnected`,
+        channelId: 'relay-status',
+        silent: true,
+      });
+    }
   });
 
   let notificationFallback: ReturnType<typeof setTimeout> | null = null;
@@ -540,7 +586,10 @@
 
 
   async function notifyBlockedAgent(agent: Agent) {
-    if (!notificationsEnabled()) return;
+    // The shell's WebView has no Notification permission model of its own —
+    // the native check is the local category preference; the OS prompt comes
+    // from nativeNotify itself.
+    if (isNativeShell() ? !nativeAttentionNotificationsEnabled() : !notificationsEnabled()) return;
     if (document.visibilityState === 'visible' && document.hasFocus()) return;
     const connection = $connections.get(agent.relay_id);
     if (pushOptedIn() && connection && ['sent', 'subscribed'].includes(connection.pushStatus)) return;
@@ -564,7 +613,12 @@
     const body = approvalPromptPreview(agent) || fallback;
     // The Tauri shell has no service worker for Web Push: post the alert as a
     // real Android notification instead, driven by the live socket event.
-    if (await nativeNotify(title, body)) return;
+    if (await nativeNotify({
+      title,
+      body,
+      channelId: 'agents-attention',
+      group: 'herdr-attention',
+    })) return;
     await showPageNotification(title, {
       body,
       tag: `herdr-${target.host}-${target.pane_id}`,
@@ -576,6 +630,27 @@
         url: viewUrl({ view: 'notification', target: open }),
         action_urls: {},
       },
+    });
+  }
+
+  async function notifyAgentFinished(agent: Agent) {
+    if (!finishedNotificationsEnabled()) return;
+    if (!isNativeShell() && !notificationsEnabled()) return;
+    if (document.visibilityState === 'visible' && document.hasFocus()) return;
+    const title = `${displayName(agent)} finished`;
+    const body = agentContextLabel(agent) || `${agent.agent || 'Agent'} · ${hostLabel(agent)}`;
+    if (await nativeNotify({
+      title,
+      body,
+      channelId: 'agents-finished',
+      group: 'herdr-finished',
+    })) return;
+    await showPageNotification(title, {
+      body,
+      tag: `herdr-finished-${agent.pane_id}`,
+      icon: 'icons/icon-192.png',
+      badge: 'icons/notification-badge.png',
+      data: { url: viewUrl({ view: 'terminal', paneId: agent.pane_id }) },
     });
   }
 </script>
