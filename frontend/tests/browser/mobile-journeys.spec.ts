@@ -699,6 +699,22 @@ test('manages workspace modals, grouped worktrees, and drag ordering', async ({ 
 
   await phoneCard.getByRole('button', { name: 'Start Agent' }).click();
   await expect(page.getByText('New tab in workspace Phone Workspace.')).toBeVisible();
+  // The launch view probes the workspace directory; answer it so the submit
+  // button is not gated on the 10s directory timeout (too slow on WebKit).
+  await expect.poll(async () => (await commands(page)).filter((command) => command.type === 'list_directories').length).toBeGreaterThanOrEqual(2);
+  const launchDirectory = (await commands(page)).filter((command) => command.type === 'list_directories').at(-1)!;
+  await server(page, 0, {
+    type: 'command_result',
+    request_id: launchDirectory.request_id,
+    action: 'list_directories',
+    ok: true,
+    phase: 'completed',
+    data: {
+      current: { path: '/work/mobile', label: 'mobile' },
+      parent: '/work',
+      directories: [],
+    },
+  });
   await page.getByLabel('Name').fill('phone-workspace-codex');
   await page.getByRole('button', { name: 'Start Agent' }).last().click();
   await expect.poll(async () => (await commands(page)).find((command) => command.type === 'agent_start')).toMatchObject({
