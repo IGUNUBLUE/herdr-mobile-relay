@@ -943,7 +943,7 @@ test('keeps device verification modal until native authentication succeeds', asy
   });
   await boot(page, [fedora]);
 
-  const unlockDialog = page.getByRole('dialog', { name: 'Unlock Herdr' });
+  const unlockDialog = page.getByRole('dialog', { name: 'Unlock Lerdr' });
   await expect(unlockDialog).toBeVisible();
   await page.keyboard.press('Escape');
   await expect(unlockDialog).toBeVisible();
@@ -971,7 +971,7 @@ test('keeps an iOS setup link unredeemed for Home Screen installation', async ({
 
   // The bootstrap key is one-use and the installed copy has its own storage:
   // a Safari tab that dialled would spend it before the Home Screen app opens.
-  await expect(page.getByRole('status').filter({ hasText: 'Add Herdr to the iPhone or iPad Home Screen' })).toBeVisible();
+  await expect(page.getByRole('status').filter({ hasText: 'Add Lerdr to the iPhone or iPad Home Screen' })).toBeVisible();
   await expect(page.getByRole('status').filter({ hasText: 'This browser tab keeps the setup link unused' })).toBeVisible();
   expect(await page.locator('link[rel="manifest"]').getAttribute('href')).toBe('/setup.webmanifest');
   expect(await page.evaluate(() => location.hash)).toBe(setupHash);
@@ -1629,7 +1629,7 @@ test('confirms and tracks one relay update through its verified reconnect', asyn
   await expect(dialog).toContainText('Update Fedora first');
   await setAutoCommands(page, false);
   await dialog.getByRole('button', { name: 'Start Update' }).click();
-  const progress = page.getByRole('dialog', { name: 'Updating Herdr' });
+  const progress = page.getByRole('dialog', { name: 'Updating Lerdr' });
 
   await expect.poll(async () =>
     (await commands(page)).filter((command) => command.type === 'install_update').length).toBe(1);
@@ -1736,7 +1736,7 @@ test('resumes fleet progress and updates the second relay automatically', async 
   await expect(confirmation).toContainText('Update Fedora first');
   await confirmation.getByRole('button', { name: 'Start Update' }).click();
 
-  let progress = page.getByRole('dialog', { name: 'Updating Herdr' });
+  let progress = page.getByRole('dialog', { name: 'Updating Lerdr' });
   await expect(progress).toContainText('Starting update…');
   await expect(progress).toContainText('Verify release');
   await expect(progress).toContainText('Install relay');
@@ -1777,7 +1777,7 @@ test('resumes fleet progress and updates the second relay automatically', async 
 
   await expect.poll(async () =>
     (await commandsForSocket(page, 1)).some((command) => command.type === 'install_update')).toBe(true);
-  progress = page.getByRole('dialog', { name: 'Updating Herdr' });
+  progress = page.getByRole('dialog', { name: 'Updating Lerdr' });
   await expect(progress).toContainText(`Updated to v${APP_RELEASE}`);
   await expect(progress).toContainText('Mac');
   await expect(progress.getByRole('button', { name: 'Update', exact: true })).toHaveCount(0);
@@ -1803,7 +1803,7 @@ test('resumes fleet progress and updates the second relay automatically', async 
     update: availableUpdate,
   });
 
-  progress = page.getByRole('dialog', { name: 'Updating Herdr' });
+  progress = page.getByRole('dialog', { name: 'Updating Lerdr' });
   await expect(progress).toContainText('updates relays one at a time');
   await server(page, 1, {
     type: 'update_status',
@@ -1853,7 +1853,7 @@ test('keeps a failed relay online and offers an explicit close action', async ({
   await page.getByRole('button', { name: /Settings/ }).click();
   await page.getByRole('button', { name: 'Update Relays' }).click();
   await page.getByRole('dialog', { name: 'Update Relays' }).getByRole('button', { name: 'Start Update' }).click();
-  await expect(page.getByRole('dialog', { name: 'Updating Herdr' })).toBeVisible();
+  await expect(page.getByRole('dialog', { name: 'Updating Lerdr' })).toBeVisible();
   await server(page, 0, {
     type: 'update_status',
     update: {
@@ -1898,7 +1898,7 @@ test('offers the one-time Terminal bootstrap instead of retrying a legacy deploy
   await page.getByRole('button', { name: /Settings/ }).click();
   await page.getByRole('button', { name: 'Update Relays' }).click();
   await page.getByRole('dialog', { name: 'Update Relays' }).getByRole('button', { name: 'Start Update' }).click();
-  await expect(page.getByRole('dialog', { name: 'Updating Herdr' })).toBeVisible();
+  await expect(page.getByRole('dialog', { name: 'Updating Lerdr' })).toBeVisible();
   await server(page, 0, {
     type: 'update_status',
     update: {

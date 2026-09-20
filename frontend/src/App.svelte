@@ -218,10 +218,20 @@
   // relayStore.showToast stays the single entry point for callers; each store
   // emission is forwarded to the M3 snackbar, whose default timeout matches
   // the old toast's 4s. The M3 snackbar has no error tint, so error toasts
-  // keep a visible distinction by staying manually closable.
+  // keep a visible distinction by staying manually closable. The snackbar
+  // paints in z-index space, so it sits inside a manual popover to recover
+  // the old toast's top-layer rendering above modal dialogs; the popover
+  // doubles as the role="status" live region the old toast provided.
+  let toastLayer: HTMLDivElement | undefined;
+  let toastLayerTimer: ReturnType<typeof setTimeout> | undefined;
   $effect(() => {
     const current = $toast;
-    if (current) snackbar(current.message, undefined, current.error);
+    if (!current) return;
+    snackbar(current.message, undefined, current.error);
+    if (toastLayer && !toastLayer.matches(':popover-open')) toastLayer.showPopover();
+    clearTimeout(toastLayerTimer);
+    // The snackbar fade-out outro needs the layer to outlive its 4s timeout.
+    toastLayerTimer = setTimeout(() => toastLayer?.hidePopover(), 4200);
   });
 
   $effect(() => {
@@ -870,6 +880,6 @@
 <GlobalJump bind:open={jumpOpen} agents={$agents} onselect={openAgent} />
 <WorkspaceInspector bind:open={workspaceOpen} agent={activeAgent} />
 <LockScreen />
-<div role="status">
+<div bind:this={toastLayer} popover="manual" class="toast-layer" role="status">
   <Snackbar />
 </div>

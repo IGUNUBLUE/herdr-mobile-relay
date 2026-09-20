@@ -974,6 +974,13 @@ textarea { min-height: 6.5rem; resize: vertical; }
 .update-progress-actions { grid-template-columns: 1fr; }
 .sr-only { height: 1px; margin: -1px; overflow: hidden; padding: 0; position: absolute; width: 1px; clip: rect(0, 0, 0, 0); white-space: nowrap; }
 
+/* Top-layer host for the M3 snackbar: transparent wrapper, child positions
+   itself. UA popover styles would otherwise center it and paint a box. It
+   keeps a 1px box because every child is position:fixed — a 0-size region is
+   invisible to accessibility queries that assert the toast is showing. */
+.toast-layer { background: none; border: 0; bottom: 0; height: 1px; inset: auto; left: 0; margin: 0; overflow: visible; padding: 0; position: fixed; width: 1px; }
+.toast-layer:not(:popover-open) { display: none; }
+
 
 .workspace-grid { display: grid; gap: .65rem; }
 .workspace-card { animation: rise-in var(--dur-med) var(--ease-out) backwards; animation-delay: calc(var(--i, 0) * 35ms); background: var(--card); border: 1px solid var(--border); border-radius: .8rem; box-shadow: var(--elev-1); overflow: hidden; }
