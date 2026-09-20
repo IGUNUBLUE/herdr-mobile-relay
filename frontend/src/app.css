@@ -818,16 +818,21 @@ textarea { min-height: 6.5rem; resize: vertical; }
 .term-wrap { display: flex; flex: 1 1 auto; min-height: 0; position: relative; }
 .jump-bottom { background: var(--primary); border: 0; border-radius: 50%; bottom: .9rem; color: var(--primary-foreground); height: 2.5rem; position: absolute; right: 1rem; width: 2.5rem; }
 .terminal-bottom { background: var(--background); border-top: 1px solid var(--border); flex: 0 0 auto; padding-bottom: env(safe-area-inset-bottom); position: relative; }
-.term-input { align-items: flex-end; display: flex; gap: .45rem; padding: .55rem; }
-.composer-field { background: var(--input); border: 1px solid var(--border); border-radius: .68rem; display: flex; flex: 1; min-width: 0; position: relative; }
+.term-input { align-items: flex-end; display: flex; gap: .45rem; padding: .5rem .55rem; }
+.composer-field { align-items: flex-end; background: var(--input); border: 1px solid var(--border); border-radius: 1.6rem; display: flex; flex: 1; min-width: 0; position: relative; }
 .composer-field:focus-within { border-color: var(--primary); }
-.generic-menu-actions { border-top: 1px solid var(--border); padding: .5rem .55rem; }
-.generic-menu-actions > header { align-items: baseline; display: flex; gap: .45rem; margin-bottom: .42rem; }
-.generic-menu-actions > header strong { font-size: .7rem; max-width: 55%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.generic-menu-actions > header span { color: var(--muted); flex: 1; font-size: .58rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.generic-menu-actions > header button { background: transparent; border: 0; color: var(--muted); cursor: pointer; font-size: 1rem; line-height: 1; }
-.generic-menu-actions > div { display: flex; flex-wrap: wrap; gap: .35rem; }
-.generic-menu-actions .button { flex: 1 1 auto; }
+/* Attach controls ride inside the field as quiet leading icons so the composer
+   reads as one input bar; the muted ghost buttons stay subordinate to send. */
+.composer-field > .button-icon { align-self: center; color: var(--muted); flex: 0 0 auto; }
+.composer-field > .button-icon:first-child { margin-left: .35rem; }
+.composer-field .button-symbol { height: 1.2rem; width: 1.2rem; }
+.send-button { border-radius: 50%; box-shadow: var(--elev-1); flex: 0 0 auto; }
+.generic-menu-actions { padding: .4rem .55rem .35rem; }
+.generic-menu-actions > header { align-items: center; display: flex; gap: .4rem; margin-bottom: .3rem; }
+.generic-menu-actions > header strong { font-size: .66rem; max-width: 55%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.generic-menu-actions > header span { color: var(--muted); flex: 1; font-size: .56rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.generic-menu-actions > header button { background: transparent; border: 0; color: var(--muted); cursor: pointer; font-size: 1rem; line-height: 2.2rem; margin: -.25rem -.15rem; min-width: 2.2rem; padding: 0; }
+.generic-menu-actions .button { border-radius: 999px; flex: 0 0 auto; }
 .generic-menu-actions kbd { background: color-mix(in srgb, var(--background) 45%, transparent); border: 1px solid color-mix(in srgb, currentColor 28%, transparent); border-radius: .28rem; font-family: ui-monospace, monospace; font-size: .58rem; font-weight: 600; padding: .08rem .24rem; }
 .composer-field textarea {
   background: transparent;
@@ -835,12 +840,13 @@ textarea { min-height: 6.5rem; resize: vertical; }
   line-height: 1.4;
   max-height: var(--composer-max-height, 10rem);
   min-height: var(--composer-min-height, 2.85rem);
+  min-width: 0;
   overflow-y: hidden;
-  padding: var(--composer-padding-block, .66rem) 2.2rem var(--composer-padding-block, .66rem) .68rem;
+  padding: var(--composer-padding-block, .66rem) 2.6rem var(--composer-padding-block, .66rem) .68rem;
   resize: none;
 }
 .composer-field.awaiting-approval textarea { line-height: var(--composer-min-height, 2.85rem); padding: 0 .6rem; text-align: center; }
-.input-clear { background: transparent; border: 0; color: var(--muted); font-size: 1.2rem; height: 2.5rem; position: absolute; right: 0; top: 0; width: 2rem; }
+.input-clear { background: transparent; border: 0; color: var(--muted); font-size: 1.2rem; height: var(--composer-min-height, 2.85rem); position: absolute; right: .15rem; top: 0; width: 2.4rem; }
 .slash-command-popover { background: var(--card); border: 1px solid var(--border); border-radius: .72rem; bottom: calc(100% + .42rem); box-shadow: 0 .8rem 2.4rem rgb(0 0 0 / .42); contain: layout paint; display: flex; flex-direction: column; left: .55rem; max-height: min(48dvh, 22rem); overflow: hidden; position: absolute; right: .55rem; z-index: 15; }
 .slash-command-header { align-items: center; border-bottom: 1px solid var(--border); display: flex; flex: 0 0 auto; justify-content: space-between; min-height: 2rem; padding: .35rem .65rem; }
 .slash-command-header strong { font-size: .68rem; letter-spacing: .06em; text-transform: uppercase; }
@@ -864,21 +870,29 @@ textarea { min-height: 6.5rem; resize: vertical; }
 /* Keep the version-41 menu safe while an already-open client loads newer CSS. */
 .composer-field > .slash-command-menu { background: var(--card); border: 1px solid var(--border); border-radius: .72rem; bottom: calc(100% + .42rem); box-shadow: 0 .8rem 2.4rem rgb(0 0 0 / .42); left: 0; max-height: min(48dvh, 22rem); overflow-y: auto; position: absolute; right: 0; z-index: 15; }
 .composer-field > .slash-command-menu .slash-command-name em { border: 1px solid var(--border); border-radius: 999px; color: var(--muted); font-size: .56rem; font-style: normal; margin-left: auto; padding: .08rem .28rem; text-transform: capitalize; }
-.upload-status { color: var(--success); font-size: .7rem; margin: -.2rem .75rem .45rem; }
+.upload-status { color: var(--success); font-size: .7rem; margin: .15rem .75rem .35rem; }
 .truncation-notice { background: var(--background); border-bottom: 1px dashed var(--border); color: var(--muted); font-size: .66rem; margin: 0; padding: .45rem .75rem .5rem; text-align: center; }
 .quick-actions { border-top: 1px solid var(--border); padding: .55rem; }
 .quick-actions .button { flex: 1; }
-.term-keys { align-items: center; border-top: 1px solid var(--border); display: flex; gap: .35rem; padding: .4rem .55rem; }
+/* The keypad is an accessory strip, not a peer of the composer: one slim
+   scrollable row of quiet outlined keys, with the popups anchored to the
+   strip's own box so they stay put when the row scrolls. */
+.term-keys { border-top: 1px solid var(--border); position: relative; }
+.generic-menu-actions > div, .term-keys-row { display: flex; gap: .3rem; overflow-x: auto; overscroll-behavior-x: contain; scrollbar-width: none; }
+.term-keys-row { align-items: center; padding: .3rem .55rem; }
+.term-keys-row > * { flex: 0 0 auto; }
+.term-keys .spacer { flex: 1 1 auto; }
+.term-keys .button-secondary { background: transparent; }
+.term-keys .button-sm { font-size: .72rem; min-height: 1.95rem; }
 .key-feedback { background: color-mix(in srgb, var(--primary) 10%, var(--background)); border-top: 1px solid var(--border); color: var(--muted); font-size: .66rem; margin: 0; min-height: 1.55rem; padding: .35rem .65rem; }
 .key-feedback.error { color: var(--danger); }
-.term-keys .spacer { flex: 1; }
-.modifier-menu, .arrow-menu, .fkey-menu { position: relative; }
+.modifier-menu { position: relative; }
 .modifier-key-input { border: 0; height: 1px; left: 50%; opacity: 0; padding: 0; pointer-events: none; position: absolute; width: 1px; }
 .modifier-menu .button[aria-pressed='true'] { background: var(--primary); color: var(--primary-foreground); }
 /* Inline-level buttons here would align on the text baseline, which drops Alt
    about a pixel below Shift and Ctrl because their glyph boxes differ. */
-.modifier-menu { align-items: center; display: flex; gap: .35rem; }
-/* 1.15rem keeps these buttons at the row's 2.15rem, unlike the 1.5rem
+.modifier-menu { align-items: center; display: flex; gap: .3rem; }
+/* 1.15rem keeps these buttons at the row's 1.95rem, unlike the 1.5rem
    .button-symbol, which makes its button taller than the lettered ones. */
 /* A drawn icon centres on the button box, but the lettered keys' ink sits about
    half a pixel below it (measured 0.63px desktop, 0.36px Android), so the icons
@@ -888,9 +902,9 @@ textarea { min-height: 6.5rem; resize: vertical; }
    nudge centres it on every platform: its ink sits in the top half of the em
    box. Measured on Android and desktop, both ~3.1px high before the nudge. */
 .key-caret { display: block; font-size: 1.25rem; line-height: 1; transform: translateY(.18em); }
-.arrow-popup { background: var(--card); border: 1px solid var(--border); border-radius: .7rem; bottom: 2.8rem; display: grid; gap: .2rem; grid-template-columns: repeat(3, 2.3rem); padding: .35rem; position: absolute; right: 0; z-index: 10; }
+.arrow-popup { background: var(--card); border: 1px solid var(--border); border-radius: .7rem; bottom: calc(100% + .3rem); display: grid; gap: .2rem; grid-template-columns: repeat(3, 2.3rem); padding: .35rem; position: absolute; right: .55rem; z-index: 10; }
 .arrow-popup button { background: var(--secondary); border: 0; border-radius: .4rem; color: var(--foreground); height: 2.3rem; }
-.fkey-popup { background: var(--card); border: 1px solid var(--border); border-radius: .7rem; bottom: 2.8rem; display: grid; gap: .2rem; grid-template-columns: repeat(4, 2.6rem); padding: .35rem; position: absolute; right: 0; z-index: 10; }
+.fkey-popup { background: var(--card); border: 1px solid var(--border); border-radius: .7rem; bottom: calc(100% + .3rem); display: grid; gap: .2rem; grid-template-columns: repeat(4, 2.6rem); padding: .35rem; position: absolute; right: .55rem; z-index: 10; }
 .fkey-popup button { background: var(--secondary); border: 0; border-radius: .4rem; color: var(--foreground); font-size: .72rem; height: 2.3rem; }
 .secret-prompt { border-top: 1px solid var(--border); display: flex; flex-direction: column; gap: .4rem; padding: .55rem .75rem; }
 .secret-prompt p { font-size: .72rem; line-height: 1.4; margin: 0; }

@@ -49,6 +49,7 @@
   } from '$lib/push';
   import { isNativeShell, nativeNotify } from '$lib/native';
   import { parsePushOpenTarget, RELAY_PROTOCOL_VERSION } from '$lib/protocol';
+  import { createRelayStatusNotifier } from '$lib/relay-status-notify';
   import { targetRefForAgent, targetRefMatchesAgent } from '$lib/resource-id';
   import {
     closeCurrentView,
@@ -275,22 +276,16 @@
 
   // Relay flapping matters to an operator; connected/disconnected transitions
   // surface as low-importance status alerts in the shell (silent by design).
-  let lastConnectionStatus = new Map<string, string>();
+  // The notifier debounces drops and reuses a per-relay notification id, so
+  // brief flaps stay silent and real outages update one shade entry in place.
+  const relayStatusNotifier = createRelayStatusNotifier({ enabled: nativeRelayStatusNotificationsEnabled });
   $effect(() => {
     for (const [relayId, connection] of $connections) {
-      const previous = lastConnectionStatus.get(relayId);
-      const current = connection.status;
-      lastConnectionStatus.set(relayId, current);
-      if (!previous || previous === current) continue;
-      if (current !== 'connected' && current !== 'disconnected') continue;
       if (!nativeRelayStatusNotificationsEnabled()) continue;
       const label = $relays.find((relay) => relay.id === relayId)?.label || relayId;
-      void nativeNotify({
-        title: current === 'connected' ? `${label} reconnected` : `${label} disconnected`,
-        channelId: 'relay-status',
-        silent: true,
-      });
+      relayStatusNotifier.sync(relayId, connection.status, label);
     }
+    relayStatusNotifier.retain($connections.keys());
   });
 
   let notificationFallback: ReturnType<typeof setTimeout> | null = null;
@@ -507,6 +502,7 @@
       window.removeEventListener('blur', visibilityChanged);
       for (const timeout of typedPushTimeouts.values()) clearTimeout(timeout);
       typedPushTimeouts.clear();
+      relayStatusNotifier.dispose();
       relayStore.destroy();
     };
   });
