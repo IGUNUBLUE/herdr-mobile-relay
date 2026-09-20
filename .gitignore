@@ -18,6 +18,8 @@ relay/push/
 /internal/app/push/
 relay/cloudflared/
 relay/stable-setup.json
+relay/relay.pid
+relay/phone-app-origin-configured
 relay/support-state.json
 relay/update-state.json
 relay/update-job-*.json

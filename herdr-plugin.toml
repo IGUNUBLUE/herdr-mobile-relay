@@ -95,6 +95,14 @@ id = "uninstall"
 title = "Herdr Mobile Relay: Full Uninstall"
 command = ["bash", "relay/open-plugin-pane.sh", "uninstall"]
 
+# tailscale-setup — the tailnet transport: exposes the relay on this machine's
+# tailnet HTTPS name via `tailscale serve` and prints the private setup QR.
+# Linux only for now.
+[[actions]]
+id = "tailscale-setup"
+title = "Herdr Mobile Relay: Tailscale Serve Setup (Linux)"
+command = ["bash", "relay/open-plugin-pane.sh", "tailscale-setup"]
+
 # status — a smoke test for support: shows the resolved config, background
 # service state, and the local relay health endpoint, then waits for Enter.
 [[actions]]
@@ -152,6 +160,12 @@ id = "uninstall"
 title = "Herdr Mobile Relay: Full Uninstall"
 placement = "zoomed"
 command = ["bash", "relay/uninstall.sh"]
+
+[[panes]]
+id = "tailscale-setup"
+title = "Herdr Mobile Relay: Tailscale Serve Setup"
+placement = "zoomed"
+command = ["bash", "relay/plugin-tailscale-setup.sh"]
 
 [[panes]]
 id = "status"

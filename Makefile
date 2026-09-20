@@ -73,6 +73,18 @@ stable-setup:
 stable-teardown:
 	relay/stable-teardown.sh
 
+tailscale-setup:
+	relay/tailscale-serve.sh start
+
+tailscale-teardown:
+	relay/tailscale-serve.sh off
+
+tailscale-status:
+	relay/tailscale-serve.sh status
+
+tailscale-service-install:
+	relay/install-tailscale-service.sh
+
 # The blind gateway is deployed separately from the relay bundle: one static
 # binary a user can self-host.
 gateway:

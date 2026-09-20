@@ -104,12 +104,15 @@ The setup menu exposes each complete connection path directly:
 | Community gateway | no account, domain, or tunnel configuration; an installed app origin | the recommended stable, no-configuration relay path |
 | Cloudflare tunnel | nothing for a temporary URL; a Cloudflare account and domain for a permanent hostname | the fastest one-computer trial or a permanent background service |
 | Your own gateway | a small VPS | dedicated bandwidth and control of the transport logs |
+| Tailscale Serve | Tailscale on the computer (Linux) and the phone, HTTPS certificates enabled on the tailnet | zero-third-party transport inside your tailnet |
 
-All three are end-to-end encrypted. On either gateway the phone and the computer
+All four are end-to-end encrypted. On either gateway the phone and the computer
 then negotiate a direct peer-to-peer connection, leaving the gateway with the
-fallback; Cloudflare tunnel traffic stays on Cloudflare.
+fallback; Cloudflare tunnel traffic stays on Cloudflare, and Tailscale traffic
+never leaves the tailnet.
 
 - **[Transports explained →](docs/transports.md)**
+- **[Tailscale Serve →](docs/tailscale.md)**
 - **[Permanent Cloudflare tunnel →](docs/cloudflare-tunnel.md)**
 - **[Run your own gateway →](docs/gateway-self-hosting.md)**
 
@@ -127,7 +130,8 @@ point the relay at that profile with `HERDR_*_CONFIG_DIRS`:
 | --- | --- |
 | [QUICKSTART.md](QUICKSTART.md) | The fast path, start to paired phone |
 | [docs/mobile-app.md](docs/mobile-app.md) | Every feature: agent list, terminal, devices, speech, notifications |
-| [docs/transports.md](docs/transports.md) | Cloudflare, community gateway, own gateway, direct WebRTC |
+| [docs/transports.md](docs/transports.md) | Cloudflare, community gateway, own gateway, Tailscale, direct WebRTC |
+| [docs/tailscale.md](docs/tailscale.md) | Tailscale Serve transport: tailnet-only access, requirements, service |
 | [docs/cloudflare-tunnel.md](docs/cloudflare-tunnel.md) | The stable tunnel wizard, DNS, and teardown |
 | [docs/gateway-self-hosting.md](docs/gateway-self-hosting.md) | Deploying and operating a gateway |
 | [docs/agent-directories.md](docs/agent-directories.md) | Agents that use a non-default config or profile directory |

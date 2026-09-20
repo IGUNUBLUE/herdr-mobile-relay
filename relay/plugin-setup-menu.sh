@@ -183,6 +183,10 @@ render_menu() {
     echo "     Copy the gateway shipped by this plugin to your server over SSH,"
     echo "     then start or restart the relay and print its QR."
     echo ""
+    menu_item t "Tailscale Serve"
+    echo "     Publish the relay on this machine's tailnet HTTPS name via"
+    echo "     tailscale serve (Linux only), then print the private setup QR."
+    echo ""
     echo "Stable Cloudflare tunnel"
     echo ""
     menu_item 4 "Stable Tunnel"
@@ -247,6 +251,7 @@ while true; do
             1) run_action "$SCRIPT_DIR/plugin-choose-transport.sh" temporary; break ;;
             2) run_action "$SCRIPT_DIR/plugin-choose-transport.sh" community; break ;;
             3) run_action "$SCRIPT_DIR/plugin-choose-transport.sh" own; break ;;
+            t | T) run_action "$SCRIPT_DIR/plugin-tailscale-setup.sh"; break ;;
             4) run_action "$SCRIPT_DIR/plugin-install-service.sh"; break ;;
             5) run_action "$SCRIPT_DIR/plugin-change-hostname.sh"; break ;;
             6) run_action "$SCRIPT_DIR/plugin-stable-teardown.sh"; break ;;
@@ -254,7 +259,7 @@ while true; do
             8) run_action "$SCRIPT_DIR/plugin-configure-app-deploy.sh"; break ;;
             9) run_action "$SCRIPT_DIR/plugin-status.sh"; break ;;
             q | Q) exit 0 ;;
-            *) echo "Enter 1, 2, 3, 4, 5, 6, 7, 8, 9, or q." ;;
+            *) echo "Enter 1, 2, 3, t, 4, 5, 6, 7, 8, 9, or q." ;;
         esac
     done
 done
