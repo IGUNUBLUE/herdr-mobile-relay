@@ -119,8 +119,30 @@ gh release upload v0.23.0 lerdr-*.apk apk-checksums.txt \
 `zipalign` and `apksigner` live in `$ANDROID_HOME/build-tools/35.0.0/`.
 Lerdr releases are signed with the key under
 `~/.local/share/lerdr/` on the maintainer's machine — never
-committed, never in CI secrets unless reproducibility is explicitly traded
-for convenience.
+committed, and only in CI secrets when reproducibility is explicitly
+traded for convenience (below).
+
+## CI APK build
+
+`release.yml` has an `android-apk` job that builds the universal release
+APK on `ubuntu-24.04` (Temurin JDK 17, `cargo-tauri`, NDK
+`28.2.13676358`, `make android-apk`) and attaches it to the GitHub
+release as `lerdr_<version>_universal.apk` alongside the relay tarballs.
+
+Signing is opt-in. With no secrets configured the job still runs and
+uploads `lerdr_<version>_universal-unsigned.apk` as a workflow artifact —
+sign it locally per the commands above. To sign in CI, add these
+repository secrets (Settings → Secrets and variables → Actions):
+
+| Secret | Value |
+|---|---|
+| `ANDROID_KEYSTORE_BASE64` | `base64 -w0 ~/.local/share/lerdr/android-release.jks` |
+| `ANDROID_KEYSTORE_PASSWORD` | keystore store password |
+| `ANDROID_KEY_ALIAS` | `herdr-mobile` (kept from before the rename) |
+| `ANDROID_KEY_PASSWORD` | key password (same as store password if unset) |
+
+The keystore lands in `$RUNNER_TEMP` (outside the workspace, `umask 077`)
+for the duration of the signing step and is deleted immediately after.
 
 ## F-Droid path (later)
 
