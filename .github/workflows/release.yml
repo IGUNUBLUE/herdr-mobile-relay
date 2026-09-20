@@ -156,7 +156,10 @@ jobs:
       - name: Ensure Android NDK r28
         run: |
           set -euo pipefail
-          sdkmanager "ndk;$NDK_VERSION"
+          sdkmanager="$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager"
+          test -x "$sdkmanager"
+          yes | "$sdkmanager" --licenses >/dev/null || true
+          "$sdkmanager" "ndk;$NDK_VERSION" "build-tools;35.0.0" "platforms;android-35"
           echo "NDK_HOME=$ANDROID_HOME/ndk/$NDK_VERSION" >> "$GITHUB_ENV"
       - name: Build universal release APK
         run: make android-apk
