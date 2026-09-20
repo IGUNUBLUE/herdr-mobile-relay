@@ -99,6 +99,25 @@ wait_for_https() {
     return 1
 }
 
+# setup-link.sh needs the verified release; a source checkout can satisfy the
+# same requirement by pointing HERDR_RELAY_BIN at its own build. Surface that
+# as a hint instead of letting the generic release error stand alone.
+require_relay_binary() {
+    if relay_binary >/dev/null 2>&1; then
+        return 0
+    fi
+    local repo_bin="$SCRIPT_DIR/../bin/herdr-mobile-relay"
+    echo "✗ Verified relay release is unavailable." >&2
+    if [ -x "$repo_bin" ]; then
+        echo "  This checkout has a built binary; point the launcher at it:" >&2
+        echo "  HERDR_RELAY_BIN=bin/herdr-mobile-relay make tailscale-setup" >&2
+    else
+        echo "  Install the plugin release, or build one:" >&2
+        echo "  go build -o bin/herdr-mobile-relay ./cmd/herdr-mobile-relay" >&2
+    fi
+    return 1
+}
+
 print_setup_link() {
     local fqdn="$1"
 
@@ -134,6 +153,7 @@ case "$COMMAND" in
             echo "▸ Tailnet endpoint healthy: https://$FQDN"
         fi
         echo ""
+        require_relay_binary
         print_setup_link "$FQDN"
         ;;
     link)
@@ -142,6 +162,7 @@ case "$COMMAND" in
             echo "✗ Tailscale Serve is not forwarding to the relay; run: relay/tailscale-serve.sh start"
             exit 1
         fi
+        require_relay_binary
         print_setup_link "$FQDN"
         ;;
     off)
