@@ -1,7 +1,8 @@
 <script lang="ts">
+  import SettingsRow from '$components/settings/SettingsRow.svelte';
+  import SettingsSection from '$components/settings/SettingsSection.svelte';
   import AppSwitch from '$components/ui/AppSwitch.svelte';
   import Button from '$components/ui/Button.svelte';
-  import Card from '$components/ui/Card.svelte';
   import {
     isNativeShell,
     nativeNotificationPermissionState,
@@ -186,23 +187,25 @@
   });
 </script>
 
-<Card aria-labelledby="notification-settings-title">
-  <h3 id="notification-settings-title">Notifications</h3>
+{#snippet allowNotifications()}
+  <Button disabled={nativePermission === null} onclick={() => void allowNativeNotifications()}>Allow notifications</Button>
+{/snippet}
+
+<SettingsSection title="Notifications">
   {#if nativeShell}
-    <p class="hint" role="status">
-      {#if nativePermission === 'granted'}
-        Android notifications are on for this app.
-      {:else if nativePermission === 'denied'}
-        Notifications are blocked for this app. Allow them from Android settings.
-      {:else}
-        Allow notifications to hear about agents while the app is closed.
-      {/if}
-    </p>
-    {#if nativePermission !== 'granted'}
-      <Button disabled={nativePermission === null} onclick={() => void allowNativeNotifications()}>Allow notifications</Button>
-    {/if}
-    <fieldset aria-label="Notification categories">
-      <div class="setting-row">
+    <SettingsRow control={nativePermission !== 'granted' ? allowNotifications : undefined}>
+      <p class="hint" role="status">
+        {#if nativePermission === 'granted'}
+          Android notifications are on for this app.
+        {:else if nativePermission === 'denied'}
+          Notifications are blocked for this app. Allow them from Android settings.
+        {:else}
+          Allow notifications to hear about agents while the app is closed.
+        {/if}
+      </p>
+    </SettingsRow>
+    <fieldset class="row-group" aria-label="Notification categories">
+      <SettingsRow>
         <AppSwitch
           checked={nativeAttention}
           label="Agents needing you"
@@ -210,8 +213,8 @@
           onchange={changeNativeAttention}
         />
         <p id="native-attention-hint" class="hint">An agent needs approval, an answer, or inspection.</p>
-      </div>
-      <div class="setting-row">
+      </SettingsRow>
+      <SettingsRow>
         <AppSwitch
           checked={nativeFinished}
           label="Finished"
@@ -219,8 +222,8 @@
           onchange={changeNativeFinished}
         />
         <p id="native-finished-hint" class="hint">An agent completed its task.</p>
-      </div>
-      <div class="setting-row">
+      </SettingsRow>
+      <SettingsRow>
         <AppSwitch
           checked={nativeRelayStatus}
           label="Relay status"
@@ -228,129 +231,140 @@
           onchange={changeNativeRelayStatus}
         />
         <p id="native-relay-status-hint" class="hint">A computer disconnected or reconnected.</p>
-      </div>
+      </SettingsRow>
     </fieldset>
   {:else}
-  <Button
-    disabled={busy || !platform.supports_push}
-    onclick={() => void ontoggle?.()}
-  >{deliveryEnabled ? 'Stop Push Notifications' : 'Enable Push Notifications'}</Button>
-  <p class="hint" role="status">{deliveryHint}</p>
-
-  {#if deliveryEnabled}
-    {#if scopes.length > 0 && selectedScope && selectedPolicy}
-      <label class="field-label scope-label" for="notification-scope">Relay and device</label>
-      <select id="notification-scope" value={effectiveSelectedKey} onchange={chooseScope} disabled={busy || saving}>
-        {#each scopes as scope (pushPolicyScopeKey(scope.relay_id, scope.device_id))}
-          <option value={pushPolicyScopeKey(scope.relay_id, scope.device_id)}>
-            {scope.relay_label} — {scope.device_label}{scope.current_device ? ' (this device)' : ''}
-          </option>
-        {/each}
-      </select>
-
-      <fieldset aria-label="Notification categories" disabled={busy || saving}>
-        {#each CONFIGURABLE_CATEGORIES as category (category)}
-          <div class="setting-row">
-            <AppSwitch
-              checked={selectedPolicy.categories[category]}
-              label={CATEGORY_LABELS[category].label}
-              descriptionId={`push-category-${category}`}
-              onchange={checked => changeCategory(category, checked)}
-            />
-            <p id={`push-category-${category}`} class="hint">{CATEGORY_LABELS[category].detail}</p>
-          </div>
-        {/each}
-      </fieldset>
-
-      <div class="grid">
-        <label>
-          Settle delay
-          <select value={String(selectedPolicy.settle_ms)} onchange={event => changeMilliseconds('settle_ms', event)} disabled={busy || saving}>
-            <option value="0">Immediately</option>
-            <option value="2000">2 seconds</option>
-            <option value="5000">5 seconds</option>
-            <option value="15000">15 seconds</option>
-          </select>
-        </label>
-        <label>
-          Cooldown
-          <select value={String(selectedPolicy.cooldown_ms)} onchange={event => changeMilliseconds('cooldown_ms', event)} disabled={busy || saving}>
-            <option value="0">None</option>
-            <option value="30000">30 seconds</option>
-            <option value="60000">1 minute</option>
-            <option value="300000">5 minutes</option>
-          </select>
-        </label>
-        <label>
-          Snooze
-          <select value={snoozeSelection(selectedPolicy)} onchange={changeSnooze} disabled={busy || saving}>
-            <option value="off">Not snoozed</option>
-            {#if selectedPolicy.snoozed && selectedPolicy.snooze_until}<option value="timed">Until {new Date(selectedPolicy.snooze_until).toLocaleString()}</option>{/if}
-            <option value="3600000">For 1 hour</option>
-            <option value="28800000">For 8 hours</option>
-            <option value="86400000">For 24 hours</option>
-            <option value="global">Until I turn it back on</option>
-          </select>
-        </label>
-      </div>
-
-      {#if policyError}<p class="hint error" role="alert">{policyError}</p>{/if}
-
-      <div class="test-row">
+    <SettingsRow>
+      {#snippet control()}
         <Button
-          variant="secondary"
-          size="sm"
-          disabled={busy || saving || selectedTestState.status === 'sending' || !selectedScope.current_device}
-          onclick={sendTest}
-        >Send neutral test</Button>
-        {#if !selectedScope.current_device}
-          <p class="hint">Test notifications from that device.</p>
+          disabled={busy || !platform.supports_push}
+          onclick={() => void ontoggle?.()}
+        >{deliveryEnabled ? 'Stop Push Notifications' : 'Enable Push Notifications'}</Button>
+      {/snippet}
+      <p class="hint" role="status">{deliveryHint}</p>
+    </SettingsRow>
+
+    {#if deliveryEnabled}
+      {#if scopes.length > 0 && selectedScope && selectedPolicy}
+        <div class="pad">
+          <label class="field-label scope-label" for="notification-scope">Relay and device</label>
+          <select id="notification-scope" value={effectiveSelectedKey} onchange={chooseScope} disabled={busy || saving}>
+            {#each scopes as scope (pushPolicyScopeKey(scope.relay_id, scope.device_id))}
+              <option value={pushPolicyScopeKey(scope.relay_id, scope.device_id)}>
+                {scope.relay_label} — {scope.device_label}{scope.current_device ? ' (this device)' : ''}
+              </option>
+            {/each}
+          </select>
+        </div>
+
+        <fieldset class="row-group" aria-label="Notification categories" disabled={busy || saving}>
+          {#each CONFIGURABLE_CATEGORIES as category (category)}
+            <SettingsRow>
+              <AppSwitch
+                checked={selectedPolicy.categories[category]}
+                label={CATEGORY_LABELS[category].label}
+                descriptionId={`push-category-${category}`}
+                onchange={checked => changeCategory(category, checked)}
+              />
+              <p id={`push-category-${category}`} class="hint">{CATEGORY_LABELS[category].detail}</p>
+            </SettingsRow>
+          {/each}
+        </fieldset>
+
+        <div class="pad">
+          <div class="grid">
+            <label>
+              Settle delay
+              <select value={String(selectedPolicy.settle_ms)} onchange={event => changeMilliseconds('settle_ms', event)} disabled={busy || saving}>
+                <option value="0">Immediately</option>
+                <option value="2000">2 seconds</option>
+                <option value="5000">5 seconds</option>
+                <option value="15000">15 seconds</option>
+              </select>
+            </label>
+            <label>
+              Cooldown
+              <select value={String(selectedPolicy.cooldown_ms)} onchange={event => changeMilliseconds('cooldown_ms', event)} disabled={busy || saving}>
+                <option value="0">None</option>
+                <option value="30000">30 seconds</option>
+                <option value="60000">1 minute</option>
+                <option value="300000">5 minutes</option>
+              </select>
+            </label>
+            <label>
+              Snooze
+              <select value={snoozeSelection(selectedPolicy)} onchange={changeSnooze} disabled={busy || saving}>
+                <option value="off">Not snoozed</option>
+                {#if selectedPolicy.snoozed && selectedPolicy.snooze_until}<option value="timed">Until {new Date(selectedPolicy.snooze_until).toLocaleString()}</option>{/if}
+                <option value="3600000">For 1 hour</option>
+                <option value="28800000">For 8 hours</option>
+                <option value="86400000">For 24 hours</option>
+                <option value="global">Until I turn it back on</option>
+              </select>
+            </label>
+          </div>
+
+          {#if policyError}<p class="hint error" role="alert">{policyError}</p>{/if}
+
+          <div class="test-row">
+            <Button
+              variant="secondary"
+              size="sm"
+              disabled={busy || saving || selectedTestState.status === 'sending' || !selectedScope.current_device}
+              onclick={sendTest}
+            >Send neutral test</Button>
+            {#if !selectedScope.current_device}
+              <p class="hint">Test notifications from that device.</p>
+            {/if}
+          </div>
+          <p class="hint" aria-live="polite">{testMessage}</p>
+        </div>
+      {:else}
+        <div class="pad">
+          <p class="hint">No paired notification device is available.</p>
+        </div>
+      {/if}
+    {/if}
+
+    {#if platform.platform === 'ios' && !platform.installed}
+      <section class="guidance" aria-labelledby="ios-install-title">
+        <h4 id="ios-install-title">Install on iPhone or iPad first</h4>
+        <ol>
+          <li>Open this site in Safari on iOS or iPadOS 16.4+.</li>
+          <li>Tap Share, Add to Home Screen, then Add.</li>
+          <li>Open Lerdr from the Home Screen and return here.</li>
+        </ol>
+        <p class="hint">iOS allows Web Push only from an installed Home Screen app after a tap.</p>
+      </section>
+    {/if}
+
+    {#if blocked}
+      <section class="guidance" aria-labelledby="manual-settings-title">
+        <h4 id="manual-settings-title">Allow notifications for this app</h4>
+        {#if platform.platform === 'ios'}
+          <p class="hint"><strong>iPhone or iPad:</strong> In Settings, open Notifications, choose Lerdr, and enable Allow Notifications.</p>
+        {:else if platform.platform === 'android'}
+          <p class="hint"><strong>Android:</strong> Long-press Lerdr, open App info, then Notifications. For a browser tab, use its site settings.</p>
+        {:else}
+          <p class="hint">Use your browser's site permissions and your system's notification settings.</p>
         {/if}
-      </div>
-      <p class="hint" aria-live="polite">{testMessage}</p>
-    {:else}
-      <p class="hint">No paired notification device is available.</p>
+      </section>
     {/if}
   {/if}
-
-  {#if platform.platform === 'ios' && !platform.installed}
-    <section class="guidance" aria-labelledby="ios-install-title">
-      <h4 id="ios-install-title">Install on iPhone or iPad first</h4>
-      <ol>
-        <li>Open this site in Safari on iOS or iPadOS 16.4+.</li>
-        <li>Tap Share, Add to Home Screen, then Add.</li>
-        <li>Open Herdr from the Home Screen and return here.</li>
-      </ol>
-      <p class="hint">iOS allows Web Push only from an installed Home Screen app after a tap.</p>
-    </section>
-  {/if}
-
-  {#if blocked}
-    <section class="guidance" aria-labelledby="manual-settings-title">
-      <h4 id="manual-settings-title">Allow notifications for this app</h4>
-      {#if platform.platform === 'ios'}
-        <p class="hint"><strong>iPhone or iPad:</strong> In Settings, open Notifications, choose Herdr, and enable Allow Notifications.</p>
-      {:else if platform.platform === 'android'}
-        <p class="hint"><strong>Android:</strong> Long-press Herdr, open App info, then Notifications. For a browser tab, use its site settings.</p>
-      {:else}
-        <p class="hint">Use your browser's site permissions and your system's notification settings.</p>
-      {/if}
-    </section>
-  {/if}
-  {/if}
-</Card>
+</SettingsSection>
 
 <style>
   h4 { font-size: .82rem; margin: 0 0 .35rem; }
-  .scope-label { display: block; margin: .9rem 0 .3rem; }
-  fieldset { border: 0; margin: 1rem 0 0; padding: 0; }
-  .setting-row { border-top: 1px solid var(--border); padding: .7rem 0 .45rem; }
-  .setting-row .hint { margin: .25rem 0 0; }
-  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr)); gap: .7rem; margin-top: 1rem; }
+  .pad { border-top: 1px solid var(--border); padding: .85rem .9rem; }
+  .pad > :first-child { margin-top: 0; }
+  .pad > :last-child { margin-bottom: 0; }
+  .scope-label { display: block; margin: 0 0 .3rem; }
+  .row-group { border: 0; border-top: 1px solid var(--border); margin: 0; min-width: 0; padding: 0; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr)); gap: .7rem; margin-top: 0; }
   .grid label { display: block; font-size: .78rem; font-weight: 650; }
   .grid select { margin-top: .3rem; }
   .test-row { display: flex; align-items: center; gap: .7rem; margin-top: .9rem; }
   .test-row .hint { margin: 0; }
-  .guidance { border-top: 1px solid var(--border); margin-top: .9rem; padding-top: .9rem; }
+  .guidance { border-top: 1px solid var(--border); padding: .85rem .9rem; }
   .guidance ol { font-size: .8rem; line-height: 1.5; margin: .35rem 0 .5rem; padding-left: 1.35rem; }
 </style>

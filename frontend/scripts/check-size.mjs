@@ -75,7 +75,10 @@ import { constants, gzipSync } from 'node:zlib';
 // safe Conversation routing with native-transcript fallback.
 // Raised from 164 KiB for bounded history diagnostics, source-change recovery,
 // and snapshot-aware refresh handling.
-const limitKiB = 165;
+// Raised from 165 KiB for the m3-svelte adoption (Lerdr): the expressive2025
+// live theme, its component styles, the snackbar, the loading indicator, and
+// the ripple layer all land in the single bootstrap payload.
+const limitKiB = 180;
 const limit = limitKiB * 1024 + 256;
 const root = resolve(process.argv[2] || 'dist');
 const assetNames = await readdir(join(root, 'assets'));

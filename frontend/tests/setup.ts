@@ -19,6 +19,19 @@ function createMemoryStorage(): Storage {
 Object.defineProperty(globalThis, 'localStorage', { value: createMemoryStorage(), configurable: true, writable: true });
 Object.defineProperty(globalThis, 'sessionStorage', { value: createMemoryStorage(), configurable: true, writable: true });
 
+// jsdom has no matchMedia; svelte/motion (via m3-svelte) calls it at import.
+if (!globalThis.matchMedia) {
+  Object.defineProperty(globalThis, 'matchMedia', {
+    value: (query: string) => ({
+      matches: false, media: query, onchange: null,
+      addListener() {}, removeListener() {},
+      addEventListener() {}, removeEventListener() {},
+      dispatchEvent: () => false,
+    }),
+    configurable: true, writable: true,
+  });
+}
+
 if (!HTMLDialogElement.prototype.showModal) {
   HTMLDialogElement.prototype.showModal = function showModal() {
     this.setAttribute('open', '');
