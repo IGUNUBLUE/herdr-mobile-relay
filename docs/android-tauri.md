@@ -1,0 +1,135 @@
+# Native Android app (Tauri)
+
+The repository ships a Tauri 2 shell in [`src-tauri/`](../src-tauri) that
+builds the same frontend the relay serves — one codebase, two install
+surfaces. The PWA stays the default path; the APK adds a native icon,
+hardware haptics, and real Android notifications without a service worker.
+
+Distribution is **GitHub Releases** (sideload / Obtainium) — no Play Store.
+F-Droid is possible later but needs a reproducible-build recipe in
+`fdroiddata`; that is a separate process, tracked below.
+
+## What works in the shell
+
+- Everything the PWA does: pairing, E2EE, WSS/WebRTC to the relay, terminal,
+  approvals, uploads, Tailscale endpoints (`wss://host.tailnet.ts.net` works —
+  the Tailscale Android app provides the VPN underneath).
+- Blocked-agent alerts post **local notifications** through
+  `tauri-plugin-notification`, driven by the live socket — no FCM roundtrip.
+- Haptics run through `tauri-plugin-haptics`; the web `navigator.vibrate`
+  fallback stays for the PWA.
+- The Android back button follows the app's `pushState` history — back from
+  a terminal view returns to the agent list; back at the root exits.
+
+## What differs from the PWA
+
+| PWA | Tauri shell |
+|---|---|
+| Web Push via service worker | Local notifications from live events |
+| `setAppBadge` icon count | Not available in WebView (notification shade carries it) |
+| Install via "Add to Home Screen" | APK sideload from GitHub Releases |
+| Pairing by scanning a QR link | Paste the setup link in Settings → import device invitation |
+
+Pairing links are `https://<relay-host>/#…` with user-specific hosts, so
+Android App Links cannot intercept them (domain verification is per-host).
+Open the app and paste the link in Settings; the QR path keeps working for
+the browser PWA.
+
+## Build requirements
+
+Verified on Linux with this exact toolchain:
+
+- **JDK 17+** — e.g. `apt install openjdk-17-jdk-headless`, or a portable
+  Temurin tarball:
+  ```bash
+  curl -L -o /tmp/jdk17.tar.gz \
+    "https://api.adoptium.net/v3/binary/latest/17/ga/linux/x64/jdk/hotspot/normal/eclipse"
+  mkdir -p ~/.local/opt && tar xzf /tmp/jdk17.tar.gz -C ~/.local/opt
+  mv ~/.local/opt/jdk-17* ~/.local/opt/jdk17
+  export JAVA_HOME=~/.local/opt/jdk17 PATH="$JAVA_HOME/bin:$PATH"
+  ```
+- **Rust targets**:
+  ```bash
+  rustup target add aarch64-linux-android armv7-linux-androideabi \
+    i686-linux-android x86_64-linux-android
+  ```
+- **Tauri CLI**: `cargo install tauri-cli --version "^2" --locked`
+- **Android SDK + NDK r28+** (r28 aligns native libs for the 16 KB page
+  size Android 15 requires; `build.rs` also injects the ELF link args):
+  ```bash
+  mkdir -p ~/Android/Sdk/cmdline-tools && cd ~/Android/Sdk/cmdline-tools
+  curl -O https://dl.google.com/android/repository/commandlinetools-linux-13114758_latest.zip
+  unzip commandlinetools-linux-*.zip && mv cmdline-tools latest
+  export ANDROID_HOME=~/Android/Sdk
+  export PATH="$ANDROID_HOME/cmdline-tools/latest/bin:$PATH"
+  yes | sdkmanager --licenses
+  sdkmanager "platform-tools" "platforms;android-35" \
+    "build-tools;35.0.0" "ndk;28.2.13676358"
+  export NDK_HOME="$ANDROID_HOME/ndk/28.2.13676358"
+  ```
+
+## Build
+
+```bash
+make android-init   # once per clone — generates src-tauri/gen/android/
+make android-apk    # release APK (unsigned), embeds a fresh frontend build
+```
+
+`beforeBuildCommand` runs `bun run --cwd ../frontend build` automatically —
+the APK always embeds the validated `frontend/dist` bundle (the committed
+`web/` release bundle is untouched by native builds). Debug APK for local
+testing: `cargo tauri android build --apk --debug` (auto debug-signed).
+
+Unsigned output lands under
+`src-tauri/gen/android/app/build/outputs/apk/`. Per-ABI splits
+(`make android-apk-split`) shrink each APK from ~43 MB universal to
+~12–15 MB — aarch64 alone covers every modern phone.
+
+## Signing and publishing
+
+APKs must be signed to install. Keep the keystore **outside the repo** —
+whoever holds it controls updates:
+
+```bash
+# one-time
+keytool -genkeypair -keystore ~/.local/share/herdr-mobile-relay/android-release.jks \
+  -alias herdr-mobile -keyalg RSA -keysize 2048 -validity 10950
+
+# per release
+zipalign -p -f 4 app-universal-release-unsigned.apk herdr-mobile-0.23.0-universal.apk
+apksigner sign --ks ~/.local/share/herdr-mobile-relay/android-release.jks \
+  --ks-key-alias herdr-mobile herdr-mobile-0.23.0-universal.apk
+apksigner verify herdr-mobile-0.23.0-universal.apk
+sha256sum herdr-mobile-*.apk > checksums.txt
+gh release upload v0.23.0 herdr-mobile-*.apk checksums.txt \
+  --repo IGUNUBLUE/herdr-mobile-relay
+```
+
+`zipalign` and `apksigner` live in `$ANDROID_HOME/build-tools/35.0.0/`.
+This fork's releases are signed with the key under
+`~/.local/share/herdr-mobile-relay/` on the maintainer's machine — never
+committed, never in CI secrets unless reproducibility is explicitly traded
+for convenience.
+
+## F-Droid path (later)
+
+Inclusion needs: all deps from source (Rust crates are fine), no proprietary
+services, a metadata recipe in `gitlab.com/fdroid/fdroiddata`, and a
+reproducible build. The shell already has no telemetry and no Play-only
+APIs, so the main work is the recipe — not the code. The per-ABI APK layout
+maps cleanly onto F-Droid's build variants.
+
+## Notes
+
+- `tauri.conf.json` pins `identifier` `com.github.igunublue.herdr-mobile-relay`
+  — the Android application id; changing it later creates a different app.
+- CSP allows `https:`/`wss:` connect-src: the app dials user-configured
+  relay hosts, which cannot be enumerated ahead of time.
+- Capabilities (`src-tauri/capabilities/default.json`) grant only
+  `core:default`, notification notify/permission, and haptics vibrate —
+  nothing else. Audit before adding plugins.
+- `src-tauri/gen/` (generated Android Studio project) and `target/` are
+  gitignored; regenerate with `cargo tauri android init` after pulling.
+- Background behavior: Android may suspend the WebView's WebSocket when the
+  app is backgrounded; the app's reconnect logic resumes on foreground. A
+  foreground service for always-on sockets is a possible follow-up.

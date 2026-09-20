@@ -85,6 +85,22 @@ tailscale-status:
 tailscale-service-install:
 	relay/install-tailscale-service.sh
 
+# Native Android shell (Tauri). Needs the toolchain from docs/android-tauri.md:
+# JDK 17+, Android SDK + NDK r28+, rustup Android targets, and cargo-tauri.
+android-apk:
+	cargo tauri android build --apk
+	@echo "APKs under src-tauri/gen/android/app/build/outputs/apk/"
+
+android-apk-split:
+	cargo tauri android build --apk --split-per-abi
+	@echo "Per-ABI APKs under src-tauri/gen/android/app/build/outputs/apk/"
+
+android-dev:
+	cargo tauri android dev
+
+android-init:
+	cargo tauri android init
+
 # The blind gateway is deployed separately from the relay bundle: one static
 # binary a user can self-host.
 gateway:

@@ -38,3 +38,10 @@ relay/phone-app-origin.*
 ralph.yml
 WATCHDOG.yml
 relay/device-auth/
+
+# Tauri native shell
+src-tauri/target/
+src-tauri/gen/
+
+# Signed APK staging (local artifacts, published to GitHub Releases)
+release-apk/

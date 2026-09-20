@@ -38,6 +38,7 @@
   } from '$lib/preferences';
   import { initializeSpeech, stopSpeech } from '$lib/speech';
   import { initializePush, notificationsEnabled, pushOptedIn, showPageNotification } from '$lib/push';
+  import { nativeNotify } from '$lib/native';
   import { parsePushOpenTarget, RELAY_PROTOCOL_VERSION } from '$lib/protocol';
   import { targetRefForAgent, targetRefMatchesAgent } from '$lib/resource-id';
   import {
@@ -560,8 +561,12 @@
       : kind === 'question'
         ? `${agent.agent || 'Agent'} needs an answer`
         : `${agent.agent || 'Agent'} needs inspection`;
+    const body = approvalPromptPreview(agent) || fallback;
+    // The Tauri shell has no service worker for Web Push: post the alert as a
+    // real Android notification instead, driven by the live socket event.
+    if (await nativeNotify(title, body)) return;
     await showPageNotification(title, {
-      body: approvalPromptPreview(agent) || fallback,
+      body,
       tag: `herdr-${target.host}-${target.pane_id}`,
       renotify: true,
       icon: 'icons/icon-192.png',

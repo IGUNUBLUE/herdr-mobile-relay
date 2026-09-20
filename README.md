@@ -6,7 +6,7 @@ Control [Herdr](https://herdr.dev) agents from your phone. Each Linux or macOS
 computer runs its own relay; the phone connects to them and merges every agent
 into one installable web app.
 
-**Current version:** [`0.22.0`](https://github.com/IGUNUBLUE/herdr-mobile-relay/releases/tag/v0.22.0) · [Changelog](CHANGELOG.md)
+**Current version:** [`0.23.0`](https://github.com/IGUNUBLUE/herdr-mobile-relay/releases/tag/v0.23.0) · [Changelog](CHANGELOG.md) · [Android APK](https://github.com/IGUNUBLUE/herdr-mobile-relay/releases/latest) (sideload, no Play Store)
 
 > [!NOTE]
 > **About this fork.** Tracks [`0cv/herdr-mobile-relay`](https://github.com/0cv/herdr-mobile-relay)

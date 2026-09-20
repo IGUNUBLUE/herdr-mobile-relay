@@ -5,6 +5,27 @@ project follows [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.23.0] - 2026-09-20
+
+### Added
+
+- **Geist** (Vercel, SIL OFL 1.1) as the app's primary typeface — a variable
+  latin + latin-ext face lazy-loaded from `fonts/` like the nerd symbols, so
+  it adds nothing to the measured bootstrap payload.
+- **Tauri 2 native Android shell** (`src-tauri/`): builds the frontend into
+  an installable APK distributed through GitHub Releases — no Play Store.
+  Local notifications via `tauri-plugin-notification`, hardware haptics via
+  `tauri-plugin-haptics`, `withGlobalTauri` globals so the web app needs no
+  npm SDK, 16 KB page-size alignment for Android 15+. Requirements and
+  signing in [docs/android-tauri.md](docs/android-tauri.md); build with
+  `make android-apk`.
+
+### Changed
+
+- `haptic()` routes through the native haptics plugin inside the Tauri shell
+  (deny patterns collapse to their summed duration) and keeps
+  `navigator.vibrate` on the PWA path.
+
 ## [0.22.0] - 2026-09-20
 
 ### Added

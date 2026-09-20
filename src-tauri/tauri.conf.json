@@ -1,0 +1,40 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "Herdr Mobile",
+  "version": "0.23.0",
+  "identifier": "com.github.igunublue.herdr-mobile-relay",
+  "build": {
+    "devUrl": "http://localhost:5173",
+    "frontendDist": "../frontend/dist",
+    "beforeDevCommand": "bun run --cwd ../frontend dev",
+    "beforeBuildCommand": "bun run --cwd ../frontend build"
+  },
+  "app": {
+    "withGlobalTauri": true,
+    "windows": [
+      {
+        "label": "main",
+        "title": "Herdr Mobile",
+        "fullscreen": false,
+        "resizable": true,
+        "width": 420,
+        "height": 860
+      }
+    ],
+    "security": {
+      "csp": "default-src 'self'; connect-src 'self' https: wss:; img-src 'self' data: blob:; media-src 'self' blob:; style-src 'self' 'unsafe-inline'; font-src 'self' data:; script-src 'self'"
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": "all",
+    "icon": [
+      "icons/icon-192.png",
+      "icons/icon-512.png",
+      "icons/icon.png"
+    ],
+    "android": {
+      "minSdkVersion": 26
+    }
+  }
+}
