@@ -9,4 +9,4 @@ for label in "${LABELS[@]}"; do
 done
 systemctl --user daemon-reload
 
-echo "Stopped and removed Herdr Mobile Relay services"
+echo "Stopped and removed Lerdr services"

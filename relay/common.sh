@@ -370,7 +370,7 @@ require_user_service_context() {
         return
     fi
 
-    echo "Refusing to manage the Herdr Mobile Relay user service as root." >&2
+    echo "Refusing to manage the Lerdr user service as root." >&2
     echo "Run the command again as the signed-in macOS or Linux user, without sudo." >&2
     return 1
 }
@@ -1296,7 +1296,7 @@ phone_app_origin_serves_herdr() {
         return 1
     fi
     printf '%s\n' "$manifest" \
-        | grep -Eq '"name"[[:space:]]*:[[:space:]]*"Herdr Mobile Relay"'
+        | grep -Eq '"name"[[:space:]]*:[[:space:]]*"(Lerdr|Herdr Mobile Relay)"'
 }
 
 # A separately hosted app uses herdr.<authorized-zone> by convention. Probe it
@@ -1669,7 +1669,7 @@ require_supported_platform() {
             return
             ;;
         *)
-            echo "Unsupported platform: Herdr Mobile Relay currently supports only Linux and macOS."
+            echo "Unsupported platform: Lerdr currently supports only Linux and macOS."
             exit 1
             ;;
     esac

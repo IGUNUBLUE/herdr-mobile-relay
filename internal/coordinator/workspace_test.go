@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/0cv/herdr-mobile-relay/internal/herdr"
+	"github.com/IGUNUBLUE/lerdr/internal/herdr"
 )
 
 func TestDirtyWorktreeRemovalOffersExplicitForceRetry(t *testing.T) {

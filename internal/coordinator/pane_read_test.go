@@ -8,7 +8,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/0cv/herdr-mobile-relay/internal/herdr"
+	"github.com/IGUNUBLUE/lerdr/internal/herdr"
 )
 
 func TestHandleReadPaneUsesRecentRowsForResizedPane(t *testing.T) {

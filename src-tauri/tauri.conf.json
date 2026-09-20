@@ -1,8 +1,8 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "Herdr Mobile",
+  "productName": "Lerdr",
   "version": "0.24.0",
-  "identifier": "com.github.igunublue.herdr-mobile-relay",
+  "identifier": "com.github.igunublue.lerdr",
   "build": {
     "devUrl": "http://localhost:5173",
     "frontendDist": "../frontend/dist",
@@ -14,7 +14,7 @@
     "windows": [
       {
         "label": "main",
-        "title": "Herdr Mobile",
+        "title": "Lerdr",
         "fullscreen": false,
         "resizable": true,
         "width": 420,

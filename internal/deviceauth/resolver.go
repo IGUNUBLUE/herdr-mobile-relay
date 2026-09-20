@@ -5,10 +5,10 @@ import (
 	"encoding/base64"
 	"errors"
 	"fmt"
-	"github.com/0cv/herdr-mobile-relay/internal/localize"
+	"github.com/IGUNUBLUE/lerdr/internal/localize"
 	"time"
 
-	"github.com/0cv/herdr-mobile-relay/internal/transport"
+	"github.com/IGUNUBLUE/lerdr/internal/transport"
 )
 
 // IsE2EEAuthRejected reports whether retrying the same selector can ever

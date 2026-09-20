@@ -12,7 +12,7 @@ import (
 	"strings"
 	"testing"
 
-	relayrelease "github.com/0cv/herdr-mobile-relay/internal/release"
+	relayrelease "github.com/IGUNUBLUE/lerdr/internal/release"
 )
 
 func setupTestWebRoot(t *testing.T) string {

@@ -14,8 +14,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/0cv/herdr-mobile-relay/internal/activity"
-	"github.com/0cv/herdr-mobile-relay/internal/herdr"
+	"github.com/IGUNUBLUE/lerdr/internal/activity"
+	"github.com/IGUNUBLUE/lerdr/internal/herdr"
 )
 
 func TestTransitionActivityPreservesExtract(t *testing.T) {

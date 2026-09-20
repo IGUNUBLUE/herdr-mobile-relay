@@ -17,7 +17,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/0cv/herdr-mobile-relay/internal/portmap"
+	"github.com/IGUNUBLUE/lerdr/internal/portmap"
 )
 
 func testLogger() *slog.Logger {

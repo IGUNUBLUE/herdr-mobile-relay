@@ -12,7 +12,7 @@ import (
 
 	"github.com/coder/websocket"
 
-	"github.com/0cv/herdr-mobile-relay/internal/gatewaywire"
+	"github.com/IGUNUBLUE/lerdr/internal/gatewaywire"
 )
 
 // errTooManyClients reports that a registration is at its concurrent client cap.

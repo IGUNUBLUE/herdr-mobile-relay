@@ -5,7 +5,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/0cv/herdr-mobile-relay/internal/config"
+	"github.com/IGUNUBLUE/lerdr/internal/config"
 )
 
 func TestTokenlessUpgradeAllowed(t *testing.T) {

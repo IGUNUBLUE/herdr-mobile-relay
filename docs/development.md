@@ -7,8 +7,8 @@ the relay rather than using it.
 ## Running from a checkout
 
 ```bash
-git clone https://github.com/0cv/herdr-mobile-relay.git
-cd herdr-mobile-relay
+git clone https://github.com/IGUNUBLUE/lerdr.git
+cd lerdr
 make dev-tunnel
 ```
 
@@ -33,7 +33,7 @@ Candidates are published as prereleases, which ordinary relays never install:
 their update check resolves the latest stable release only. To run one:
 
 ```bash
-herdr plugin install 0cv/herdr-mobile-relay --ref dev
+herdr plugin install IGUNUBLUE/lerdr --ref dev
 ```
 
 Rerun that command to move to a newer candidate.

@@ -135,7 +135,7 @@ self.addEventListener('push', event => {
       },
     };
     await self.registration.showNotification(
-      typeof payload.title === 'string' && payload.title ? payload.title : 'Herdr',
+      typeof payload.title === 'string' && payload.title ? payload.title : 'Lerdr',
       options,
     );
   })());

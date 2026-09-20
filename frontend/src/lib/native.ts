@@ -198,7 +198,7 @@ export async function authenticateBiometric(reason: string): Promise<boolean> {
   try {
     await invoke('plugin:biometric|authenticate', {
       reason,
-      title: 'Herdr Mobile',
+      title: 'Lerdr',
       allowDeviceCredential: true,
       confirmationRequired: false,
     });

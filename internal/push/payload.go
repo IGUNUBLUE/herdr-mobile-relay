@@ -13,7 +13,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/0cv/herdr-mobile-relay/internal/localize"
+	"github.com/IGUNUBLUE/lerdr/internal/localize"
 )
 
 type Platform string

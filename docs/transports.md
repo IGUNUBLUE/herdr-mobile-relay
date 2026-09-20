@@ -35,7 +35,7 @@ HERDR_GATEWAY_URL=wss://gw.example.com
 
 The QR is printed once the gateway confirms the registration and the phone-app
 origin is settled — the gateway carries relay traffic, never the app itself, so
-the first run asks which installed Herdr app to pair with, or takes
+the first run asks which installed Lerdr app to pair with, or takes
 `HERDR_PHONE_APP_URL`.
 
 A gateway holds no secrets and never learns the relay key: the relay registers

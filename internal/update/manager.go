@@ -19,11 +19,11 @@ import (
 	"sync"
 	"time"
 
-	relayrelease "github.com/0cv/herdr-mobile-relay/internal/release"
+	relayrelease "github.com/IGUNUBLUE/lerdr/internal/release"
 )
 
 const canonicalAPI = "https://api.github.com/repos/0cv/herdr-mobile-relay"
-const canonicalWeb = "https://github.com/0cv/herdr-mobile-relay"
+const canonicalWeb = "https://github.com/IGUNUBLUE/lerdr"
 
 var appDeployEnvironmentKeys = [...]string{
 	"HERDR_APP_DEPLOY_ORIGIN",

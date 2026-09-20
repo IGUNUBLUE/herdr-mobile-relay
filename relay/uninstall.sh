@@ -169,7 +169,7 @@ preflight_removal_target "$RELEASE_ROOT" "releases"
 preflight_removal_target "$CONFIG_DIR" "config/state"
 preflight_removal_target "$CACHE_DIR" "cache"
 
-echo "Herdr Mobile Relay — full uninstall"
+echo "Lerdr — full uninstall"
 echo ""
 echo "This will remove:"
 echo "  Service:      herdr-mobile-relay.service (systemd/launchd)"
@@ -265,7 +265,7 @@ safe_remove_dir "$CONFIG_DIR" "config/state"
 safe_remove_dir "$CACHE_DIR" "cache"
 
 echo ""
-echo "Herdr Mobile Relay has been uninstalled."
+echo "Lerdr has been uninstalled."
 if command -v herdr >/dev/null 2>&1; then
     echo "Removing Herdr plugin registration..."
     if ! herdr plugin uninstall herdr-mobile-relay.events; then

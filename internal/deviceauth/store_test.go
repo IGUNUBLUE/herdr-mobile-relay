@@ -8,7 +8,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/0cv/herdr-mobile-relay/internal/transport"
+	"github.com/IGUNUBLUE/lerdr/internal/transport"
 )
 
 func testCredential(deviceID, credentialID string, role Role) credentialRecord {

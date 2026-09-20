@@ -30,7 +30,7 @@ if [ -n "$GATEWAY_URL" ]; then
 
     ARMED=0
     arm_setup_link "$ENV_FILE" || ARMED=$?
-    echo "🐑 Herdr Mobile Relay phone setup"
+    echo "🐑 Lerdr phone setup"
     echo ""
     print_phone_setup "$PHONE_APP_BASE/#$SETUP_FRAGMENT"
     echo ""
@@ -73,7 +73,7 @@ PHONE_URL="$PHONE_APP_BASE/#$SETUP_FRAGMENT"
 DIRECT_URL="$PHONE_APP_FALLBACK/#$SETUP_FRAGMENT"
 ARMED=0
 arm_setup_link "$ENV_FILE" || ARMED=$?
-echo "🐑 Herdr Mobile Relay phone setup"
+echo "🐑 Lerdr phone setup"
 echo ""
 print_phone_setup "$PHONE_URL"
 if [ "$PHONE_URL" != "$DIRECT_URL" ]; then

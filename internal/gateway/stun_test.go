@@ -16,7 +16,7 @@ import (
 
 	"github.com/coder/websocket"
 
-	"github.com/0cv/herdr-mobile-relay/internal/gatewaywire"
+	"github.com/IGUNUBLUE/lerdr/internal/gatewaywire"
 )
 
 // stunSilenceWindow is how long a test waits before it believes a datagram drew

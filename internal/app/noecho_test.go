@@ -4,7 +4,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/0cv/herdr-mobile-relay/internal/coordinator"
+	"github.com/IGUNUBLUE/lerdr/internal/coordinator"
 )
 
 // The phone locks its generic composer on a pane the attention classifier

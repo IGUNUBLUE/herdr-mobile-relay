@@ -119,7 +119,7 @@ function setRelaySource(blob: Blob): void {
 
 function mediaSessionPlaying(): void {
   if (!('mediaSession' in navigator)) return;
-  navigator.mediaSession.metadata = new MediaMetadata({ title: 'Reading response', artist: 'Herdr Mobile Relay' });
+  navigator.mediaSession.metadata = new MediaMetadata({ title: 'Reading response', artist: 'Lerdr' });
   navigator.mediaSession.playbackState = 'playing';
   for (const action of ['pause', 'stop'] as MediaSessionAction[]) {
     try {

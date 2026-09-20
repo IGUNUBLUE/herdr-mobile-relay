@@ -8,8 +8,8 @@ import (
 
 	"github.com/pion/webrtc/v4"
 
-	"github.com/0cv/herdr-mobile-relay/internal/framing"
-	"github.com/0cv/herdr-mobile-relay/internal/transport"
+	"github.com/IGUNUBLUE/lerdr/internal/framing"
+	"github.com/IGUNUBLUE/lerdr/internal/transport"
 )
 
 const (

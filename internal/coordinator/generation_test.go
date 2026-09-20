@@ -14,7 +14,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/0cv/herdr-mobile-relay/internal/herdr"
+	"github.com/IGUNUBLUE/lerdr/internal/herdr"
 )
 
 // §9.5: a mutation that captured generation N must abort — without sending any

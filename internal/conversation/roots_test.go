@@ -10,7 +10,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/0cv/herdr-mobile-relay/internal/agentroots"
+	"github.com/IGUNUBLUE/lerdr/internal/agentroots"
 )
 
 const secondSessionID = "223e4567-e89b-12d3-a456-426614174001"

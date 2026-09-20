@@ -1,6 +1,6 @@
 # Changelog
 
-Notable user-facing changes to Herdr Mobile Relay are documented here. The
+Notable user-facing changes to Lerdr are documented here. The
 project follows [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
@@ -1647,7 +1647,7 @@ project follows [Semantic Versioning](https://semver.org/).
 - Release pane-size leases when their WebSocket owner disappears, preventing a
   laptop terminal from remaining narrowed.
 
-[Unreleased]: https://github.com/0cv/herdr-mobile-relay/compare/v0.21.3...HEAD
+[Unreleased]: https://github.com/IGUNUBLUE/lerdr/compare/v0.24.0...HEAD
 [0.21.3]: https://github.com/0cv/herdr-mobile-relay/compare/v0.21.2...v0.21.3
 [0.21.2]: https://github.com/0cv/herdr-mobile-relay/compare/v0.21.1...v0.21.2
 [0.21.1]: https://github.com/0cv/herdr-mobile-relay/compare/v0.21.0...v0.21.1

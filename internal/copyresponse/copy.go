@@ -12,8 +12,8 @@ import (
 	"time"
 	"unicode/utf8"
 
-	"github.com/0cv/herdr-mobile-relay/internal/herdr"
-	"github.com/0cv/herdr-mobile-relay/internal/slashcmd"
+	"github.com/IGUNUBLUE/lerdr/internal/herdr"
+	"github.com/IGUNUBLUE/lerdr/internal/slashcmd"
 )
 
 const (

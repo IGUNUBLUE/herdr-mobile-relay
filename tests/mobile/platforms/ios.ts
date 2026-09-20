@@ -1472,13 +1472,15 @@ export class IOSPlatform implements MobilePlatform {
 
   private async findHittableHomeIcon(timeoutMs: number): Promise<string> {
     const locators = [
+      accessibility('Lerdr'),
+      textLocator('Lerdr'),
       accessibility('Herdr Mobile Relay'),
       textLocator('Herdr Mobile Relay'),
       accessibility('Herdr Relay'),
       textLocator('Herdr Relay'),
       {
         using: 'xpath',
-        value: "//*[@name='Home screen icons']//*[contains(@name, 'Herdr Mobile Relay') or contains(@name, 'Herdr Relay') or contains(@label, 'Herdr Mobile Relay') or contains(@label, 'Herdr Relay')]",
+        value: "//*[@name='Home screen icons']//*[contains(@name, 'Lerdr') or contains(@name, 'Herdr Mobile Relay') or contains(@name, 'Herdr Relay') or contains(@label, 'Lerdr') or contains(@label, 'Herdr Mobile Relay') or contains(@label, 'Herdr Relay')]",
       },
     ];
     const deadline = Date.now() + Math.min(timeoutMs, this.budget.remainingMs);

@@ -24,9 +24,9 @@ import (
 
 	"github.com/coder/websocket"
 
-	"github.com/0cv/herdr-mobile-relay/internal/config"
-	"github.com/0cv/herdr-mobile-relay/internal/framing"
-	"github.com/0cv/herdr-mobile-relay/internal/gatewaywire"
+	"github.com/IGUNUBLUE/lerdr/internal/config"
+	"github.com/IGUNUBLUE/lerdr/internal/framing"
+	"github.com/IGUNUBLUE/lerdr/internal/gatewaywire"
 )
 
 const gatewayTestRelayKey = "0123456789abcdef0123456789abcdef"

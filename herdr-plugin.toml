@@ -1,4 +1,4 @@
-# herdr-plugin.toml registers Herdr Mobile Relay with herdr as a plugin.
+# herdr-plugin.toml registers Lerdr with herdr as a plugin.
 # Install it with `herdr plugin install 0cv/herdr-mobile-relay` (herdr clones
 # this repo, runs the [[build]] pre-warm below after confirmation, and
 # registers the entry points), or `herdr plugin link .` from a local checkout.
@@ -13,10 +13,10 @@
 #   key = "prefix+m"
 #   type = "plugin_action"
 #   command = "herdr-mobile-relay.events.setup"
-#   description = "Herdr Mobile Relay: Setup"
+#   description = "Lerdr: Setup"
 
 id = "herdr-mobile-relay.events"
-name = "Herdr Mobile Relay"
+name = "Lerdr"
 version = "0.24.0"
 
 # Herdr 0.7.5 introduced the live-agent facade used for atomic starts and prompts.
@@ -37,7 +37,7 @@ command = ["bash", "relay/plugin-build.sh"]
 # destination; users can always invoke it directly as a fallback.
 [[actions]]
 id = "setup"
-title = "Herdr Mobile Relay: Setup"
+title = "Lerdr: Setup"
 command = ["bash", "relay/open-plugin-pane.sh", "setup"]
 
 
@@ -48,7 +48,7 @@ command = ["bash", "relay/open-plugin-pane.sh", "setup"]
 # remains as a direct fallback.
 [[actions]]
 id = "quick-start"
-title = "Herdr Mobile Relay: Start or Restart Relay"
+title = "Lerdr: Start or Restart Relay"
 command = ["bash", "relay/open-plugin-pane.sh", "quick-start"]
 
 # install-service — the permanent Cloudflare path: provisions or resumes a
@@ -56,7 +56,7 @@ command = ["bash", "relay/open-plugin-pane.sh", "quick-start"]
 # relay identity, and only then prints the stable setup QR code.
 [[actions]]
 id = "install-service"
-title = "Herdr Mobile Relay: Stable Cloudflare Tunnel Setup"
+title = "Lerdr: Stable Cloudflare Tunnel Setup"
 command = ["bash", "relay/open-plugin-pane.sh", "install-service"]
 
 # setup-link — reprints the private phone link and QR for the installed relay,
@@ -65,7 +65,7 @@ command = ["bash", "relay/open-plugin-pane.sh", "install-service"]
 # action manages a checkout-installed service.
 [[actions]]
 id = "setup-link"
-title = "Herdr Mobile Relay: Show Phone Setup QR"
+title = "Lerdr: Show Phone Setup QR"
 command = ["bash", "relay/open-plugin-pane.sh", "setup-link"]
 
 # change-hostname — moves a tunnel relay to another public name. The tunnel,
@@ -73,26 +73,26 @@ command = ["bash", "relay/open-plugin-pane.sh", "setup-link"]
 # link; the old record keeps answering until it is deleted.
 [[actions]]
 id = "change-hostname"
-title = "Herdr Mobile Relay: Change Tunnel Hostname"
+title = "Lerdr: Change Tunnel Hostname"
 command = ["bash", "relay/open-plugin-pane.sh", "change-hostname"]
 
 # configure-app-deploy — opts one stable relay into deploying a separately
 # hosted Cloudflare Pages app after explicit confirmation from the phone.
 [[actions]]
 id = "configure-app-deploy"
-title = "Herdr Mobile Relay: Configure App Deployment"
+title = "Lerdr: Configure App Deployment"
 command = ["bash", "relay/open-plugin-pane.sh", "configure-app-deploy"]
 
 # stable-teardown — explicit confirmed cleanup before plugin uninstall. Herdr
 # keeps plugin config/state on uninstall and has no manifest uninstall hook.
 [[actions]]
 id = "stable-teardown"
-title = "Herdr Mobile Relay: Stable Tunnel Teardown"
+title = "Lerdr: Stable Tunnel Teardown"
 command = ["bash", "relay/open-plugin-pane.sh", "stable-teardown"]
 
 [[actions]]
 id = "uninstall"
-title = "Herdr Mobile Relay: Full Uninstall"
+title = "Lerdr: Full Uninstall"
 command = ["bash", "relay/open-plugin-pane.sh", "uninstall"]
 
 # tailscale-setup — the tailnet transport: exposes the relay on this machine's
@@ -100,76 +100,76 @@ command = ["bash", "relay/open-plugin-pane.sh", "uninstall"]
 # Linux only for now.
 [[actions]]
 id = "tailscale-setup"
-title = "Herdr Mobile Relay: Tailscale Serve Setup (Linux)"
+title = "Lerdr: Tailscale Serve Setup (Linux)"
 command = ["bash", "relay/open-plugin-pane.sh", "tailscale-setup"]
 
 # status — a smoke test for support: shows the resolved config, background
 # service state, and the local relay health endpoint, then waits for Enter.
 [[actions]]
 id = "status"
-title = "Herdr Mobile Relay: Status"
+title = "Lerdr: Status"
 command = ["bash", "relay/open-plugin-pane.sh", "status"]
 
 # The interactive halves of the actions above. herdr opens each in a managed
 # pane, runs the script, and tears the pane down when it exits.
 [[panes]]
 id = "setup"
-title = "Herdr Mobile Relay: Setup"
+title = "Lerdr: Setup"
 placement = "zoomed"
 command = ["bash", "relay/plugin-setup-menu.sh"]
 
 
 [[panes]]
 id = "quick-start"
-title = "Herdr Mobile Relay: Start or Restart Relay"
+title = "Lerdr: Start or Restart Relay"
 placement = "zoomed"
 command = ["bash", "relay/plugin-quick-start.sh"]
 
 [[panes]]
 id = "install-service"
-title = "Herdr Mobile Relay: Stable Cloudflare Tunnel Setup"
+title = "Lerdr: Stable Cloudflare Tunnel Setup"
 placement = "zoomed"
 command = ["bash", "relay/plugin-install-service.sh"]
 
 [[panes]]
 id = "setup-link"
-title = "Herdr Mobile Relay: Show Phone Setup QR"
+title = "Lerdr: Show Phone Setup QR"
 placement = "zoomed"
 command = ["bash", "relay/plugin-setup-link.sh"]
 
 [[panes]]
 id = "change-hostname"
-title = "Herdr Mobile Relay: Change Tunnel Hostname"
+title = "Lerdr: Change Tunnel Hostname"
 placement = "zoomed"
 command = ["bash", "relay/plugin-change-hostname.sh"]
 
 [[panes]]
 id = "configure-app-deploy"
-title = "Herdr Mobile Relay: Configure App Deployment"
+title = "Lerdr: Configure App Deployment"
 placement = "zoomed"
 command = ["bash", "relay/plugin-configure-app-deploy.sh"]
 
 [[panes]]
 id = "stable-teardown"
-title = "Herdr Mobile Relay: Stable Tunnel Teardown"
+title = "Lerdr: Stable Tunnel Teardown"
 placement = "zoomed"
 command = ["bash", "relay/plugin-stable-teardown.sh"]
 
 [[panes]]
 id = "uninstall"
-title = "Herdr Mobile Relay: Full Uninstall"
+title = "Lerdr: Full Uninstall"
 placement = "zoomed"
 command = ["bash", "relay/uninstall.sh"]
 
 [[panes]]
 id = "tailscale-setup"
-title = "Herdr Mobile Relay: Tailscale Serve Setup"
+title = "Lerdr: Tailscale Serve Setup"
 placement = "zoomed"
 command = ["bash", "relay/plugin-tailscale-setup.sh"]
 
 [[panes]]
 id = "status"
-title = "Herdr Mobile Relay: Status"
+title = "Lerdr: Status"
 placement = "overlay"
 command = ["bash", "relay/plugin-status.sh"]
 

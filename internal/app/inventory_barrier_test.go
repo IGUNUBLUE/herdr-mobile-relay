@@ -17,9 +17,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/0cv/herdr-mobile-relay/internal/config"
-	"github.com/0cv/herdr-mobile-relay/internal/herdr"
-	"github.com/0cv/herdr-mobile-relay/internal/transport"
+	"github.com/IGUNUBLUE/lerdr/internal/config"
+	"github.com/IGUNUBLUE/lerdr/internal/herdr"
+	"github.com/IGUNUBLUE/lerdr/internal/transport"
 	"github.com/coder/websocket"
 )
 

@@ -14,7 +14,7 @@ export PATH="/opt/homebrew/bin:/usr/local/bin:/home/linuxbrew/.linuxbrew/bin:$HO
 ENV_FILE="$(relay_env_file "$SCRIPT_DIR")"
 load_relay_env "$ENV_FILE"
 
-echo "🐑 Herdr Mobile Relay status"
+echo "🐑 Lerdr status"
 echo ""
 echo "  Config file:  $ENV_FILE"
 if [ -f "$ENV_FILE" ] && grep -q '^HERDR_RELAY_TOKEN=..*' "$ENV_FILE"; then

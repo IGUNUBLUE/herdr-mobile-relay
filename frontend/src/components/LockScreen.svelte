@@ -8,7 +8,7 @@
   id="unlock-dialog"
   open={$securityState.locked}
   dismissible={false}
-  title="Unlock Herdr"
+  title="Unlock Lerdr"
   description={$securityState.reason === 'resume'
     ? 'Verify to pick up where you left off.'
     : 'Verify with your device fingerprint, face unlock, or passcode.'}

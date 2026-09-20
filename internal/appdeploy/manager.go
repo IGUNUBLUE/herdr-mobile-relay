@@ -13,8 +13,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/0cv/herdr-mobile-relay/internal/release"
-	"github.com/0cv/herdr-mobile-relay/internal/setuphelper"
+	"github.com/IGUNUBLUE/lerdr/internal/release"
+	"github.com/IGUNUBLUE/lerdr/internal/setuphelper"
 )
 
 type PublicState struct {

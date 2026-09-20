@@ -413,7 +413,7 @@ export class AndroidPlatform implements MobilePlatform {
     const deadline = Date.now() + Math.min(30_000, this.budget.remainingMs);
     const locator = { using: 'xpath', value:
       `//*[@resource-id='${ANDROID_LAUNCHER_PACKAGE}:id/add_item_bottom_sheet_content']`
-      + `[.//*[@resource-id='${ANDROID_LAUNCHER_PACKAGE}:id/widget_name' and @text='Herdr Relay' and @displayed='true']]`
+      + `[.//*[@resource-id='${ANDROID_LAUNCHER_PACKAGE}:id/widget_name' and (@text='Lerdr' or @text='Herdr Relay') and @displayed='true']]`
       + `//android.widget.Button[@package='${ANDROID_LAUNCHER_PACKAGE}' and @text='Add to home screen' and @clickable='true' and @enabled='true' and @displayed='true']`,
     };
     while (this.nativeTransactionAvailable(deadline)) {
@@ -528,7 +528,7 @@ export class AndroidPlatform implements MobilePlatform {
   private async waitForChromeShortcut(timeoutMs: number): Promise<AndroidChromeShortcut> {
     const adb = process.env.ADB || 'adb';
     const deadline = Date.now() + timeoutMs;
-    let lastError = 'Chrome did not publish a matching Herdr Relay ShortcutInfo';
+    let lastError = 'Chrome did not publish a matching Lerdr or Herdr Relay ShortcutInfo';
     while (Date.now() < deadline) {
       try {
         const output = await commandOutput(adb, [
@@ -538,7 +538,7 @@ export class AndroidPlatform implements MobilePlatform {
         const expectedOrigin = new URL(this.origin).origin;
         const shortcut = parseAndroidChromeShortcuts(output).find((candidate) => {
           const labels = [candidate.shortLabel, candidate.name];
-          if (!labels.some((label) => /herdr(?: mobile)? relay/iu.test(label))) return false;
+          if (!labels.some((label) => /lerdr|herdr(?: mobile)? relay/iu.test(label))) return false;
           try {
             return new URL(candidate.url).origin === expectedOrigin
               && new URL(candidate.scope).origin === expectedOrigin;
@@ -557,6 +557,8 @@ export class AndroidPlatform implements MobilePlatform {
 
   private async findLauncherIcon(): Promise<string> {
     const locators = [
+      textLocator('Lerdr'),
+      accessibility('Lerdr'),
       textLocator('Herdr Mobile Relay'),
       accessibility('Herdr Mobile Relay'),
       textLocator('Herdr Relay'),
@@ -588,7 +590,7 @@ export class AndroidPlatform implements MobilePlatform {
         return await this.driver.findAny(locators, 30_000);
       } catch (drawerError) {
         if (isFatalDriverError(drawerError)) throw drawerError;
-        throw new Error(`ANDROID_LAUNCHER: home screen and app drawer did not expose Herdr Relay (${drawerError instanceof Error ? drawerError.message : String(homeError)})`, { cause: drawerError });
+        throw new Error(`ANDROID_LAUNCHER: home screen and app drawer did not expose Lerdr or Herdr Relay (${drawerError instanceof Error ? drawerError.message : String(homeError)})`, { cause: drawerError });
       }
     }
   }

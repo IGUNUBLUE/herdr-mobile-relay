@@ -32,11 +32,11 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/0cv/herdr-mobile-relay/internal/config"
-	"github.com/0cv/herdr-mobile-relay/internal/deviceauth"
-	"github.com/0cv/herdr-mobile-relay/internal/protocol"
-	"github.com/0cv/herdr-mobile-relay/internal/transport"
-	"github.com/0cv/herdr-mobile-relay/internal/web"
+	"github.com/IGUNUBLUE/lerdr/internal/config"
+	"github.com/IGUNUBLUE/lerdr/internal/deviceauth"
+	"github.com/IGUNUBLUE/lerdr/internal/protocol"
+	"github.com/IGUNUBLUE/lerdr/internal/transport"
+	"github.com/IGUNUBLUE/lerdr/internal/web"
 )
 
 const (

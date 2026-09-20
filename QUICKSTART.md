@@ -1,4 +1,4 @@
-# Herdr Mobile Relay Quick Start
+# Lerdr Quick Start
 
 Connect one Linux or macOS computer to your phone through a temporary Cloudflare
 tunnel, through a gateway that needs no Cloudflare account (see **Skip
@@ -16,7 +16,7 @@ rather than treating the whole connection as unavailable.
 ## 1. Install
 
 ```bash
-herdr plugin install IGUNUBLUE/herdr-mobile-relay
+herdr plugin install IGUNUBLUE/lerdr
 ```
 
 Choose **Temporary Cloudflare Tunnel** when the setup menu opens. If it does
@@ -37,11 +37,11 @@ Both paths print the QR once they know which origin serves the phone app.
 On the tunnel path, wait for the temporary tunnel, then choose:
 
 - **This temporary relay** for a simple one-computer trial.
-- **An existing installed Herdr app** to add this computer to an app you already
+- **An existing installed Lerdr app** to add this computer to an app you already
   use.
 
 On the gateway path the QR follows registration, and the app origin has to be an
-installed Herdr app — a gateway carries relay traffic only. It reuses a recorded
+installed Lerdr app — a gateway carries relay traffic only. It reuses a recorded
 or `HERDR_PHONE_APP_URL` origin, and asks for one when neither exists.
 
 Scan the QR or open the complete HTTPS setup link. Keep it private: it contains
@@ -80,7 +80,7 @@ QR. No account, no domain, no `cloudflared`. The gateways are run by the
 project: free, shared, best-effort.
 
 A gateway carries relay traffic only, so the phone app lives elsewhere: point
-`HERDR_PHONE_APP_URL` at an installed Herdr app, or host one with
+`HERDR_PHONE_APP_URL` at an installed Lerdr app, or host one with
 `make web-deploy`.
 
 A gateway cannot read your traffic — it copies frames that are already encrypted

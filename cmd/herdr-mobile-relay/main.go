@@ -13,16 +13,16 @@ import (
 	"strings"
 	"syscall"
 
-	"github.com/0cv/herdr-mobile-relay/internal/app"
-	"github.com/0cv/herdr-mobile-relay/internal/appdeploy"
-	"github.com/0cv/herdr-mobile-relay/internal/config"
-	"github.com/0cv/herdr-mobile-relay/internal/eventhook"
-	"github.com/0cv/herdr-mobile-relay/internal/release"
-	"github.com/0cv/herdr-mobile-relay/internal/setuphelper"
-	"github.com/0cv/herdr-mobile-relay/internal/speech"
-	"github.com/0cv/herdr-mobile-relay/internal/stablestate"
-	"github.com/0cv/herdr-mobile-relay/internal/support"
-	relayupdate "github.com/0cv/herdr-mobile-relay/internal/update"
+	"github.com/IGUNUBLUE/lerdr/internal/app"
+	"github.com/IGUNUBLUE/lerdr/internal/appdeploy"
+	"github.com/IGUNUBLUE/lerdr/internal/config"
+	"github.com/IGUNUBLUE/lerdr/internal/eventhook"
+	"github.com/IGUNUBLUE/lerdr/internal/release"
+	"github.com/IGUNUBLUE/lerdr/internal/setuphelper"
+	"github.com/IGUNUBLUE/lerdr/internal/speech"
+	"github.com/IGUNUBLUE/lerdr/internal/stablestate"
+	"github.com/IGUNUBLUE/lerdr/internal/support"
+	relayupdate "github.com/IGUNUBLUE/lerdr/internal/update"
 )
 
 var (

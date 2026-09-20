@@ -8,7 +8,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/0cv/herdr-mobile-relay/internal/question"
+	"github.com/IGUNUBLUE/lerdr/internal/question"
 )
 
 const (

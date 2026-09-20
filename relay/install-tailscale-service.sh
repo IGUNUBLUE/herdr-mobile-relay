@@ -54,7 +54,7 @@ mkdir -p "$UNIT_DIR"
 
 cat > "$UNIT_FILE" <<EOF
 [Unit]
-Description=Herdr Mobile Relay (Tailscale transport)
+Description=Lerdr (Tailscale transport)
 After=network-online.target
 Wants=network-online.target
 

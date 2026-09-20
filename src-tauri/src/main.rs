@@ -3,5 +3,5 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 fn main() {
-    herdr_mobile_lib::run()
+    lerdr_lib::run()
 }

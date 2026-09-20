@@ -6,7 +6,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/0cv/herdr-mobile-relay/internal/agentroots"
+	"github.com/IGUNUBLUE/lerdr/internal/agentroots"
 )
 
 func writeForegroundTranscript(t *testing.T, path, answer string) {

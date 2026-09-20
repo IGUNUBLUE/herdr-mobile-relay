@@ -1,4 +1,4 @@
-# Blind WSS rendezvous gateway for Herdr Mobile Relay.
+# Blind WSS rendezvous gateway for Lerdr.
 #
 # Build:  docker build -f Dockerfile.gateway -t herdr-gateway .
 # Run:    docker run -p 8443:8443 -e HERDR_GATEWAY_ADDR=:8443 herdr-gateway

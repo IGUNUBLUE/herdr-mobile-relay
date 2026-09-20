@@ -18,7 +18,7 @@ import (
 
 	"github.com/coder/websocket"
 
-	"github.com/0cv/herdr-mobile-relay/internal/config"
+	"github.com/IGUNUBLUE/lerdr/internal/config"
 )
 
 // rejectingResolver stands in for a relay whose device store no longer knows
