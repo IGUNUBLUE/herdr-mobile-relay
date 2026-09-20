@@ -161,6 +161,8 @@ jobs:
           yes | "$sdkmanager" --licenses >/dev/null || true
           "$sdkmanager" "ndk;$NDK_VERSION" "build-tools;35.0.0" "platforms;android-35"
           echo "NDK_HOME=$ANDROID_HOME/ndk/$NDK_VERSION" >> "$GITHUB_ENV"
+      - name: Initialize Android project
+        run: make android-init
       - name: Build universal release APK
         run: make android-apk
       - name: Align and sign APK
