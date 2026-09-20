@@ -3,7 +3,7 @@
 [![check](https://github.com/IGUNUBLUE/lerdr/actions/workflows/check.yml/badge.svg)](https://github.com/IGUNUBLUE/lerdr/actions/workflows/check.yml)
 
 Lerdr is the mobile companion for [Herdr](https://herdr.dev) coding agents —
-your agents, in your pocket, Telegram-style. Each Linux or macOS computer
+your agents, in your pocket. Each Linux or macOS computer
 runs its own relay; the app connects to all of them and merges every agent
 into one place: prompts, approvals, plan questions, terminal output, and
 notifications. Ships as a signed native Android APK, with the same app
@@ -44,9 +44,13 @@ needed) are the recommended paths — and scan the QR with your phone.
 
 ## What you get
 
-| Agents | Terminal | Pairing |
+| Agents | Terminal | Plan questions |
 | --- | --- | --- |
-| <img src="images/home.jpeg" alt="Agents grouped by workspace and worktree across computers" width="260"> | <img src="images/terminal.jpeg" alt="Mobile terminal with Copy, Speak, attachments, and terminal keys" width="260"> | <img src="images/devices-qr.jpeg" alt="One-use device invitation shown as a QR code" width="260"> |
+| <img src="images/home.jpeg" alt="Agents grouped by workspace and worktree across computers" width="260"> | <img src="images/terminal.jpeg" alt="Mobile terminal with Copy, Speak, attachments, and terminal keys" width="260"> | <img src="images/agent_plan.jpeg" alt="Structured plan question with multiple-choice answers and Previous and Next navigation" width="260"> |
+
+| Conversation | Workspace diff | Pairing |
+| --- | --- | --- |
+| <img src="images/conversations.jpeg" alt="Native agent conversation history rendered from the agent transcript" width="260"> | <img src="images/git-history.jpeg" alt="Read-only mobile Git diff with diff-aware colors and zoom controls" width="260"> | <img src="images/devices-qr.jpeg" alt="One-use device invitation shown as a QR code" width="260"> |
 
 - Monitor and control agents across several computers, grouped by status and
   workspace, with agents that need input pinned on top.
@@ -111,16 +115,18 @@ distinguish controller and reader devices, mutations default to
 controller-only, and the app can require device verification before it
 reconnects. [Details →](docs/security.md)
 
-## Upstream
+## Acknowledgments
 
 Lerdr began as a fork of
-[`0cv/herdr-mobile-relay`](https://github.com/0cv/herdr-mobile-relay), which
-created the relay architecture, the end-to-end pairing model, and the phone
-UI this project builds on. It has since diverged — a native Tauri 2 Android
-shell, the Tailscale Serve transport, native notifications/haptics/
-biometrics, and signed APK releases — and is maintained and released
-independently here. Thanks and credit to the upstream authors; the AGPL
-license below carries their copyright forward.
+[`0cv/herdr-mobile-relay`](https://github.com/0cv/herdr-mobile-relay) by
+Christophe Vidal. The upstream project created the relay architecture, the
+end-to-end encrypted pairing model, and the phone UI this project builds
+on — thank you.
+
+It has since diverged — a native Tauri 2 Android shell, the Tailscale Serve
+transport, native notifications/haptics/biometrics, and signed APK
+releases — and is maintained and released independently here. The upstream
+copyright is carried forward by the AGPL license below.
 
 ## License
 
