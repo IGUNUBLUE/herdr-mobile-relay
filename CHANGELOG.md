@@ -5,6 +5,54 @@ project follows [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.22.0] - 2026-09-20
+
+### Added
+
+- **Tailscale Serve transport** (Linux): publish the relay as tailnet-only
+  HTTPS through `tailscale serve` — no Cloudflare account and no third-party
+  gateway. The setup menu gains a `t` option, the Makefile gains
+  `tailscale-setup`, `tailscale-teardown`, `tailscale-status`, and
+  `tailscale-service-install`, and `herdr-plugin.toml` exposes a
+  `tailscale-setup` action. Hostname and MagicDNS suffix are resolved from
+  `tailscale status` at runtime, so it works on any tailnet. See
+  [docs/tailscale.md](docs/tailscale.md).
+- Standalone systemd user service for the Tailscale path that runs the relay
+  directly — `tailscaled` owns the tailnet listener, so there is no tunnel
+  process to babysit, and pairings survive reboots on the stable hostname.
+- Mobile UI live-state layer: status dots pulse while work flows and breathe
+  while an agent waits on input, cards gain elevation tokens and press
+  feedback, lists enter staggered, the terminal gets a streaming top edge
+  while the agent works, and the header reports the live transport path
+  (`ws`, `relayed`, `p2p`). All decorative motion honors
+  `prefers-reduced-motion`.
+- Tactile confirmations: `navigator.vibrate` on sends and approvals with a
+  distinct double-tick on denies, skeleton cards instead of a dead "Loading
+  agents…" state, pull-to-refresh on the agent list that pings live relays
+  and redials disconnected ones, and a second-grain elapsed counter on
+  working agents for the first ninety seconds.
+- `devin` agent logo kind (LobeHub mark), integration logo + presence dot in
+  the header while a terminal is open, and the same identity slot on
+  activity rows.
+
+### Changed
+
+- The truncated-history notice ("Older terminal history is not shown…")
+  renders inside the transcript at the cut boundary instead of occupying
+  fixed space under the composer, and scrolls away with the content.
+- Routine send confirmations ("Prompt sent", "Password sent") no longer fire
+  overlay toasts: the action button flashes a checkmark for ~1.4s instead.
+  Errors keep toast treatment.
+- `tailscale-setup` prints an actionable `HERDR_RELAY_BIN` hint when the
+  verified release is absent instead of the bare launcher error.
+
+### Fixed
+
+- The Tailscale systemd unit now loads `relay.env` via `EnvironmentFile=`,
+  so the service-managed relay actually carries its relay key and can arm
+  pairing invitations (previously logged `no relay key configured`).
+- The unit uses a normalized absolute relay path, which systemd requires.
+
 ## [0.21.3] - 2026-09-15
 
 ### Fixed

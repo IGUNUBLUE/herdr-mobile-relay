@@ -171,9 +171,12 @@ grep -Fq 'context: ${HERDR_GATEWAY_BUILD_CONTEXT:-./gateway-source}' \
     "$BUNDLE_DIR/docker-compose.yml" || fail "compose file lost the bundled build context"
 grep -Fq 'HERDR_GATEWAY_BUILD_CONTEXT="./gateway-source"' "$BUNDLE_DIR/.env" ||
     fail ".env lost the bundled build context"
-grep -Fq 'HERDR_GATEWAY_VERSION: ${HERDR_GATEWAY_VERSION:-0.21.3}' \
+# The gateway release default tracks the plugin version in herdr-plugin.toml.
+EXPECTED_VERSION="$(sed -n 's/^version = "\([^"]*\)"/\1/p' "$REPO_DIR/herdr-plugin.toml" | head -1)"
+[ -n "$EXPECTED_VERSION" ] || fail "could not read the plugin version"
+grep -Fq "HERDR_GATEWAY_VERSION: \${HERDR_GATEWAY_VERSION:-$EXPECTED_VERSION}" \
     "$BUNDLE_DIR/docker-compose.yml" || fail "compose file does not pass the gateway release to the build"
-grep -Fq 'HERDR_GATEWAY_VERSION=0.21.3' "$BUNDLE_DIR/.env" ||
+grep -Fq "HERDR_GATEWAY_VERSION=$EXPECTED_VERSION" "$BUNDLE_DIR/.env" ||
 
     fail ".env does not record the deployed gateway release"
 grep -Eq '^HERDR_GATEWAY_REVISION=[0-9a-f]{40}$' "$BUNDLE_DIR/.env" ||

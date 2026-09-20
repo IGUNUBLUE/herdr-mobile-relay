@@ -1,10 +1,13 @@
 # Herdr Mobile Relay Quick Start
 
 Connect one Linux or macOS computer to your phone through a temporary Cloudflare
-tunnel, or through a gateway that needs no Cloudflare account (see **Skip
-Cloudflare**). You need Herdr 0.7.5 or newer, Git, and `curl`. Herdr 0.9.0 is
-recommended for the complete live JSON inventory and workspace-management
-surface, but it is not the relay's minimum supported version.
+tunnel, through a gateway that needs no Cloudflare account (see **Skip
+Cloudflare**), or — on Linux — through **Tailscale Serve** when both devices are
+already on your tailnet (zero third parties; see
+[docs/tailscale.md](docs/tailscale.md)). You need Herdr 0.7.5 or newer, Git, and
+`curl`. Herdr 0.9.0 is recommended for the complete live JSON inventory and
+workspace-management surface, but it is not the relay's minimum supported
+version.
 
 The relay shows the installed Herdr client separately from the running server
 version and protocol. If those differ, Settings reports the affected feature
@@ -13,7 +16,7 @@ rather than treating the whole connection as unavailable.
 ## 1. Install
 
 ```bash
-herdr plugin install 0cv/herdr-mobile-relay
+herdr plugin install IGUNUBLUE/herdr-mobile-relay
 ```
 
 Choose **Temporary Cloudflare Tunnel** when the setup menu opens. If it does

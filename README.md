@@ -1,12 +1,20 @@
 # Herdr Mobile Relay
 
-[![check](https://github.com/0cv/herdr-mobile-relay/actions/workflows/check.yml/badge.svg)](https://github.com/0cv/herdr-mobile-relay/actions/workflows/check.yml)
+[![check](https://github.com/IGUNUBLUE/herdr-mobile-relay/actions/workflows/check.yml/badge.svg)](https://github.com/IGUNUBLUE/herdr-mobile-relay/actions/workflows/check.yml)
 
 Control [Herdr](https://herdr.dev) agents from your phone. Each Linux or macOS
 computer runs its own relay; the phone connects to them and merges every agent
 into one installable web app.
 
-**Current version:** [`0.21.3`](https://github.com/0cv/herdr-mobile-relay/releases/tag/v0.21.3) · [Changelog](CHANGELOG.md)
+**Current version:** [`0.22.0`](https://github.com/IGUNUBLUE/herdr-mobile-relay/releases/tag/v0.22.0) · [Changelog](CHANGELOG.md)
+
+> [!NOTE]
+> **About this fork.** Tracks [`0cv/herdr-mobile-relay`](https://github.com/0cv/herdr-mobile-relay)
+> and adds a zero-third-party **Tailscale Serve** transport (Linux —
+> [docs/tailscale.md](docs/tailscale.md)) plus a mobile UX pass: live status
+> motion, haptics, pull-to-refresh, skeleton loaders, and per-integration
+> logos (Claude Code, Codex, Devin, OpenCode, Pi, Oh My Pi, Kimi, Qoder,
+> Hermes). Install it with `herdr plugin install IGUNUBLUE/herdr-mobile-relay`.
 
 
 > [!IMPORTANT]
@@ -28,7 +36,7 @@ running local server version and protocol. A server upgrade can enable or
 disable individual actions without changing the relay release.
 
 ```bash
-herdr plugin install 0cv/herdr-mobile-relay
+herdr plugin install IGUNUBLUE/herdr-mobile-relay
 ```
 
 The setup menu opens automatically after installation.
