@@ -4,6 +4,7 @@
   import ActivityDetail from '$components/ActivityDetail.svelte';
   import ActivityView from '$components/ActivityView.svelte';
   import AgentList from '$components/AgentList.svelte';
+  import AgentLogo from '$components/AgentLogo.svelte';
   import AgentRail from '$components/AgentRail.svelte';
   import LaunchView from '$components/LaunchView.svelte';
   import GlobalJump from '$components/GlobalJump.svelte';
@@ -588,13 +589,26 @@
         </svg>
       </Button>
     {/if}
-    <span
-      class={`status-dot status-${headerIndicator.tone}`}
-      class:hollow={headerIndicator.hollow}
-      class:live={headerIndicator.live}
-      role="img"
-      aria-label={headerIndicator.label}
-    ></span>
+    {#if activeAgent}
+      <span class="header-agent">
+        <AgentLogo agent={activeAgent.agent} />
+        <span
+          class={`status-dot status-${headerIndicator.tone}`}
+          class:hollow={headerIndicator.hollow}
+          class:live={headerIndicator.live}
+          role="img"
+          aria-label={headerIndicator.label}
+        ></span>
+      </span>
+    {:else}
+      <span
+        class={`status-dot status-${headerIndicator.tone}`}
+        class:hollow={headerIndicator.hollow}
+        class:live={headerIndicator.live}
+        role="img"
+        aria-label={headerIndicator.label}
+      ></span>
+    {/if}
     <div class="header-title">
       <h1>{headerTitle}</h1>
       {#if headerMeta}<span>{headerMeta}</span>{/if}
