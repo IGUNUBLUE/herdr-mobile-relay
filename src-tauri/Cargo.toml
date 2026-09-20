@@ -1,6 +1,6 @@
 [package]
 name = "herdr-mobile"
-version = "0.23.0"
+version = "0.23.1"
 description = "Native Android shell for the Herdr Mobile Relay web app"
 edition = "2021"
 rust-version = "1.77.2"
