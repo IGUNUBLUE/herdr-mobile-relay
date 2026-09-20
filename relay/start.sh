@@ -14,7 +14,10 @@ export PATH="/opt/homebrew/bin:/usr/local/bin:/home/linuxbrew/.linuxbrew/bin:$HO
 . "$SCRIPT_DIR/common.sh"
 
 ENV_FILE="$(relay_env_file "$SCRIPT_DIR")"
+# Both spellings go to the child: a pre-rename relay binary only reads
+# HERDR_RELAY_ENV, a renamed one reads LERDR_RELAY_ENV first.
 export HERDR_RELAY_ENV="$ENV_FILE"
+export LERDR_RELAY_ENV="$ENV_FILE"
 
 cleanup() {
     if [ -n "$TUNNEL_PID" ] && kill -0 "$TUNNEL_PID" 2>/dev/null; then
@@ -56,8 +59,8 @@ if ! command -v herdr >/dev/null 2>&1 && [ -z "${HERDR_BIN:-}" ]; then
     echo "✗ herdr is required. Install Herdr, then run Quick Start again."
     exit 1
 fi
-PORT="${HERDR_RELAY_PORT:-8375}"
-HOST="${HERDR_RELAY_HOST:-127.0.0.1}"
+PORT="${LERDR_RELAY_PORT:-${HERDR_RELAY_PORT:-8375}}"
+HOST="${LERDR_RELAY_HOST:-${HERDR_RELAY_HOST:-127.0.0.1}}"
 GATEWAY_URL="$(gateway_url "$ENV_FILE")"
 TUNNEL_TARGET_HOST="$HOST"
 if [ "$TUNNEL_TARGET_HOST" = "0.0.0.0" ]; then
@@ -71,9 +74,10 @@ fi
 # gateway keeps a stable identity, so its pairings survive a restart.
 if [ -z "$GATEWAY_URL" ]; then
     export HERDR_RELAY_REARM_BOOTSTRAP=1
+    export LERDR_RELAY_REARM_BOOTSTRAP=1
 fi
 
-if [ "${HERDR_DEV_TUNNEL:-}" != 1 ] && installed_relay_service_active; then
+if [ "${LERDR_DEV_TUNNEL:-${HERDR_DEV_TUNNEL:-}}" != 1 ] && installed_relay_service_active; then
     # The checkout's dev tunnel intentionally uses isolated ports and state,
     # so it may coexist with the installed production service.
     echo "▸ Restarting the installed background relay instead of starting a duplicate..."
@@ -140,7 +144,7 @@ if [ -n "$GATEWAY_URL" ]; then
     wait "$RELAY_PID"
 elif command -v cloudflared >/dev/null 2>&1; then
     echo "▸ Starting Cloudflare tunnel..."
-    LOG_FILE="$(mktemp "${TMPDIR:-/tmp}/herdr-cloudflared.XXXXXX")"
+    LOG_FILE="$(mktemp "${TMPDIR:-/tmp}/lerdr-cloudflared.XXXXXX")"
     cloudflared tunnel --config /dev/null --url "http://$TUNNEL_TARGET_HOST:$PORT" >"$LOG_FILE" 2>&1 &
     TUNNEL_PID=$!
 

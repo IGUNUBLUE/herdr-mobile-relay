@@ -6,10 +6,10 @@ SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 # shellcheck source=common.sh
 . "$SCRIPT_DIR/common.sh"
 
-if [ -z "${HERDR_RELAY_ENV:-}" ]; then
+if [ -z "${LERDR_RELAY_ENV:-${HERDR_RELAY_ENV:-}}" ]; then
     SERVICE_ENV="$(installed_service_env_file)"
     if [ -n "$SERVICE_ENV" ]; then
-        export HERDR_RELAY_ENV="$SERVICE_ENV"
+        export LERDR_RELAY_ENV="$SERVICE_ENV"
         echo "Reusing the installed relay configuration:"
         echo "  $SERVICE_ENV"
         echo ""

@@ -1,7 +1,60 @@
 #!/bin/bash
 
+# Operator-facing variables read their LERDR_ name first and the pre-rename
+# HERDR_ name as a fallback, so existing relay.env files and documented
+# invocations keep working. Host-injected variables (HERDR_RELAY_TOKEN,
+# HERDR_RELAY_PORT, HERDR_RELAY_HOST, HERDR_PLUGIN_CONFIG_DIR, HERDR_SOCKET_PATH,
+# HERDR_BIN) are not folded through this: the herdr host exports them under
+# their own names and this layer must not shadow that contract.
+relay_env() {
+    local lerdr_name="LERDR_$1"
+    local herdr_name="HERDR_$1"
+    printf '%s\n' "${!lerdr_name:-${!herdr_name:-}}"
+}
+
+relay_env_or() {
+    local value
+    value="$(relay_env "$1")"
+    printf '%s\n' "${value:-$2}"
+}
+
+# env_file_setting FILE SUFFIX prints a relay env-file value, reading the
+# LERDR_ key first and the HERDR_ key an older install may have written.
+env_file_setting() {
+    local env_file="$1"
+    local suffix="$2"
+    local value
+
+    value="$(env_file_value "$env_file" "LERDR_$suffix")"
+    if [ -z "$value" ]; then
+        value="$(env_file_value "$env_file" "HERDR_$suffix")"
+    fi
+    printf '%s\n' "$value"
+}
+
+# Carries a pre-rename directory forward to its lerdr name when the new path
+# does not exist yet, so installed state survives the product rename.
+migrate_legacy_dir() {
+    local legacy="$1"
+    local current="$2"
+
+    if [ -e "$current" ] || [ -L "$current" ] || [ ! -e "$legacy" ]; then
+        return 0
+    fi
+    mv "$legacy" "$current"
+}
+
 relay_release_root() {
-    printf '%s\n' "${HERDR_RELEASE_ROOT:-${XDG_DATA_HOME:-$HOME/.local/share}/herdr-mobile-relay}"
+    local configured
+    configured="$(relay_env RELEASE_ROOT)"
+    if [ -n "$configured" ]; then
+        printf '%s\n' "$configured"
+        return
+    fi
+    migrate_legacy_dir \
+        "${XDG_DATA_HOME:-$HOME/.local/share}/herdr-mobile-relay" \
+        "${XDG_DATA_HOME:-$HOME/.local/share}/lerdr"
+    printf '%s\n' "${XDG_DATA_HOME:-$HOME/.local/share}/lerdr"
 }
 
 
@@ -9,14 +62,16 @@ relay_binary() {
     local binary
     local common_dir
     local packaged_binary
+    local configured
 
     common_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd -P)"
-    packaged_binary="$(dirname "$common_dir")/herdr-mobile-relay"
+    packaged_binary="$(dirname "$common_dir")/lerdr"
     if [ -f "$(dirname "$common_dir")/release-manifest.json" ] &&
        [ -x "$packaged_binary" ]; then
         binary="$packaged_binary"
     else
-        binary="${HERDR_RELAY_BIN:-$(relay_release_root)/current/herdr-mobile-relay}"
+        configured="$(relay_env RELAY_BIN)"
+        binary="${configured:-$(relay_release_root)/current/lerdr}"
     fi
     if [ ! -x "$binary" ]; then
         echo "✗ Verified relay release is unavailable: $binary" >&2
@@ -75,9 +130,11 @@ relay_env_file() {
     local script_dir="$1"
     local config_dir
     local plugin_env
+    local configured
 
-    if [ -n "${HERDR_RELAY_ENV:-}" ]; then
-        printf '%s\n' "$HERDR_RELAY_ENV"
+    configured="$(relay_env RELAY_ENV)"
+    if [ -n "$configured" ]; then
+        printf '%s\n' "$configured"
         return
     fi
     if [ -z "${HERDR_PLUGIN_CONFIG_DIR:-}" ]; then
@@ -204,7 +261,7 @@ read_cloudflared_relay_config() {
     case "$origin" in
         "127.0.0.1:$expected_port"|"localhost:$expected_port") ;;
         *)
-            echo "✗ Ingress origin $service_url does not match HERDR_RELAY_PORT=$expected_port." >&2
+            echo "✗ Ingress origin $service_url does not match LERDR_RELAY_PORT=$expected_port." >&2
             return 1
             ;;
     esac
@@ -246,7 +303,7 @@ cloudflared_origin_cert() {
 
 # The Cloudflare name of a tunnel UUID. A generated config records the UUID as
 # its `tunnel:` scalar, so anything that reasons about the tunnel *name* — the
-# Herdr namespace guard above all — has to ask Cloudflare which name the id was
+# Lerdr namespace guard above all — has to ask Cloudflare which name the id was
 # created with. Fails when the certificate cannot authorize the lookup, when
 # Cloudflare refuses it, or when the id names no live tunnel.
 cloudflared_tunnel_name_by_id() {
@@ -256,7 +313,7 @@ cloudflared_tunnel_name_by_id() {
     local name
 
     [ -r "$origin_cert" ] || return 1
-    list_output="$(mktemp "${TMPDIR:-/tmp}/herdr-tunnel-list.XXXXXX")" || return 1
+    list_output="$(mktemp "${TMPDIR:-/tmp}/lerdr-tunnel-list.XXXXXX")" || return 1
     if ! cloudflared tunnel --origincert "$origin_cert" list --id "$uuid" --output json > "$list_output"; then
         rm -f "$list_output"
         return 1
@@ -320,21 +377,44 @@ cloudflare_routed_hostname() {
         head -1
 }
 
+# The pre-rename Cloudflare config filename is still honored: a deployment that
+# already wrote config-herdr-mobile-relay.yml keeps using that file rather than
+# being handed a fresh empty path. New installs get config-lerdr.yml.
+cloudflared_config_default() {
+    local current="$HOME/.cloudflared/config-lerdr.yml"
+    local legacy="$HOME/.cloudflared/config-herdr-mobile-relay.yml"
+
+    if [ ! -r "$current" ] && [ -r "$legacy" ]; then
+        printf '%s\n' "$legacy"
+        return
+    fi
+    printf '%s\n' "$current"
+}
+
 installed_service_env_file() {
     local service_file
+    local legacy_file
 
     case "$(uname -s)" in
         Linux)
-            service_file="$HOME/.config/systemd/user/herdr-mobile-relay.service"
+            service_file="$HOME/.config/systemd/user/lerdr.service"
+            legacy_file="$HOME/.config/systemd/user/herdr-mobile-relay.service"
+            if [ ! -r "$service_file" ]; then
+                service_file="$legacy_file"
+            fi
             if [ -r "$service_file" ]; then
-                sed -n 's/^Environment=HERDR_RELAY_ENV=//p' "$service_file" | tail -1
+                sed -nE 's/^Environment=(LERDR|HERDR)_RELAY_ENV=//p' "$service_file" | tail -1
             fi
             ;;
         Darwin)
-            service_file="$HOME/Library/LaunchAgents/com.herdr-mobile-relay.service.plist"
+            service_file="$HOME/Library/LaunchAgents/com.lerdr.service.plist"
+            legacy_file="$HOME/Library/LaunchAgents/com.herdr-mobile-relay.service.plist"
+            if [ ! -r "$service_file" ]; then
+                service_file="$legacy_file"
+            fi
             if [ -r "$service_file" ]; then
                 awk '
-                    /<key>HERDR_RELAY_ENV<\/key>/ { found = 1; next }
+                    /<key>(LERDR|HERDR)_RELAY_ENV<\/key>/ { found = 1; next }
                     found && /<string>/ {
                         sub(/^.*<string>/, "")
                         sub(/<\/string>.*$/, "")
@@ -352,16 +432,23 @@ update_launchd_release_paths() {
     local service_wrapper="$2"
     local work_dir="$3"
     local env_file="${4:-}"
-    local plist_buddy="${HERDR_PLIST_BUDDY:-/usr/libexec/PlistBuddy}"
+    local label="${5:-com.lerdr.service}"
+    local env_key="${6:-LERDR_RELAY_ENV}"
+    local stale_key=HERDR_RELAY_ENV
+    local plist_buddy="${LERDR_PLIST_BUDDY:-${HERDR_PLIST_BUDDY:-/usr/libexec/PlistBuddy}}"
 
     [ -x "$plist_buddy" ] || {
         echo "PlistBuddy is unavailable: $plist_buddy" >&2
         return 1
     }
+    [ "$env_key" = "$stale_key" ] && stale_key=LERDR_RELAY_ENV
+    "$plist_buddy" -c "Set :Label $label" "$plist"
     "$plist_buddy" -c "Set :ProgramArguments:0 $service_wrapper" "$plist"
     "$plist_buddy" -c "Set :WorkingDirectory $work_dir" "$plist"
+    # The other spelling is dropped rather than left to shadow the new key.
+    "$plist_buddy" -c "Delete :EnvironmentVariables:$stale_key" "$plist" >/dev/null 2>&1 || true
     if [ -n "$env_file" ]; then
-        "$plist_buddy" -c "Set :EnvironmentVariables:HERDR_RELAY_ENV $env_file" "$plist"
+        "$plist_buddy" -c "Set :EnvironmentVariables:$env_key $env_file" "$plist"
     fi
 }
 
@@ -451,13 +538,20 @@ reload_launchd_service_definition() {
 }
 
 installed_relay_service_active() {
+    local label
     case "$(uname -s)" in
         Darwin)
-            launchd_service_loaded "gui/$(id -u)/com.herdr-mobile-relay.service"
+            for label in com.lerdr.service com.herdr-mobile-relay.service; do
+                launchd_service_loaded "gui/$(id -u)/$label" && return 0
+            done
+            return 1
             ;;
         Linux)
-            command -v systemctl >/dev/null 2>&1 &&
-                systemctl --user is-active --quiet herdr-mobile-relay.service
+            command -v systemctl >/dev/null 2>&1 || return 1
+            for label in lerdr.service herdr-mobile-relay.service; do
+                systemctl --user is-active --quiet "$label" && return 0
+            done
+            return 1
             ;;
         *)
             return 1
@@ -466,12 +560,25 @@ installed_relay_service_active() {
 }
 
 restart_installed_relay_service() {
+    local label
     case "$(uname -s)" in
         Darwin)
-            launchctl kickstart -k "gui/$(id -u)/com.herdr-mobile-relay.service"
+            for label in com.lerdr.service com.herdr-mobile-relay.service; do
+                if launchd_service_loaded "gui/$(id -u)/$label"; then
+                    launchctl kickstart -k "gui/$(id -u)/$label"
+                    return
+                fi
+            done
+            return 1
             ;;
         Linux)
-            systemctl --user restart herdr-mobile-relay.service
+            for label in lerdr.service herdr-mobile-relay.service; do
+                if systemctl --user cat "$label" >/dev/null 2>&1; then
+                    systemctl --user restart "$label"
+                    return
+                fi
+            done
+            return 1
             ;;
         *)
             return 1
@@ -497,7 +604,7 @@ assert_service_env_matches() {
     echo "  This command resolved: $resolved_env" >&2
     echo "  Installed service uses: $service_env" >&2
     echo "  Run the matching Herdr plugin action, or explicitly set:" >&2
-    echo "  HERDR_RELAY_ENV=$service_env" >&2
+    echo "  LERDR_RELAY_ENV=$service_env" >&2
     return 1
 }
 
@@ -505,7 +612,7 @@ assert_service_env_matches() {
 # to be read. Under the setup menu it must not: the menu pauses once on the way
 # back, so a second prompt here would cost two keystrokes to return.
 pause_before_close() {
-    [ "${HERDR_SETUP_MENU:-}" != 1 ] || return 0
+    [ "$(relay_env SETUP_MENU)" != 1 ] || return 0
     if [ -t 0 ]; then
         echo ""
         read -r -p "Press Enter to close this pane." _answer
@@ -541,7 +648,7 @@ node_bin_dir() {
     local on_path=""
 
     if [ -n "$env_file" ] && [ -f "$env_file" ]; then
-        recorded="$(env_file_value "$env_file" HERDR_APP_DEPLOY_NODE_DIR)"
+        recorded="$(env_file_setting "$env_file" APP_DEPLOY_NODE_DIR)"
     fi
     if on_path="$(command -v node 2>/dev/null)"; then
         on_path="$(dirname "$on_path")"
@@ -710,7 +817,7 @@ persist_github_token() {
     printf '%s\n' "$GH_TOKEN" > "$temp_file"
     chmod 600 "$temp_file"
     mv "$temp_file" "$token_file"
-    set_env_value_atomic "$env_file" HERDR_GITHUB_TOKEN_FILE "$token_file"
+    set_env_value_atomic "$env_file" LERDR_GITHUB_TOKEN_FILE "$token_file"
 }
 
 append_env_default() {
@@ -727,6 +834,7 @@ append_env_default() {
 ensure_relay_env() {
     local env_file="$1"
     local cloudflared_config="${2:-}"
+    local token
 
     if [ ! -f "$env_file" ]; then
         umask 077
@@ -735,11 +843,17 @@ ensure_relay_env() {
     fi
 
     chmod 600 "$env_file"
-    if ! grep -q '^HERDR_RELAY_TOKEN=' "$env_file" || [ -z "$(env_file_value "$env_file" HERDR_RELAY_TOKEN)" ]; then
-        set_env_value_atomic "$env_file" HERDR_RELAY_TOKEN "$(generate_token)"
+    if ! grep -qE '^(LERDR|HERDR)_RELAY_TOKEN=' "$env_file" ||
+       [ -z "$(env_file_setting "$env_file" RELAY_TOKEN)" ]; then
+        # Both spellings carry the same token: a rollback to a pre-rename
+        # binary still reads HERDR_RELAY_TOKEN.
+        token="$(generate_token)"
+        set_env_value_atomic "$env_file" HERDR_RELAY_TOKEN "$token"
+        set_env_value_atomic "$env_file" LERDR_RELAY_TOKEN "$token"
     fi
-    if ! grep -q '^HERDR_RELAY_INSTANCE_ID=' "$env_file" || [ -z "$(env_file_value "$env_file" HERDR_RELAY_INSTANCE_ID)" ]; then
-        set_env_value_atomic "$env_file" HERDR_RELAY_INSTANCE_ID "$(generate_instance_id)"
+    if ! grep -qE '^(LERDR|HERDR)_RELAY_INSTANCE_ID=' "$env_file" ||
+       [ -z "$(env_file_setting "$env_file" RELAY_INSTANCE_ID)" ]; then
+        set_env_value_atomic "$env_file" LERDR_RELAY_INSTANCE_ID "$(generate_instance_id)"
     fi
     if [ -n "$cloudflared_config" ]; then
         append_env_default "$env_file" CLOUDFLARED_CONFIG "$cloudflared_config"
@@ -752,13 +866,19 @@ ensure_relay_env() {
 
 load_relay_env() {
     local env_file="$1"
-    if [ ! -f "$env_file" ]; then
-        return
+    if [ -f "$env_file" ]; then
+        set -a
+        # shellcheck source=/dev/null
+        . "$env_file"
+        set +a
     fi
-    set -a
-    # shellcheck source=/dev/null
-    . "$env_file"
-    set +a
+    # Mirror renamed keys onto the legacy spellings these scripts still read.
+    # LERDR_ wins over HERDR_, matching the binary's own resolution.
+    HERDR_RELAY_TOKEN="${LERDR_RELAY_TOKEN:-${HERDR_RELAY_TOKEN:-}}"
+    HERDR_RELAY_HOST="${LERDR_RELAY_HOST:-${HERDR_RELAY_HOST:-}}"
+    HERDR_RELAY_PORT="${LERDR_RELAY_PORT:-${HERDR_RELAY_PORT:-}}"
+    HERDR_RELAY_PLUGIN_PORT="${LERDR_RELAY_PLUGIN_PORT:-${HERDR_RELAY_PLUGIN_PORT:-}}"
+    HERDR_RELAY_INSTANCE_ID="${LERDR_RELAY_INSTANCE_ID:-${HERDR_RELAY_INSTANCE_ID:-}}"
 }
 
 wait_for_relay_health() {
@@ -915,18 +1035,19 @@ build_setup_fragment() {
 }
 
 # The configured blind gateway base URLs as a comma-separated candidate list —
-# the same shape HERDR_GATEWAY_URL takes. The relay measures healthy candidates
+# the same shape LERDR_GATEWAY_URL takes. The relay measures healthy candidates
 # concurrently; configured order breaks close ties and is the fallback when no
 # probe succeeds. Empty means the relay keeps using a Cloudflare tunnel.
 gateway_urls() {
-    local env_file="${1:-${HERDR_RELAY_ENV:-}}"
-    local raw="${HERDR_GATEWAY_URL:-}"
+    local env_file="${1:-$(relay_env RELAY_ENV)}"
+    local raw
     local old_ifs
     local list=""
     local entry
 
+    raw="$(relay_env GATEWAY_URL)"
     if [ -z "$raw" ] && [ -n "$env_file" ]; then
-        raw="$(env_file_value "$env_file" HERDR_GATEWAY_URL)"
+        raw="$(env_file_setting "$env_file" GATEWAY_URL)"
     fi
     old_ifs="$IFS"
     IFS=','
@@ -957,17 +1078,21 @@ gateway_url() {
 # The gateway candidates this project operates for the community. They are
 # compiled in so the free shared path costs a user no hostname, no account, and
 # no typing: picking it in the chooser is the whole setup. The value has the
-# same comma-separated shape as HERDR_GATEWAY_URL. An operator points elsewhere
-# with HERDR_COMMUNITY_GATEWAY_URL; an explicitly empty value means "no
+# same comma-separated shape as LERDR_GATEWAY_URL. An operator points elsewhere
+# with LERDR_COMMUNITY_GATEWAY_URL; an explicitly empty value means "no
 # community gateway", which is how a test or fork switches the option off.
-HERDR_COMMUNITY_GATEWAY_DEFAULT="wss://gw1.herdr-mobile.dev,wss://gw2.herdr-mobile.dev"
+LERDR_COMMUNITY_GATEWAY_DEFAULT="wss://gw1.herdr-mobile.dev,wss://gw2.herdr-mobile.dev"
 
 community_gateway_url() {
+    if [ "${LERDR_COMMUNITY_GATEWAY_URL+set}" = "set" ]; then
+        printf '%s\n' "$LERDR_COMMUNITY_GATEWAY_URL"
+        return
+    fi
     if [ "${HERDR_COMMUNITY_GATEWAY_URL+set}" = "set" ]; then
         printf '%s\n' "$HERDR_COMMUNITY_GATEWAY_URL"
         return
     fi
-    printf '%s\n' "$HERDR_COMMUNITY_GATEWAY_DEFAULT"
+    printf '%s\n' "$LERDR_COMMUNITY_GATEWAY_DEFAULT"
 }
 
 # Canonicalizes anything a person might reasonably type — gw.example.com,
@@ -1045,7 +1170,9 @@ prompt_gateway_subscriptions() {
         return 1
     fi
     while true; do
-        if [ "${HERDR_GATEWAY_SUBSCRIPTIONS+set}" = "set" ]; then
+        if [ "${LERDR_GATEWAY_SUBSCRIPTIONS+set}" = "set" ]; then
+            entered="$LERDR_GATEWAY_SUBSCRIPTIONS"
+        elif [ "${HERDR_GATEWAY_SUBSCRIPTIONS+set}" = "set" ]; then
             entered="$HERDR_GATEWAY_SUBSCRIPTIONS"
         else
             echo "" >&2
@@ -1060,7 +1187,8 @@ prompt_gateway_subscriptions() {
             return 0
         fi
         echo "✗ Enter one or more gateway hostnames or ws:// / wss:// origins." >&2
-        [ "${HERDR_GATEWAY_SUBSCRIPTIONS+set}" != "set" ] || return 1
+        [ -z "${LERDR_GATEWAY_SUBSCRIPTIONS+set}" ] &&
+            [ -z "${HERDR_GATEWAY_SUBSCRIPTIONS+set}" ] || return 1
     done
 }
 
@@ -1100,7 +1228,7 @@ gateway_healthz_ms() {
     local body_file
     local seconds
 
-    body_file="$(mktemp "${TMPDIR:-/tmp}/herdr-healthz.XXXXXX")" || return 1
+    body_file="$(mktemp "${TMPDIR:-/tmp}/lerdr-healthz.XXXXXX")" || return 1
     if ! seconds="$(
         curl --fail --silent --show-error \
             --connect-timeout 3 \
@@ -1157,7 +1285,7 @@ gateway_selection_choice() {
 # interchangeable public ones is ranked by distance — so Enter is always the
 # right answer for someone who does not care.
 #
-# The terminal is the only guard: HERDR_GATEWAY_SELECTION cannot serve as an
+# The terminal is the only guard: LERDR_GATEWAY_SELECTION cannot serve as an
 # "automation is driving" signal, because the setup menu loads relay.env into
 # the environment before running an action. Reading it here would let a saved
 # policy silently answer the question and, worse, carry an old own-gateway
@@ -1192,11 +1320,15 @@ set_gateway_url() {
     local url="$2"
 
     if [ -z "$url" ]; then
+        remove_env_value_atomic "$env_file" LERDR_GATEWAY_URL
         remove_env_value_atomic "$env_file" HERDR_GATEWAY_URL
+        remove_env_value_atomic "$env_file" LERDR_GATEWAY_SELECTION
         remove_env_value_atomic "$env_file" HERDR_GATEWAY_SELECTION
         return 0
     fi
-    set_env_value_atomic "$env_file" HERDR_GATEWAY_URL "$url"
+    # A stale pre-rename key must not shadow the value just written.
+    remove_env_value_atomic "$env_file" HERDR_GATEWAY_URL
+    set_env_value_atomic "$env_file" LERDR_GATEWAY_URL "$url"
 }
 
 # Records how the relay picks among the configured candidates. "ordered" keeps
@@ -1214,7 +1346,8 @@ set_gateway_selection() {
         ordered|latency) ;;
         *) return 1 ;;
     esac
-    set_env_value_atomic "$env_file" HERDR_GATEWAY_SELECTION "$selection"
+    remove_env_value_atomic "$env_file" HERDR_GATEWAY_SELECTION
+    set_env_value_atomic "$env_file" LERDR_GATEWAY_SELECTION "$selection"
 }
 
 # Percent-encodes one fragment value with the compiled encoder, so an entry of
@@ -1258,8 +1391,8 @@ build_transport_setup_fragment() {
 
 phone_app_base_url() {
     local relay_fallback="$1"
-    local env_file="${2:-${HERDR_RELAY_ENV:-}}"
-    local app_url="${HERDR_PHONE_APP_URL:-${HERDR_APP_DEPLOY_ORIGIN:-}}"
+    local env_file="${2:-$(relay_env RELAY_ENV)}"
+    local app_url="${LERDR_PHONE_APP_URL:-${HERDR_PHONE_APP_URL:-${LERDR_APP_DEPLOY_ORIGIN:-${HERDR_APP_DEPLOY_ORIGIN:-}}}}"
     local normalized
     local configured_origin
     local observed_origin
@@ -1283,7 +1416,7 @@ phone_app_base_url() {
     printf '%s\n' "$normalized"
 }
 
-phone_app_origin_serves_herdr() {
+phone_app_origin_serves_lerdr() {
     local origin="$1"
     local manifest
 
@@ -1299,9 +1432,11 @@ phone_app_origin_serves_herdr() {
         | grep -Eq '"name"[[:space:]]*:[[:space:]]*"(Lerdr|Herdr Mobile Relay)"'
 }
 
-# A separately hosted app uses herdr.<authorized-zone> by convention. Probe it
-# before defaulting a new computer to its relay-served copy: browser storage and
-# PWA identity are origin-scoped, so every relay must open the same app origin.
+# A separately hosted app uses lerdr.<authorized-zone> by convention; the
+# pre-rename convention was herdr.<zone>, which is still probed so an older
+# deployment is found. Either wins over the relay-served copy: browser storage
+# and PWA identity are origin-scoped, so every relay must open the same app
+# origin.
 discover_cloudflare_phone_app_origin() {
     local origin_cert="${TUNNEL_ORIGIN_CERT:-$HOME/.cloudflared/cert.pem}"
     local zone
@@ -1310,12 +1445,16 @@ discover_cloudflare_phone_app_origin() {
     [ -r "$origin_cert" ] || return 1
     zone="$(cloudflare_cert_zone_name "$origin_cert" 2>/dev/null)" || return 1
     [ -n "$zone" ] || return 1
-    candidate="https://herdr.$zone"
-    phone_app_origin_serves_herdr "$candidate" || return 1
-    printf '%s\n' "$candidate"
+    for candidate in "https://lerdr.$zone" "https://herdr.$zone"; do
+        if phone_app_origin_serves_lerdr "$candidate"; then
+            printf '%s\n' "$candidate"
+            return 0
+        fi
+    done
+    return 1
 }
 
-# Asks for the origin of an already-installed Herdr app and validates it with
+# Asks for the origin of an already-installed Lerdr app and validates it with
 # the same normalizer the setup link uses. Shared by the tunnel chooser below
 # and the gateway path, which has no relay-served origin of its own.
 prompt_phone_app_base_url() {
@@ -1343,13 +1482,13 @@ prompt_phone_app_base_url() {
             continue
         fi
         if ! normalized="$(
-            HERDR_PHONE_APP_URL="$entered_url" \
+            LERDR_PHONE_APP_URL="$entered_url" \
                 phone_app_base_url "$relay_fallback" "$env_file"
         )"; then
             continue
         fi
-        if ! phone_app_origin_serves_herdr "$normalized"; then
-            echo "✗ No Herdr app was found at $normalized." >&2
+        if ! phone_app_origin_serves_lerdr "$normalized"; then
+            echo "✗ No Lerdr app was found at $normalized." >&2
             echo "  Enter the exact domain shown in the installed app's Site settings." >&2
             if ! read -r -p "Use this address anyway? [y/N]: " confirmation; then
                 echo "" >&2
@@ -1380,13 +1519,13 @@ gateway_phone_app_base_url() {
         printf '%s\n' "$base"
         return 0
     fi
-    if [ -n "${HERDR_PHONE_APP_URL:-}" ] || [ ! -t 0 ]; then
-        echo "✗ Set HERDR_PHONE_APP_URL to the HTTPS origin that serves the Herdr phone app." >&2
+    if [ -n "${LERDR_PHONE_APP_URL:-${HERDR_PHONE_APP_URL:-}}" ] || [ ! -t 0 ]; then
+        echo "✗ Set LERDR_PHONE_APP_URL to the HTTPS origin that serves the Lerdr phone app." >&2
         echo "  The gateway carries relay traffic only; it does not host the app." >&2
         return 1
     fi
     echo "The gateway carries relay traffic only, so the phone app needs its own" >&2
-    echo "HTTPS origin. Enter an installed Herdr app, or host one with make web-deploy." >&2
+    echo "HTTPS origin. Enter an installed Lerdr app, or host one with make web-deploy." >&2
     echo "" >&2
     prompt_phone_app_base_url "" "$env_file"
 }
@@ -1426,17 +1565,18 @@ choose_phone_app_base_url() {
 
     configured_origin="$(dirname "$env_file")/phone-app-origin-configured"
     observed_origin="$(dirname "$env_file")/phone-app-origin"
-    if [ -z "${HERDR_PHONE_APP_URL:-}" ] && [ ! -s "$configured_origin" ]; then
-        if [ -n "${HERDR_APP_DEPLOY_ORIGIN:-}" ]; then
+    if [ -z "${LERDR_PHONE_APP_URL:-${HERDR_PHONE_APP_URL:-}}" ] && [ ! -s "$configured_origin" ]; then
+        local deploy_origin="${LERDR_APP_DEPLOY_ORIGIN:-${HERDR_APP_DEPLOY_ORIGIN:-}}"
+        if [ -n "$deploy_origin" ]; then
             discovered_origin="$(
-                HERDR_PHONE_APP_URL="$HERDR_APP_DEPLOY_ORIGIN" \
+                LERDR_PHONE_APP_URL="$deploy_origin" \
                     phone_app_base_url "$relay_fallback" "$env_file"
             )"
         else
             discovered_origin="$(discover_cloudflare_phone_app_origin || true)"
         fi
     fi
-    if [ -n "${HERDR_PHONE_APP_URL:-}" ] || [ ! -t 0 ]; then
+    if [ -n "${LERDR_PHONE_APP_URL:-${HERDR_PHONE_APP_URL:-}}" ] || [ ! -t 0 ]; then
         if [ -n "$discovered_origin" ]; then
             printf '%s\n' "$discovered_origin"
         else
@@ -1454,7 +1594,7 @@ choose_phone_app_base_url() {
         fi
     elif [ -n "$discovered_origin" ]; then
         current_origin="$discovered_origin"
-        echo "  Found an existing Herdr app in this Cloudflare zone." >&2
+        echo "  Found an existing Lerdr app in this Cloudflare zone." >&2
     elif [ -s "$observed_origin" ]; then
         current_origin="$(phone_app_base_url "$relay_fallback" "$env_file" || true)"
         [ -z "$current_origin" ] ||
@@ -1474,7 +1614,7 @@ choose_phone_app_base_url() {
             echo "     Switches the app origin to this computer's relay hostname." >&2
         fi
         echo "" >&2
-        menu_item 3 "Use another installed Herdr app" >&2
+        menu_item 3 "Use another installed Lerdr app" >&2
     else
         if [ "$setup_kind" = "temporary" ]; then
             menu_item 1 "This temporary relay (recommended for trying one relay)" >&2
@@ -1484,7 +1624,7 @@ choose_phone_app_base_url() {
             echo "     Uses this computer's verified hostname as the installed app." >&2
         fi
         echo "" >&2
-        menu_item 2 "An existing installed Herdr app" >&2
+        menu_item 2 "An existing installed Lerdr app" >&2
     fi
     echo "     Adds this computer to the same app as your other relays." >&2
     echo "" >&2
@@ -1504,7 +1644,7 @@ choose_phone_app_base_url() {
                 return
                 ;;
             relay)
-                HERDR_PHONE_APP_URL=relay phone_app_base_url "$relay_fallback" "$env_file"
+                LERDR_PHONE_APP_URL=relay phone_app_base_url "$relay_fallback" "$env_file"
                 return
                 ;;
             existing)

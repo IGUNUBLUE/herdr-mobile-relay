@@ -14,7 +14,7 @@ import (
 	"time"
 )
 
-const eventSubscriptionRequestID = "mobile-relay-events"
+const eventSubscriptionRequestID = "lerdr-events"
 
 type Event struct {
 	Event string          `json:"event"`
@@ -313,7 +313,7 @@ func (c *EventClient) snapshot(ctx context.Context) (SessionSnapshot, error) {
 	if err := setSocketDeadline(conn, requestCtx); err != nil {
 		return SessionSnapshot{}, fmt.Errorf("set Herdr snapshot socket deadline: %w", err)
 	}
-	const requestID = "mobile-relay-snapshot"
+	const requestID = "lerdr-snapshot"
 	request := map[string]any{"id": requestID, "method": "session.snapshot", "params": map[string]any{}}
 	if err := writeSocketJSON(conn, request); err != nil {
 		return SessionSnapshot{}, fmt.Errorf("write Herdr session snapshot: %w", err)

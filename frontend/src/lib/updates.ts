@@ -4,14 +4,14 @@ import type { AppDeploymentStatus, AppUpdateStatus, RelayConnectionView, RelayUp
 
 const APP_UPDATE_INTERVAL_MS = 24 * 60 * 60 * 1_000;
 const APP_RECHECK_INTERVAL_MS = 60 * 1_000;
-const PENDING_RELAY_UPDATES_KEY = 'herdr_pending_relay_updates';
-const UPDATE_PROGRESS_KEY = 'herdr_update_progress';
-const APP_RELOAD_TARGET_KEY = 'herdr_app_reload_target';
-const APP_RELOAD_ATTEMPTS_KEY = 'herdr_app_reload_attempts';
+const PENDING_RELAY_UPDATES_KEY = 'lerdr_pending_relay_updates';
+const UPDATE_PROGRESS_KEY = 'lerdr_update_progress';
+const APP_RELOAD_TARGET_KEY = 'lerdr_app_reload_target';
+const APP_RELOAD_ATTEMPTS_KEY = 'lerdr_app_reload_attempts';
 const MAX_AUTOMATIC_RELOAD_ATTEMPTS = 2;
 const sessionStartedRelayIds = new Set<string>();
 const APP_DEPLOY_SELF_UPDATE_MIN_VERSION = '0.13.3';
-export const MANAGED_UPDATE_COMMAND = 'HERDR_MOBILE_RELAY_NO_AUTO_SETUP=1 herdr plugin install 0cv/herdr-mobile-relay --yes';
+export const MANAGED_UPDATE_COMMAND = 'LERDR_NO_AUTO_SETUP=1 herdr plugin install IGUNUBLUE/lerdr --yes';
 export const CHECKOUT_UPDATE_COMMAND = 'git pull --ff-only && make service-install';
 const RELAY_UPDATE_STATES = new Set([
   'checking',
@@ -378,21 +378,21 @@ export function cacheBustedAppUrl(currentUrl: string, version: string, nonce = D
   const url = new URL(currentUrl);
   const cacheKey = version || 'current';
   url.pathname = '/index.html';
-  url.searchParams.set('herdr_reload', `${cacheKey}-${nonce}`);
+  url.searchParams.set('lerdr_reload', `${cacheKey}-${nonce}`);
   return url.toString();
 }
 
 export function normalizeReloadedAppUrl(currentUrl: string): string | null {
   const url = new URL(currentUrl);
   const buildEntry = /^\/builds\/[A-Za-z0-9._-]+\/(?:index\.html)?$/.test(url.pathname);
-  if (!url.searchParams.has('herdr_reload') && !buildEntry) return null;
+  if (!url.searchParams.has('lerdr_reload') && !buildEntry) return null;
   // Cloudflare Pages and relay-hosted apps both preserve the old /index.html
   // contract while routing the document to a digest-specific entry. Replace
   // that implementation path so it cannot become a second PWA route or leak a
   // reload marker into the installed app's address.
   if (url.pathname !== '/index.html' && url.pathname !== '/' && !buildEntry) return null;
   url.pathname = '/';
-  url.searchParams.delete('herdr_reload');
+  url.searchParams.delete('lerdr_reload');
   return url.toString();
 }
 

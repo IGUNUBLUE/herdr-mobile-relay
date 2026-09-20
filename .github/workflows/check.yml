@@ -37,8 +37,9 @@ jobs:
           cache: true
       - name: Run opt-in user-journal integration test
         env:
+          LERDR_TEST_JOURNAL: "1"
           HERDR_TEST_JOURNAL: "1"
-        run: go test ./cmd/herdr-mobile-relay -run '^TestJournalIntegration$' -count=1 -v
+        run: go test ./cmd/lerdr -run '^TestJournalIntegration$' -count=1 -v
 
   # The race detector more than doubles the Go suite, and the shell suites are
   # unrelated to it. Both used to sit behind `go test` in one serial job and
@@ -124,7 +125,7 @@ jobs:
           version="$(sed -n 's/^version = "\([^"]*\)"/\1/p' herdr-plugin.toml)"
           scripts/package-release.sh "$version" "$GITHUB_SHA" dist/release
           scripts/check-installed-release.sh \
-            "dist/release/herdr-mobile-relay_${version}_linux_amd64.tar.gz" \
+            "dist/release/lerdr_${version}_linux_amd64.tar.gz" \
             dist/release/checksums.txt "$version" "$GITHUB_SHA" linux/amd64
       - uses: actions/upload-artifact@v7
         with:
@@ -159,7 +160,7 @@ jobs:
           version="$(sed -n 's/^version = "\([^"]*\)"/\1/p' herdr-plugin.toml)"
           target="${{ matrix.target }}"
           scripts/check-installed-release.sh \
-            "dist/release/herdr-mobile-relay_${version}_${{ matrix.target }}.tar.gz" \
+            "dist/release/lerdr_${version}_${{ matrix.target }}.tar.gz" \
             dist/release/checksums.txt "$version" "$GITHUB_SHA" \
             "${target%_*}/${target#*_}"
 

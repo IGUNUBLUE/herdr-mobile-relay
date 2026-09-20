@@ -84,7 +84,7 @@ async function main(): Promise<void> {
     || baseline.identity.styleSha256 === bundleSet.candidate.identity.styleSha256) {
     throw new Error('CACHE_RECOVERY: baseline and candidate stylesheet identities must differ');
   }
-  const privateDir = await mkdtemp(join(tmpdir(), 'herdr-mobile-cache-recovery-'));
+  const privateDir = await mkdtemp(join(tmpdir(), 'lerdr-cache-recovery-'));
   const infoFile = join(privateDir, 'fixture-info.json');
   const suppliedBinary = option('--fixture');
   const binary = suppliedBinary || join(privateDir, 'fixture-bin');

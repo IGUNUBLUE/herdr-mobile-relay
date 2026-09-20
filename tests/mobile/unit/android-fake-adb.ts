@@ -21,7 +21,7 @@ const nativeLog = join(directory, 'native.log');
 const stoppedFile = join(directory, 'chrome-stopped');
 const nativeLine = (tag: string, message: string) => appendFileSync(nativeLog, `${(Date.now() / 1000).toFixed(3)} 546 1761 I ${tag}: ${message}\n`);
 if (args.join(' ') === 'version') output('Android Debug Bridge version 1.0.41\nVersion 35.0.2-12147458\nInstalled as /hypothetical/adb\n');
-else if (request === 'emu avd name') output(`${vending.avd || 'herdr-mobile-ci-fixture'}\nOK\n`);
+else if (request === 'emu avd name') output(`${vending.avd || 'lerdr-ci-fixture'}\nOK\n`);
 else if (args[0] !== '-s' || args[1] !== 'emulator-5554') fail('unexpected serial');
 else if (request === 'shell getprop') output(readFileSync(join(directory, 'getprop'), 'utf8'));
 else if (request.startsWith('shell getprop ')) {

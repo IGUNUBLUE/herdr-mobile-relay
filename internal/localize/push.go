@@ -91,7 +91,7 @@ var englishPushCatalog = map[PushCategory]pushTemplate{
 		validate: relayLabels,
 		render: func(labels PushLabels) PushMessage {
 			return PushMessage{
-				Title: "Herdr update available",
+				Title: "Lerdr update available",
 				Body:  "An update is available for " + labels.Relay + ".",
 			}
 		},
@@ -148,7 +148,7 @@ var chinesePushCatalog = map[PushCategory]pushTemplate{
 		validate: relayLabels,
 		render: func(labels PushLabels) PushMessage {
 			return PushMessage{
-				Title: "Herdr 有可用更新",
+				Title: "Lerdr 有可用更新",
 				Body:  labels.Relay + " 有可用更新。",
 			}
 		},

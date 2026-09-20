@@ -62,7 +62,7 @@ The setup menu opens by itself a moment after the install finishes. If it does
 not, open it:
 
 ```bash
-herdr plugin action invoke setup --plugin herdr-mobile-relay.events
+herdr plugin action invoke setup --plugin lerdr.events
 ```
 
 If your phones load the app from a separately hosted origin — every gateway
@@ -81,7 +81,7 @@ controller to create a reader or controller invitation from the phone.
 Previously paired phones cannot reuse their v0.19.1 key: pair them again with a
 freshly printed link.
 
-`HERDR_MOBILE_RELAY_NO_AUTO_SETUP=1` in front of the install command suppresses
+`LERDR_NO_AUTO_SETUP=1` in front of the install command suppresses
 the automatic menu; it exists for unattended upgrades, not for this one.
 
 ## The deployment-owner role
@@ -102,7 +102,7 @@ enter is not one of them, and the account has exactly one Pages project, the
 action attaches it for you if `relay.env` carries a `CLOUDFLARE_API_TOKEN` with
 Pages:Edit — the updater pins Wrangler 4.125.0 and skips Wrangler's differential
 asset cache during deployment because that upload path can fail against stale
-Pages cache state. Set `HERDR_APP_DEPLOY_ATTACH_DOMAIN=true` to allow that
+Pages cache state. Set `LERDR_APP_DEPLOY_ATTACH_DOMAIN=true` to allow that
 without being asked, or `false` to refuse. Otherwise it names the credential to
 set and offers to take a different origin.
 
@@ -147,7 +147,7 @@ signoff for a user-facing release.
 
 - **Update operation failed with `read canonical release: HTTP 403`:** an older
   relay's unauthenticated GitHub release check was rate-limited. Run
-  `HERDR_MOBILE_RELAY_NO_AUTO_SETUP=1 herdr plugin install IGUNUBLUE/lerdr --yes`
+  `LERDR_NO_AUTO_SETUP=1 herdr plugin install IGUNUBLUE/lerdr --yes`
   once on that computer as the signed-in user; current releases retry through
   the public release redirect and commit feed.
 - **Updated app still shows the previous version:** open Settings, choose

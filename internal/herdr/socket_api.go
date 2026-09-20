@@ -94,7 +94,7 @@ func (c *socketAPIClient) requestUnary(
 		return nil, false, fmt.Errorf("set Herdr socket API deadline: %w", err)
 	}
 
-	requestID := fmt.Sprintf("mobile-relay-api-%d", c.seq.Add(1))
+	requestID := fmt.Sprintf("lerdr-api-%d", c.seq.Add(1))
 	payload, err := json.Marshal(map[string]any{
 		"id": requestID, "method": method, "params": params,
 	})
@@ -257,7 +257,7 @@ func (c *socketAPIClient) requestConnected(
 		return response, false, fmt.Errorf("set Herdr socket API deadline: %w", err)
 	}
 
-	requestID := fmt.Sprintf("mobile-relay-api-%d", c.seq.Add(1))
+	requestID := fmt.Sprintf("lerdr-api-%d", c.seq.Add(1))
 	payload, err := json.Marshal(map[string]any{
 		"id": requestID, "method": method, "params": params,
 	})

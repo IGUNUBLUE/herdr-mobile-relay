@@ -442,7 +442,7 @@ func TestReportError(t *testing.T) {
 				t.Fatal(err)
 			}
 			defer file.Close()
-			t.Setenv("HERDR_RELAY_LOG_FORMAT", test.format)
+			t.Setenv("LERDR_RELAY_LOG_FORMAT", test.format)
 			t.Setenv("JOURNAL_STREAM", "")
 			reportErrorWithJournal(file, test.args, errors.New("bad config"), test.journal)
 			if _, err := file.Seek(0, io.SeekStart); err != nil {
@@ -453,7 +453,7 @@ func TestReportError(t *testing.T) {
 				t.Fatal(err)
 			}
 			if test.wantPlain {
-				if string(data) != "herdr-mobile-relay: bad config\n" {
+				if string(data) != "lerdr: bad config\n" {
 					t.Errorf("output = %q", data)
 				}
 				return
@@ -486,8 +486,8 @@ func TestReportErrorIgnoresInvalidLogLevel(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer file.Close()
-	t.Setenv("HERDR_RELAY_LOG_LEVEL", "verbose")
-	t.Setenv("HERDR_RELAY_LOG_FORMAT", "json")
+	t.Setenv("LERDR_RELAY_LOG_LEVEL", "verbose")
+	t.Setenv("LERDR_RELAY_LOG_FORMAT", "json")
 	reportError(file, nil, errors.New("invalid log level"))
 	if _, err := file.Seek(0, io.SeekStart); err != nil {
 		t.Fatal(err)

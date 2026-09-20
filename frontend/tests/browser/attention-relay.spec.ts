@@ -21,7 +21,7 @@ test('drives captured attention panes through the real relay', async ({ page }) 
   const wsURL = process.env.HERDR_ATTENTION_WS_URL;
   if (!wsURL) throw new Error('HERDR_ATTENTION_WS_URL is not configured');
   await page.addInitScript(({ relayURL }) => {
-    localStorage.setItem('herdr_relays', JSON.stringify([{
+    localStorage.setItem('lerdr_relays', JSON.stringify([{
       id: 'captured-attention',
       label: 'Captured relay',
       url: relayURL,
@@ -233,13 +233,13 @@ test('browses a full conversation through the real relay', async ({ page }) => {
   const wsURL = process.env.HERDR_ATTENTION_WS_URL;
   if (!wsURL) throw new Error('HERDR_ATTENTION_WS_URL is not configured');
   await page.addInitScript(({ relayURL }) => {
-    localStorage.setItem('herdr_relays', JSON.stringify([{
+    localStorage.setItem('lerdr_relays', JSON.stringify([{
       id: 'captured-attention',
       label: 'Captured relay',
       url: relayURL,
       token: 'attention-browser-test-key-32byt',
     }]));
-    localStorage.setItem('herdr_default_agent_view', 'conversation');
+    localStorage.setItem('lerdr_default_agent_view', 'conversation');
   }, { relayURL: wsURL });
   await page.goto('/');
 

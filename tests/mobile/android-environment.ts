@@ -857,7 +857,7 @@ async function ownedProvenance(serial: string, policy: AndroidEnvironmentPolicy,
   await requireOwnedDevice('android', serial);
   diagnostics?.setStage('verify owned AVD, foreground user and system image provenance');
   const expectedAvd = process.env.ANDROID_AVD_NAME || '';
-  if (!/^herdr-mobile-ci-[A-Za-z0-9-]+$/u.test(expectedAvd)) throw new Error('ANDROID_ENVIRONMENT: owned AVD name is required');
+  if (!/^lerdr-ci-[A-Za-z0-9-]+$/u.test(expectedAvd)) throw new Error('ANDROID_ENVIRONMENT: owned AVD name is required');
   const response = (await adb(serial, ['emu', 'avd', 'name'], timeout, diagnostics)).replace(/\r/gu, '');
   if (response !== `${expectedAvd}\nOK\n`) throw new Error('ANDROID_ENVIRONMENT: owned AVD identity mismatch');
   const user = await adb(serial, ['shell', 'am', 'get-current-user'], timeout, diagnostics);
@@ -1007,7 +1007,7 @@ async function readSnapshot(filename: string): Promise<AndroidEnvironmentSnapsho
     throw new Error('incomplete snapshot');
   }
   policyFromToolchains({ android: value.policy });
-  if (!/^emulator-\d+$/u.test(value.serial) || !/^herdr-mobile-ci-[A-Za-z0-9-]+$/u.test(value.avdName)
+  if (!/^emulator-\d+$/u.test(value.serial) || !/^lerdr-ci-[A-Za-z0-9-]+$/u.test(value.avdName)
     || !Number.isFinite(Date.parse(value.capturedAt)) || value.provenance.foregroundUser !== 0
     || !value.provenance.avdConfig || !value.provenance.sdkProperties || !value.provenance.sdkRevision
     || !/^[a-f0-9]{64}$/u.test(value.provenance.avdConfigSha256) || !/^[a-f0-9]{64}$/u.test(value.provenance.sdkPropertiesSha256)

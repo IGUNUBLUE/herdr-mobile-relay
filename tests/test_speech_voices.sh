@@ -2,7 +2,7 @@
 set -euo pipefail
 
 REPO_DIR="$(cd "$(dirname "$0")/.." && pwd)"
-WORK_DIR="$(mktemp -d "${TMPDIR:-/tmp}/herdr-speech-test.XXXXXX")"
+WORK_DIR="$(mktemp -d "${TMPDIR:-/tmp}/lerdr-speech-test.XXXXXX")"
 trap 'rm -rf "$WORK_DIR"' EXIT INT TERM
 
 SCRIPT_DIR="$WORK_DIR/relay"
@@ -10,17 +10,17 @@ mkdir -p "$SCRIPT_DIR"
 cp "$REPO_DIR/relay/speech-voices.sh" "$REPO_DIR/relay/common.sh" "$SCRIPT_DIR/"
 SCRIPT="$SCRIPT_DIR/speech-voices.sh"
 
-unset HERDR_RELAY_BIN
+unset LERDR_RELAY_BIN HERDR_RELAY_BIN
 export HOME="$WORK_DIR/home"
 export XDG_CACHE_HOME="$HOME/cache"
-export HERDR_RELEASE_ROOT="$HOME/releases-root"
+export LERDR_RELEASE_ROOT="$HOME/releases-root"
 export ARGV_FILE="$WORK_DIR/argv.txt"
 export STUB_EXIT=0
 
 # The catalog, the digests, and the downloads live in the relay binary, so a
 # stub that only records its argv proves the wrapper without any network.
-mkdir -p "$HERDR_RELEASE_ROOT/current"
-STUB="$HERDR_RELEASE_ROOT/current/herdr-mobile-relay"
+mkdir -p "$LERDR_RELEASE_ROOT/current"
+STUB="$LERDR_RELEASE_ROOT/current/lerdr"
 cat > "$STUB" <<'STUB'
 #!/bin/bash
 printf '%s\n' "$@" > "$ARGV_FILE"
@@ -79,7 +79,7 @@ else
 fi
 
 # Without an installed release there is nothing to download the voices with.
-if HERDR_RELEASE_ROOT="$HOME/absent" "$SCRIPT" --missing \
+if LERDR_RELEASE_ROOT="$HOME/absent" "$SCRIPT" --missing \
     >/dev/null 2>"$WORK_DIR/absent.log"; then
     echo "wrapper ran without an installed relay release" >&2
     exit 1

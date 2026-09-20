@@ -90,7 +90,7 @@ const entry = descriptor?.files?.entry?.path;
 if (typeof entry !== 'string' || !entry.startsWith('builds/') || !entry.endsWith('/index.html')) {
   throw new Error('release.json does not describe a build-specific entry');
 }
-const files = ['index.html', 'herdr-bootstrap.js', entry, `assets/${appScript}`, `assets/${appStyle}`];
+const files = ['index.html', 'lerdr-bootstrap.js', entry, `assets/${appScript}`, `assets/${appStyle}`];
 let totalRaw = 0;
 let totalGzip = 0;
 let totalBrotli = 0;

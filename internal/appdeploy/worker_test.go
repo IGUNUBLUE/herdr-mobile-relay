@@ -271,6 +271,7 @@ func TestRunRejectsWebBundleThatDoesNotMatchReleaseManifest(t *testing.T) {
 }
 
 func TestRunPinsWranglerToRelayOwnedWorkingDirectory(t *testing.T) {
+	t.Setenv("LERDR_RELAY_ENV", "")
 	t.Setenv("HERDR_RELAY_ENV", "")
 	t.Setenv("HERDR_PLUGIN_CONFIG_DIR", "")
 	root := t.TempDir()
@@ -452,7 +453,8 @@ func TestCommandEnvironmentLoadsOnlyCloudflareCredentials(t *testing.T) {
 	), 0o600); err != nil {
 		t.Fatal(err)
 	}
-	t.Setenv("HERDR_RELAY_ENV", envFile)
+	t.Setenv("LERDR_RELAY_ENV", envFile)
+	t.Setenv("HERDR_RELAY_ENV", "")
 	t.Setenv("HERDR_PLUGIN_CONFIG_DIR", "")
 
 	environment, err := commandEnvironmentWithCloudflareCredentials("/opt/pinned-node", []string{"PATH=/usr/bin"})
@@ -509,7 +511,8 @@ func TestCommandEnvironmentRejectsUnsupportedExpansion(t *testing.T) {
 	if err := os.WriteFile(envFile, []byte("CLOUDFLARE_API_TOKEN=$(printf bad)\n"), 0o600); err != nil {
 		t.Fatal(err)
 	}
-	t.Setenv("HERDR_RELAY_ENV", envFile)
+	t.Setenv("LERDR_RELAY_ENV", envFile)
+	t.Setenv("HERDR_RELAY_ENV", "")
 	t.Setenv("HERDR_PLUGIN_CONFIG_DIR", "")
 
 	if _, err := commandEnvironmentWithCloudflareCredentials("/opt/pinned-node", []string{"PATH=/usr/bin"}); err == nil {
@@ -559,7 +562,7 @@ func TestVerifyPublicRetriesUntilExpectedBundleIsPublished(t *testing.T) {
 	cacheBusters := make(chan string, 2)
 	server := httptest.NewServer(http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
 		if request.URL.Path == "/version.json" && request.Header.Get("Accept-Encoding") == "identity" {
-			cacheBusters <- request.URL.Query().Get("herdr_deploy_check")
+			cacheBusters <- request.URL.Query().Get("lerdr_deploy_check")
 			if versionRequests.Add(1) == 1 {
 				writer.Header().Set("Content-Type", "application/json")
 				_, _ = writer.Write([]byte(`{"release_version":"1.2.2","revision":"old"}`))

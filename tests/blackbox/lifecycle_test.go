@@ -29,7 +29,7 @@ func startRelayBrokenHerdr(t *testing.T) string {
 	tmpDir := t.TempDir()
 
 	relayBin := filepath.Join(tmpDir, "relay")
-	build := exec.Command("go", "build", "-o", relayBin, "./cmd/herdr-mobile-relay")
+	build := exec.Command("go", "build", "-o", relayBin, "./cmd/lerdr")
 	build.Dir = repoRoot(t)
 	if out, err := build.CombinedOutput(); err != nil {
 		t.Fatalf("build relay: %v\n%s", err, out)

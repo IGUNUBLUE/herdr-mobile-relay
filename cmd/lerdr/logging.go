@@ -35,16 +35,25 @@ func reportError(stderr *os.File, args []string, err error) {
 
 func reportErrorWithJournal(stderr *os.File, args []string, err error, journal bool) {
 	if !isServeInvocation(args) {
-		fmt.Fprintf(stderr, "herdr-mobile-relay: %v\n", err)
+		fmt.Fprintf(stderr, "lerdr: %v\n", err)
 		return
 	}
 
-	logger := newRelayLogger(stderr, os.Getenv("HERDR_RELAY_LOG_FORMAT"), slog.LevelError, journal)
+	logger := newRelayLogger(stderr, relayLogFormat(), slog.LevelError, journal)
 	logger.Error("relay failed", "error", err)
 }
 
 func isServeInvocation(args []string) bool {
 	return len(args) == 0 || args[0] == "serve"
+}
+
+// relayLogFormat dual-reads the configured log format: LERDR_ first, then the
+// HERDR_ spelling a pre-rename service definition may still export.
+func relayLogFormat() string {
+	if v := os.Getenv("LERDR_RELAY_LOG_FORMAT"); v != "" {
+		return v
+	}
+	return os.Getenv("HERDR_RELAY_LOG_FORMAT")
 }
 
 func newRelayLogger(output io.Writer, format string, level slog.Level, journal bool) *slog.Logger {

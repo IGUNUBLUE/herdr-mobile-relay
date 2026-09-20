@@ -190,9 +190,9 @@ func localizedPayloadText(locale string, category Category, preview PreviewMode,
 	switch preview {
 	case PreviewHidden:
 		if zh {
-			return "Herdr 通知", "打开应用查看详情", nil
+			return "Lerdr 通知", "打开应用查看详情", nil
 		}
-		return "Herdr notification", "Open the app to view details", nil
+		return "Lerdr notification", "Open the app to view details", nil
 	case PreviewQuestion:
 		if zh {
 			return "需要回复", "打开应用查看问题并回复", nil

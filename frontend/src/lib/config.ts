@@ -1,28 +1,28 @@
 import { canRendezvous, RELAY_ID_LENGTH } from './gateway-credentials';
 import type { RelayConfig } from './types';
 
-export const RELAYS_KEY = 'herdr_relays';
-export const THEME_KEY = 'herdr_theme';
+export const RELAYS_KEY = 'lerdr_relays';
+export const THEME_KEY = 'lerdr_theme';
 // Keep the existing key so stored terminal-size preferences migrate into the
 // whole-interface size without resetting users.
-export const INTERFACE_SIZE_KEY = 'herdr_terminal_font_size';
-export const LEGACY_FONT_KEY = 'herdr_home_font_size';
-export const TERMINAL_HISTORY_KEY = 'herdr_terminal_history_lines';
-export const TERMINAL_REFRESH_KEY = 'herdr_terminal_refresh_ms';
-export const TERMINAL_HEIGHT_LEASE_KEY = 'herdr_terminal_height_lease';
-export const TERMINAL_WAKE_LOCK_KEY = 'herdr_terminal_wake_lock';
-export const HOME_LAYOUT_KEY = 'herdr_home_workspace_layout';
-export const DEVICE_LOCK_KEY = 'herdr_require_device_unlock';
-export const DEVICE_CREDENTIAL_KEY = 'herdr_device_unlock_credential';
-export const PUSH_ENABLED_KEY = 'herdr_push_enabled';
-export const PUSH_FINISHED_KEY = 'herdr_push_finished';
-export const NATIVE_ATTENTION_NOTIFY_KEY = 'herdr_native_attention_notify';
-export const NATIVE_RELAY_STATUS_NOTIFY_KEY = 'herdr_native_relay_status_notify';
-export const PUSH_CLIENT_KEY = 'herdr_push_client_id';
-export const PUSH_VAPID_KEY_PREFIX = 'herdr_push_vapid_key_';
-export const HANDLED_NOTIFICATION_ACTIONS_KEY = 'herdr_handled_notification_actions';
-export const DEFAULT_AGENT_VIEW_KEY = 'herdr_default_agent_view';
-export const PANE_AGENT_VIEW_OVERRIDES_KEY = 'herdr_pane_agent_view_overrides';
+export const INTERFACE_SIZE_KEY = 'lerdr_terminal_font_size';
+export const LEGACY_FONT_KEY = 'lerdr_home_font_size';
+export const TERMINAL_HISTORY_KEY = 'lerdr_terminal_history_lines';
+export const TERMINAL_REFRESH_KEY = 'lerdr_terminal_refresh_ms';
+export const TERMINAL_HEIGHT_LEASE_KEY = 'lerdr_terminal_height_lease';
+export const TERMINAL_WAKE_LOCK_KEY = 'lerdr_terminal_wake_lock';
+export const HOME_LAYOUT_KEY = 'lerdr_home_workspace_layout';
+export const DEVICE_LOCK_KEY = 'lerdr_require_device_unlock';
+export const DEVICE_CREDENTIAL_KEY = 'lerdr_device_unlock_credential';
+export const PUSH_ENABLED_KEY = 'lerdr_push_enabled';
+export const PUSH_FINISHED_KEY = 'lerdr_push_finished';
+export const NATIVE_ATTENTION_NOTIFY_KEY = 'lerdr_native_attention_notify';
+export const NATIVE_RELAY_STATUS_NOTIFY_KEY = 'lerdr_native_relay_status_notify';
+export const PUSH_CLIENT_KEY = 'lerdr_push_client_id';
+export const PUSH_VAPID_KEY_PREFIX = 'lerdr_push_vapid_key_';
+export const HANDLED_NOTIFICATION_ACTIONS_KEY = 'lerdr_handled_notification_actions';
+export const DEFAULT_AGENT_VIEW_KEY = 'lerdr_default_agent_view';
+export const PANE_AGENT_VIEW_OVERRIDES_KEY = 'lerdr_pane_agent_view_overrides';
 
 export const APP_PROTOCOL_VERSION = __APP_PROTOCOL_VERSION__;
 export const APP_VERSION = __APP_VERSION__;
@@ -222,11 +222,11 @@ export function loadRelayConfigs(storage: Storage = localStorage): RelayConfig[]
       // Fall through to the legacy single-relay keys.
     }
   }
-  const url = storage.getItem('herdr_relay_url') || '';
+  const url = storage.getItem('lerdr_relay_url') || '';
   if (!url) return [];
   const relay = normalizeRelayConfig({
     url,
-    token: storage.getItem('herdr_relay_token') || '',
+    token: storage.getItem('lerdr_relay_token') || '',
     label: relayLabelFromUrl(url),
   });
   storage.setItem(RELAYS_KEY, JSON.stringify([relay]));

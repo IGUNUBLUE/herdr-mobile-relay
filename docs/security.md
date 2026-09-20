@@ -6,9 +6,9 @@ this before exposing a relay beyond your own machine.
 
 ## Ports and exposed surface
 
-The relay binds to `127.0.0.1:8375` by default (`HERDR_RELAY_HOST`,
-`HERDR_RELAY_PORT`); its event hook uses loopback UDP 8376
-(`HERDR_RELAY_PLUGIN_PORT`). A Cloudflare tunnel supplies HTTPS/WSS without
+The relay binds to `127.0.0.1:8375` by default (`LERDR_RELAY_HOST`,
+`LERDR_RELAY_PORT`); its event hook uses loopback UDP 8376
+(`LERDR_RELAY_PLUGIN_PORT`). A Cloudflare tunnel supplies HTTPS/WSS without
 opening an inbound port. On the gateway transport, an outbound connection to the
 gateway replaces the tunnel, and the direct WebRTC path adds one UDP socket,
 guarded by ICE credentials and a pinned DTLS fingerprint exchanged only inside
@@ -18,7 +18,7 @@ arbitrary executables or shell commands. Workspace and worktree mutations use
 Herdr's typed API; the phone creates checkouts under Herdr's configured
 worktree directory and can open only paths returned by Herdr's worktree list.
 A keyed connection is authorized by the end-to-end handshake rather than by its
-browser origin; the `HERDR_ALLOWED_ORIGINS` check applies to tokenless loopback
+browser origin; the `LERDR_ALLOWED_ORIGINS` check applies to tokenless loopback
 development connections.
 
 Runtime data stays in the relay's private config and cache roots. The phone

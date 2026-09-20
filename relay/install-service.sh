@@ -1,12 +1,12 @@
 #!/bin/bash
 set -euo pipefail
 
-LABEL="com.herdr-mobile-relay.service"
-LEGACY_LABEL="com.herdr-remote.service"
+LABEL="com.lerdr.service"
+# Every label this product has ever run under; installing clears them out.
+LEGACY_LABELS=("com.herdr-mobile-relay.service" "com.herdr-remote.service")
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 PLIST="$HOME/Library/LaunchAgents/$LABEL.plist"
-LEGACY_PLIST="$HOME/Library/LaunchAgents/$LEGACY_LABEL.plist"
-LOG_DIR="$HOME/Library/Logs/herdr-mobile-relay"
+LOG_DIR="$HOME/Library/Logs/lerdr"
 
 # shellcheck source=common.sh
 . "$SCRIPT_DIR/common.sh"
@@ -16,7 +16,7 @@ require_user_service_context
 ENV_FILE="$(relay_env_file "$SCRIPT_DIR")"
 
 load_relay_env "$ENV_FILE"
-CLOUDFLARED_CONFIG="${CLOUDFLARED_CONFIG:-$HOME/.cloudflared/config-herdr-mobile-relay.yml}"
+CLOUDFLARED_CONFIG="${CLOUDFLARED_CONFIG:-$(cloudflared_config_default)}"
 
 if [ ! -r "$CLOUDFLARED_CONFIG" ]; then
     echo "Missing Cloudflare tunnel config: $CLOUDFLARED_CONFIG"
@@ -25,14 +25,14 @@ if [ ! -r "$CLOUDFLARED_CONFIG" ]; then
 fi
 
 ensure_relay_env "$ENV_FILE" "$CLOUDFLARED_CONFIG"
-chmod +x "$SCRIPT_DIR/herdr-mobile-relay-service.sh"
+chmod +x "$SCRIPT_DIR/lerdr-service.sh"
 mkdir -p "$HOME/Library/LaunchAgents" "$LOG_DIR"
 
 RELEASE_ROOT="$(relay_release_root)"
-SERVICE_WRAPPER="$RELEASE_ROOT/current/relay/herdr-mobile-relay-service.sh"
+SERVICE_WRAPPER="$RELEASE_ROOT/current/relay/lerdr-service.sh"
 WORK_DIR="$RELEASE_ROOT/current"
 if [ ! -x "$SERVICE_WRAPPER" ]; then
-    SERVICE_WRAPPER="$SCRIPT_DIR/herdr-mobile-relay-service.sh"
+    SERVICE_WRAPPER="$SCRIPT_DIR/lerdr-service.sh"
 fi
 if [ ! -d "$WORK_DIR" ]; then
     WORK_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
@@ -64,7 +64,7 @@ cat > "$PLIST" <<EOF
     <string>$WORK_DIR</string>
     <key>EnvironmentVariables</key>
     <dict>
-        <key>HERDR_RELAY_ENV</key>
+        <key>LERDR_RELAY_ENV</key>
         <string>$ENV_FILE</string>
     </dict>
     <key>StandardOutPath</key>
@@ -75,8 +75,11 @@ cat > "$PLIST" <<EOF
 </plist>
 EOF
 
-launchctl bootout "gui/$UID" "$LEGACY_PLIST" >/dev/null 2>&1 || true
-rm -f "$LEGACY_PLIST"
+for legacy_label in "${LEGACY_LABELS[@]}"; do
+    legacy_plist="$HOME/Library/LaunchAgents/$legacy_label.plist"
+    launchctl bootout "gui/$UID" "$legacy_plist" >/dev/null 2>&1 || true
+    rm -f "$legacy_plist"
+done
 reload_launchd_service_definition "$PLIST" "$LABEL"
 
 echo "Installed and started $LABEL"
@@ -84,7 +87,7 @@ echo "Plist: $PLIST"
 echo "Env:   $ENV_FILE"
 echo "Logs:  $LOG_DIR/service.log and $LOG_DIR/service.err"
 
-PORT="${HERDR_RELAY_PORT:-8375}"
+PORT="${LERDR_RELAY_PORT:-${HERDR_RELAY_PORT:-8375}}"
 echo "Waiting for relay health on 127.0.0.1:$PORT..."
 if ! HEALTH="$(wait_for_relay_health "$PORT")"; then
     echo "Relay service was installed, but it did not become healthy."

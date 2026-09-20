@@ -82,7 +82,7 @@ describe('relay speech', () => {
 
     setSpeechLanguage('zh');
     expect(get(speechLanguage)).toBe('zh');
-    expect(localStorage.getItem('herdr_speech_language')).toBe('zh');
+    expect(localStorage.getItem('lerdr_speech_language')).toBe('zh');
 
     // A language with no relay voice behind it is never selectable.
     setSpeechLanguage('ja');
@@ -93,8 +93,8 @@ describe('relay speech', () => {
   });
 
   it('reads aloud by default once a relay reports a voice, then obeys the setting', () => {
-    localStorage.removeItem('herdr_speech_enabled');
-    localStorage.removeItem('herdr_speech_language');
+    localStorage.removeItem('lerdr_speech_enabled');
+    localStorage.removeItem('lerdr_speech_language');
     adoptRelaySpeech(['en']);
     expect(get(speechEnabled)).toBe(true);
     expect(get(speechLanguage)).toBe('en');
@@ -105,19 +105,19 @@ describe('relay speech', () => {
     expect(get(speechEnabled)).toBe(false);
 
     // A relay with no voice at all leaves a fresh phone untouched.
-    localStorage.removeItem('herdr_speech_enabled');
+    localStorage.removeItem('lerdr_speech_enabled');
     adoptRelaySpeech([]);
     expect(get(speechEnabled)).toBe(false);
-    expect(localStorage.getItem('herdr_speech_enabled')).toBeNull();
+    expect(localStorage.getItem('lerdr_speech_enabled')).toBeNull();
 
     // The first language is one the relay can actually speak: English is only
     // downloaded by default, so a phone set to German still hears something.
-    localStorage.removeItem('herdr_speech_language');
+    localStorage.removeItem('lerdr_speech_language');
     speechLanguage.set('de');
     adoptRelaySpeech(['en']);
     expect(get(speechLanguage)).toBe('en');
 
-    localStorage.removeItem('herdr_speech_language');
+    localStorage.removeItem('lerdr_speech_language');
     speechLanguage.set('de');
     adoptRelaySpeech(['fr', 'zh']);
     expect(get(speechLanguage)).toBe('fr');

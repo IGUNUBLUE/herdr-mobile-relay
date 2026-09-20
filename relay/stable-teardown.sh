@@ -9,7 +9,7 @@ export PATH="$HOME/.local/bin:$PATH:/opt/homebrew/bin:/usr/local/bin:/home/linux
 
 ENV_FILE="$(relay_env_file "$SCRIPT_DIR")"
 ENV_FILE="$(canonical_file_path "$ENV_FILE")"
-STATE_FILE="${HERDR_STABLE_STATE_FILE:-$(dirname "$ENV_FILE")/stable-setup.json}"
+STATE_FILE="${LERDR_STABLE_STATE_FILE:-${HERDR_STABLE_STATE_FILE:-$(dirname "$ENV_FILE")/stable-setup.json}}"
 
 state_command() {
     "$(relay_binary)" stable-state "$@"
@@ -46,15 +46,15 @@ recover_state_from_config() {
     local resolved
 
     load_relay_env "$ENV_FILE"
-    port="${HERDR_RELAY_PORT:-8375}"
+    port="${LERDR_RELAY_PORT:-${HERDR_RELAY_PORT:-8375}}"
     config="${CLOUDFLARED_CONFIG:-}"
-    if [ -z "$config" ] && [ -r "$HOME/.cloudflared/config-herdr-mobile-relay.yml" ]; then
-        config="$HOME/.cloudflared/config-herdr-mobile-relay.yml"
+    if [ -z "$config" ]; then
+        config="$(cloudflared_config_default)"
     fi
-    if [ -z "$config" ] || [ ! -r "$config" ]; then
-        echo "✗ No stable state or readable Herdr Cloudflare config was found." >&2
+    if [ ! -r "$config" ]; then
+        echo "✗ No stable state or readable Lerdr Cloudflare config was found." >&2
         echo "  Checked state:  $STATE_FILE" >&2
-        echo "  Checked config: ${config:-$HOME/.cloudflared/config-herdr-mobile-relay.yml}" >&2
+        echo "  Checked config: $config" >&2
         return 1
     fi
 
@@ -78,9 +78,9 @@ recover_state_from_config() {
         TUNNEL_NAME="$resolved"
     fi
     case "$TUNNEL_NAME" in
-        herdr-mobile-relay-*) ;;
+        lerdr-* | herdr-mobile-relay-*) ;;
         *)
-            echo "✗ Refusing recovery: config tunnel is outside the Herdr stable-tunnel namespace: $TUNNEL_NAME" >&2
+            echo "✗ Refusing recovery: config tunnel is outside the Lerdr stable-tunnel namespace: $TUNNEL_NAME" >&2
             return 1
             ;;
     esac
@@ -93,7 +93,7 @@ recover_state_from_config() {
         "hostname=$CONFIG_HOST" \
         "credentials_path=$CREDENTIALS_PATH" \
         "config_path=$config"
-    echo "▸ Recovered teardown identity from the retained Herdr Cloudflare config."
+    echo "▸ Recovered teardown identity from the retained Lerdr Cloudflare config."
     echo "  This repairs state cleared by older no-op teardown behavior."
 }
 
@@ -106,13 +106,15 @@ if [ ! -f "$STATE_FILE" ]; then
     fi
 fi
 
-# Every state read validates the Herdr ownership marker. Missing legacy state is
-# rebuilt only after the config, loopback origin, namespace, and credentials agree.
+# Every state read validates the Lerdr ownership marker. Missing legacy state is
+# rebuilt only after the config, loopback origin, namespace, and credentials
+# agree. Both tunnel namespaces are accepted: pre-rename installs recorded
+# herdr-mobile-relay-* names that still need teardown.
 TUNNEL_NAME="$(state_get tunnel_name)"
 case "$TUNNEL_NAME" in
-    herdr-mobile-relay-*) ;;
+    lerdr-* | herdr-mobile-relay-*) ;;
     *)
-        echo "✗ Refusing teardown: the recorded tunnel is outside the Herdr stable-tunnel namespace: ${TUNNEL_NAME:-<empty>}" >&2
+        echo "✗ Refusing teardown: the recorded tunnel is outside the Lerdr stable-tunnel namespace: ${TUNNEL_NAME:-<empty>}" >&2
         exit 1
         ;;
 esac
@@ -138,16 +140,24 @@ fi
 
 case "$(uname -s)" in
     Darwin)
-        SERVICE="com.herdr-mobile-relay.service"
+        SERVICE="com.lerdr.service"
         SERVICE_FILE="$HOME/Library/LaunchAgents/$SERVICE.plist"
+        if [ ! -e "$SERVICE_FILE" ]; then
+            SERVICE="com.herdr-mobile-relay.service"
+            SERVICE_FILE="$HOME/Library/LaunchAgents/$SERVICE.plist"
+        fi
         ;;
     Linux)
-        SERVICE="herdr-mobile-relay.service"
+        SERVICE="lerdr.service"
         SERVICE_FILE="$HOME/.config/systemd/user/$SERVICE"
+        if [ ! -e "$SERVICE_FILE" ]; then
+            SERVICE="herdr-mobile-relay.service"
+            SERVICE_FILE="$HOME/.config/systemd/user/$SERVICE"
+        fi
         ;;
 esac
 
-if [ "${HERDR_STABLE_TEARDOWN_WRAPPED:-}" != 1 ]; then
+if [ "${LERDR_STABLE_TEARDOWN_WRAPPED:-${HERDR_STABLE_TEARDOWN_WRAPPED:-}}" != 1 ]; then
     echo "🐑 Lerdr stable tunnel teardown"
     echo ""
 fi
@@ -159,9 +169,9 @@ echo "  Config:      ${CONFIG:-none}"
 echo "  Credentials: ${CREDENTIALS:-none}"
 echo ""
 
-if [ "${HERDR_STABLE_TEARDOWN_YES:-}" != "1" ]; then
+if [ "${LERDR_STABLE_TEARDOWN_YES:-${HERDR_STABLE_TEARDOWN_YES:-}}" != "1" ]; then
     if [ ! -t 0 ]; then
-        echo "✗ Confirmation required. Run interactively, or set HERDR_STABLE_TEARDOWN_YES=1." >&2
+        echo "✗ Confirmation required. Run interactively, or set LERDR_STABLE_TEARDOWN_YES=1." >&2
         exit 1
     fi
     read -r -p "Type teardown to continue: " confirmation

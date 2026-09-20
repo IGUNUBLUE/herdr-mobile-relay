@@ -133,7 +133,7 @@ const PANE_READ_RETRY_MS = 35_000;
 // out the full handshake timeout plus backoff — the "dozens of seconds before
 // streaming resumes after sleep" a phone sees in gateway mode.
 const STALE_CONNECTING_MS = 5_000;
-const PAIRING_DEFERRED_MESSAGE = 'Add Herdr to the iPhone or iPad Home Screen, then open it there to finish pairing.';
+const PAIRING_DEFERRED_MESSAGE = 'Add Lerdr to the iPhone or iPad Home Screen, then open it there to finish pairing.';
 // Proof-of-life cadence for every connected relay. The gateway reaps a quiet
 // phone connection after five minutes and never pings one, so a hidden but
 // still-running page loses its socket silently and pays a full re-dial (TLS +
@@ -1332,7 +1332,7 @@ class RelayStore {
       }
       return;
     }
-    if (message.type === 'herdr_status' && connection) {
+    if (message.type === 'lerdr_status' && connection) {
       const status = normalizeHerdrStatus(message.status);
       if (status.generation <= connection.herdrStatus.generation) return;
       connection.herdrStatus = status;
@@ -3127,10 +3127,10 @@ function runningAsInstalledApp(): boolean {
 }
 
 export function pushClientId(): string {
-  let value = localStorage.getItem('herdr_push_client_id');
+  let value = localStorage.getItem('lerdr_push_client_id');
   if (value) return value;
   value = crypto.randomUUID ? crypto.randomUUID() : `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`;
-  localStorage.setItem('herdr_push_client_id', value);
+  localStorage.setItem('lerdr_push_client_id', value);
   return value;
 }
 

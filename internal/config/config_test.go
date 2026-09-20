@@ -2,6 +2,7 @@ package config
 
 import (
 	"log/slog"
+	"os"
 	"path/filepath"
 	"slices"
 	"strings"
@@ -56,7 +57,7 @@ func TestParseLogLevel(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			got, err := parseLogLevel(test.raw)
 			if test.error {
-				if err == nil || !strings.Contains(err.Error(), "HERDR_RELAY_LOG_LEVEL") {
+				if err == nil || !strings.Contains(err.Error(), "LERDR_RELAY_LOG_LEVEL") {
 					t.Fatalf("parseLogLevel(%q) error = %v", test.raw, err)
 				}
 				return
@@ -82,7 +83,7 @@ func TestLoadRejectsInvalidLogLevel(t *testing.T) {
 	if cfg != nil {
 		t.Fatalf("config = %#v, want nil", cfg)
 	}
-	if !strings.Contains(err.Error(), "HERDR_RELAY_LOG_LEVEL") {
+	if !strings.Contains(err.Error(), "LERDR_RELAY_LOG_LEVEL") {
 		t.Errorf("error = %v, want setting name", err)
 	}
 }
@@ -144,17 +145,56 @@ func TestLoadIsolatesAllXDGPaths(t *testing.T) {
 	if cfg.ConfigHome != configHome {
 		t.Fatalf("config home = %q, want %q", cfg.ConfigHome, configHome)
 	}
-	if cfg.CacheDir != filepath.Join(cacheHome, "herdr-mobile-relay") {
+	if cfg.CacheDir != filepath.Join(cacheHome, "lerdr") {
 		t.Fatalf("cache dir = %q", cfg.CacheDir)
 	}
 	if cfg.DataHome != dataHome {
 		t.Fatalf("data home = %q, want %q", cfg.DataHome, dataHome)
 	}
-	if cfg.RuntimeDir != filepath.Join(configHome, "herdr-mobile-relay") {
+	if cfg.RuntimeDir != filepath.Join(configHome, "lerdr") {
 		t.Fatalf("runtime dir = %q", cfg.RuntimeDir)
 	}
-	if cfg.ReleaseRoot != filepath.Join(dataHome, "herdr-mobile-relay") {
+	if cfg.ReleaseRoot != filepath.Join(dataHome, "lerdr") {
 		t.Fatalf("release root = %q", cfg.ReleaseRoot)
+	}
+}
+
+func TestLoadAdoptsLegacyDirectories(t *testing.T) {
+	isolateLoadEnvironment(t)
+	root := t.TempDir()
+	configHome := filepath.Join(root, "config")
+	cacheHome := filepath.Join(root, "cache")
+	dataHome := filepath.Join(root, "data")
+	t.Setenv("XDG_CONFIG_HOME", configHome)
+	t.Setenv("XDG_CACHE_HOME", cacheHome)
+	t.Setenv("XDG_DATA_HOME", dataHome)
+	t.Setenv("LERDR_RELAY_ENV", "")
+	t.Setenv("HERDR_RELAY_ENV", "")
+	t.Setenv("HERDR_PLUGIN_CONFIG_DIR", "")
+	t.Setenv("LERDR_RELEASE_ROOT", "")
+	t.Setenv("HERDR_RELEASE_ROOT", "")
+	for _, dir := range []string{
+		filepath.Join(configHome, "herdr-mobile-relay"),
+		filepath.Join(cacheHome, "herdr-mobile-relay"),
+		filepath.Join(dataHome, "herdr-mobile-relay"),
+	} {
+		if err := os.MkdirAll(dir, 0o700); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	cfg, err := Load()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if cfg.CacheDir != filepath.Join(cacheHome, "herdr-mobile-relay") {
+		t.Fatalf("cache dir = %q, want legacy dir adopted", cfg.CacheDir)
+	}
+	if cfg.RuntimeDir != filepath.Join(configHome, "herdr-mobile-relay") {
+		t.Fatalf("runtime dir = %q, want legacy dir adopted", cfg.RuntimeDir)
+	}
+	if cfg.ReleaseRoot != filepath.Join(dataHome, "herdr-mobile-relay") {
+		t.Fatalf("release root = %q, want legacy dir adopted", cfg.ReleaseRoot)
 	}
 }
 
@@ -295,6 +335,19 @@ func TestLoadRejectsInvalidSecondGatewayURL(t *testing.T) {
 func isolateLoadEnvironment(t *testing.T) {
 	t.Helper()
 	root := t.TempDir()
+	// Pin the LERDR_ spellings too: they take precedence, so an ambient
+	// operator environment must not leak into the tests.
+	for _, key := range []string{
+		"LERDR_RELAY_HOST", "LERDR_RELAY_PORT", "LERDR_RELAY_PLUGIN_PORT",
+		"LERDR_RELAY_TOKEN", "LERDR_RELAY_INSTANCE_ID", "LERDR_WEB_ROOT",
+		"LERDR_RELAY_POLL_INTERVAL", "LERDR_RELAY_LOG_FORMAT",
+		"LERDR_RELAY_LOG_LEVEL", "LERDR_RELAY_SERVICE_NAME",
+		"LERDR_ALLOWED_ORIGINS", "LERDR_GATEWAY_URL", "LERDR_GATEWAY_SELECTION",
+		"LERDR_WEBRTC_UDP_PORT", "LERDR_TRANSPORT_FORCE_RELAY",
+		"LERDR_REACHABILITY_PORT_MAPPING", "LERDR_RELAY_ENV", "LERDR_RELEASE_ROOT",
+	} {
+		t.Setenv(key, "")
+	}
 	t.Setenv("HERDR_RELAY_HOST", "127.0.0.1")
 	t.Setenv("HERDR_RELAY_PORT", "")
 	t.Setenv("HERDR_RELAY_PLUGIN_PORT", "")

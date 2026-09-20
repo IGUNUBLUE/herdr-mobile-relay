@@ -1,13 +1,13 @@
 #!/bin/bash
 set -euo pipefail
 
-LABEL="herdr-mobile-relay.service"
-LEGACY_LABEL="herdr-remote.service"
+LABEL="lerdr.service"
+# Every unit name this product has ever installed under; install removes them.
+LEGACY_LABELS=("herdr-mobile-relay.service" "herdr-remote.service")
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 REPO_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 UNIT_DIR="$HOME/.config/systemd/user"
 UNIT_FILE="$UNIT_DIR/$LABEL"
-LEGACY_UNIT_FILE="$UNIT_DIR/$LEGACY_LABEL"
 
 export PATH="$HOME/.local/bin:/usr/local/bin:/home/linuxbrew/.linuxbrew/bin:/usr/bin:/bin:/usr/sbin:/sbin:$PATH"
 
@@ -17,7 +17,7 @@ export PATH="$HOME/.local/bin:/usr/local/bin:/home/linuxbrew/.linuxbrew/bin:/usr
 ENV_FILE="$(relay_env_file "$SCRIPT_DIR")"
 
 load_relay_env "$ENV_FILE"
-CLOUDFLARED_CONFIG="${CLOUDFLARED_CONFIG:-$HOME/.cloudflared/config-herdr-mobile-relay.yml}"
+CLOUDFLARED_CONFIG="${CLOUDFLARED_CONFIG:-$(cloudflared_config_default)}"
 
 if ! command -v systemctl >/dev/null 2>&1; then
     echo "systemctl not found"
@@ -40,9 +40,9 @@ fi
 
 ensure_relay_env "$ENV_FILE" "$CLOUDFLARED_CONFIG"
 RELEASE_ROOT="$(relay_release_root)"
-SERVICE_WRAPPER="$RELEASE_ROOT/current/relay/herdr-mobile-relay-service.sh"
+SERVICE_WRAPPER="$RELEASE_ROOT/current/relay/lerdr-service.sh"
 if [ ! -x "$SERVICE_WRAPPER" ]; then
-    SERVICE_WRAPPER="$SCRIPT_DIR/herdr-mobile-relay-service.sh"
+    SERVICE_WRAPPER="$SCRIPT_DIR/lerdr-service.sh"
 fi
 WORK_DIR="$RELEASE_ROOT/current"
 if [ ! -d "$WORK_DIR" ]; then
@@ -60,7 +60,7 @@ Wants=network-online.target
 [Service]
 Type=simple
 WorkingDirectory=$WORK_DIR
-Environment=HERDR_RELAY_ENV=$ENV_FILE
+Environment=LERDR_RELAY_ENV=$ENV_FILE
 ExecStart=$SERVICE_WRAPPER
 Restart=on-failure
 RestartSec=10
@@ -70,8 +70,10 @@ WantedBy=default.target
 EOF
 
 systemctl --user daemon-reload
-systemctl --user disable --now "$LEGACY_LABEL" >/dev/null 2>&1 || true
-rm -f "$LEGACY_UNIT_FILE"
+for legacy_label in "${LEGACY_LABELS[@]}"; do
+    systemctl --user disable --now "$legacy_label" >/dev/null 2>&1 || true
+    rm -f "$UNIT_DIR/$legacy_label"
+done
 systemctl --user daemon-reload
 systemctl --user enable "$LABEL"
 systemctl --user restart "$LABEL"
@@ -81,7 +83,7 @@ echo "Unit: $UNIT_FILE"
 echo "Env:  $ENV_FILE"
 echo "Logs: journalctl --user -u $LABEL -f"
 
-PORT="${HERDR_RELAY_PORT:-8375}"
+PORT="${LERDR_RELAY_PORT:-${HERDR_RELAY_PORT:-8375}}"
 echo "Waiting for relay health on 127.0.0.1:$PORT..."
 if ! HEALTH="$(wait_for_relay_health "$PORT")"; then
     echo "Relay service was installed, but it did not become healthy."

@@ -24,7 +24,7 @@ interface BootOptions {
 
 async function boot(page: Page, relays: RelayFixture[] = [], path = '/', options: BootOptions = {}) {
   await page.addInitScript(({ savedRelays, standalone, navigatorStandalone, userAgent, largeSlashCatalog }) => {
-    if (savedRelays.length) localStorage.setItem('herdr_relays', JSON.stringify(savedRelays));
+    if (savedRelays.length) localStorage.setItem('lerdr_relays', JSON.stringify(savedRelays));
     if (navigatorStandalone !== null) {
       Object.defineProperty(navigator, 'standalone', { configurable: true, value: navigatorStandalone });
     }
@@ -476,7 +476,7 @@ async function commands(page: Page) {
 
 async function updateProgressPlan(page: Page): Promise<Record<string, unknown> | null> {
   try {
-    return await page.evaluate(() => JSON.parse(sessionStorage.getItem('herdr_update_progress') || 'null'));
+    return await page.evaluate(() => JSON.parse(sessionStorage.getItem('lerdr_update_progress') || 'null'));
   } catch (error) {
     if (error instanceof Error && error.message.includes('Execution context was destroyed')) return null;
     throw error;
@@ -929,8 +929,8 @@ test('sizes captured activity text with terminal typography', async ({ page }) =
 
 test('keeps device verification modal until native authentication succeeds', async ({ page }) => {
   await page.addInitScript(() => {
-    localStorage.setItem('herdr_require_device_unlock', 'true');
-    localStorage.setItem('herdr_device_unlock_credential', 'AQ');
+    localStorage.setItem('lerdr_require_device_unlock', 'true');
+    localStorage.setItem('lerdr_device_unlock_credential', 'AQ');
     Object.defineProperty(window, 'PublicKeyCredential', { configurable: true, value: class {} });
     Object.defineProperty(navigator, 'credentials', {
       configurable: true,
@@ -975,7 +975,7 @@ test('keeps an iOS setup link unredeemed for Home Screen installation', async ({
   await expect(page.getByRole('status').filter({ hasText: 'This browser tab keeps the setup link unused' })).toBeVisible();
   expect(await page.locator('link[rel="manifest"]').getAttribute('href')).toBe('/setup.webmanifest');
   expect(await page.evaluate(() => location.hash)).toBe(setupHash);
-  expect(await page.evaluate(() => JSON.parse(localStorage.getItem('herdr_relays') || '[]')[0]))
+  expect(await page.evaluate(() => JSON.parse(localStorage.getItem('lerdr_relays') || '[]')[0]))
     .toMatchObject({
       label: 'Fedora Workstation',
       url: 'wss://relay-fedora.example.com',
@@ -1010,7 +1010,7 @@ test('imports quick setup and merges agents from multiple relays', async ({ page
   );
   await expect(page.getByRole('button', { name: 'Activity history' }).locator('svg')).toBeVisible();
   await expect.poll(() => socketCount(page)).toBe(1);
-  expect(await page.evaluate(() => JSON.parse(localStorage.getItem('herdr_relays') || '[]')[0]))
+  expect(await page.evaluate(() => JSON.parse(localStorage.getItem('lerdr_relays') || '[]')[0]))
     .toMatchObject({
       label: 'Fedora Workstation',
       url: 'wss://relay-fedora.example.com',
@@ -1023,7 +1023,7 @@ test('imports quick setup and merges agents from multiple relays', async ({ page
     location.hash = '#setup=abcdef0123456789abcdef0123456789&label=Mac&relay=wss%3A%2F%2Fmac.example';
   });
   await expect.poll(() => socketCount(page)).toBe(3);
-  expect(await page.evaluate(() => JSON.parse(localStorage.getItem('herdr_relays') || '[]')[1]))
+  expect(await page.evaluate(() => JSON.parse(localStorage.getItem('lerdr_relays') || '[]')[1]))
     .toMatchObject({
       label: 'Mac',
       url: 'wss://mac.example',
@@ -1031,12 +1031,12 @@ test('imports quick setup and merges agents from multiple relays', async ({ page
     });
   expect(await page.evaluate(() => location.hash)).toBe('');
   await page.evaluate(() => {
-    const relays = JSON.parse(localStorage.getItem('herdr_relays') || '[]');
-    localStorage.setItem('herdr_relays', JSON.stringify(relays.map((relay: RelayFixture) => ({
+    const relays = JSON.parse(localStorage.getItem('lerdr_relays') || '[]');
+    localStorage.setItem('lerdr_relays', JSON.stringify(relays.map((relay: RelayFixture) => ({
       ...relay,
       token: '',
     }))));
-    localStorage.removeItem('herdr_device_auth_v1');
+    localStorage.removeItem('lerdr_device_auth_v1');
   });
   await page.reload();
   await expect.poll(() => socketCount(page)).toBe(2);
@@ -1154,7 +1154,7 @@ test('rechecks Herdr terminal compatibility and wraps actual failures on mobile'
   await expect(page.getByText(/Could not check|Server upgrade needed|Server feature unavailable/)).toHaveCount(0);
 
   await server(page, 0, {
-    type: 'herdr_status',
+    type: 'lerdr_status',
     status: {
       server_version: '0.9.0',
       generation: 2,
@@ -1171,7 +1171,7 @@ test('rechecks Herdr terminal compatibility and wraps actual failures on mobile'
   expect(await warning.evaluate((element) => element.scrollWidth <= element.clientWidth)).toBe(true);
 
   await server(page, 0, {
-    type: 'herdr_status',
+    type: 'lerdr_status',
     status: {
       server_version: '0.9.0',
       generation: 3,
@@ -1197,7 +1197,7 @@ test('reconnects and blocks mutations for an incompatible relay protocol', async
   await expect(page.getByText(/Relay outdated/)).toBeVisible();
   await page.getByRole('button', { name: 'How to update Fedora' }).click();
   const updateHelp = page.getByRole('dialog', { name: 'Update Fedora' });
-  await expect(updateHelp).toContainText('herdr plugin install 0cv/herdr-mobile-relay');
+  await expect(updateHelp).toContainText('herdr plugin install IGUNUBLUE/lerdr');
   await updateHelp.getByRole('button', { name: 'Close' }).click();
   await page.getByRole('button', { name: 'Remove Fedora' }).click();
   const removeDialog = page.getByRole('dialog', { name: 'Remove Fedora?' });
@@ -1377,13 +1377,13 @@ test('loads a deployed phone app and preserves pending relay updates', async ({ 
     (window as unknown as { __herdrPreReload?: boolean }).__herdrPreReload = true;
   });
   const reloadRequest = page.waitForRequest((request) =>
-    new URL(request.url()).searchParams.has('herdr_reload'));
+    new URL(request.url()).searchParams.has('lerdr_reload'));
   const reloadNavigation = page.waitForNavigation({ waitUntil: 'domcontentloaded' });
   await dialog.getByRole('button', { name: 'Load Update', exact: true }).click();
 
   const reloadUrl = new URL((await reloadRequest).url());
   expect(reloadUrl.pathname).toBe('/index.html');
-  expect(reloadUrl.searchParams.get('herdr_reload'))
+  expect(reloadUrl.searchParams.get('lerdr_reload'))
     .toMatch(new RegExp(`^${APP_RELEASE.replaceAll('.', '\\.')}-\\d+$`));
   await reloadNavigation;
   await page.waitForFunction(() =>
@@ -1437,8 +1437,8 @@ manifestLink.href = navigator.standalone === false && setupToken.length >= 16 &&
 document.head.append(manifestLink);`,
   }));
   await page.addInitScript(({ metadata, relayIds }) => {
-    localStorage.setItem('herdr_theme', 'light');
-    sessionStorage.setItem('herdr_update_progress', JSON.stringify({
+    localStorage.setItem('lerdr_theme', 'light');
+    sessionStorage.setItem('lerdr_update_progress', JSON.stringify({
       targetVersion: metadata.version,
       relayIds,
       startedRelayIds: relayIds,
@@ -1464,8 +1464,8 @@ document.head.append(manifestLink);`,
   await expect(dialog).toBeHidden();
   await expect(page.getByText(`Phone app version ${APP_RELEASE}`, { exact: true })).toBeVisible();
   expect(await page.evaluate(() => ({
-    relays: JSON.parse(localStorage.getItem('herdr_relays') || '[]'),
-    theme: localStorage.getItem('herdr_theme'),
+    relays: JSON.parse(localStorage.getItem('lerdr_relays') || '[]'),
+    theme: localStorage.getItem('lerdr_theme'),
   }))).toEqual({ relays: [fedora, mac], theme: 'light' });
 });
 
@@ -1910,7 +1910,7 @@ test('offers the one-time Terminal bootstrap instead of retrying a legacy deploy
 
   const progress = page.getByRole('dialog', { name: 'Update needs attention' });
   await expect(progress).toContainText('Manual update required');
-  await expect(progress).toContainText('HERDR_MOBILE_RELAY_NO_AUTO_SETUP=1 herdr plugin install');
+  await expect(progress).toContainText('LERDR_NO_AUTO_SETUP=1 herdr plugin install');
   await expect(progress.getByRole('button', { name: 'Copy Update Command' })).toBeVisible();
   await expect(progress.getByRole('button', { name: 'Try Again' })).toHaveCount(0);
 });
@@ -2318,7 +2318,7 @@ test('uses Resize Session as the only terminal layout', async ({ page }) => {
     .getByRole('button', { name: /Terminal width:/ })).toHaveCount(0);
   await expect.poll(async () => (await commands(page))
     .filter((command) => command.type === 'lease_pane_size').length).toBe(1);
-  expect(await page.evaluate(() => localStorage.getItem('herdr_terminal_layout'))).toBeNull();
+  expect(await page.evaluate(() => localStorage.getItem('lerdr_terminal_layout'))).toBeNull();
 });
 
 test('keeps a wide pane readable while its size lease is still pending', async ({ page }) => {
@@ -2402,7 +2402,7 @@ test('wraps wide terminal output for a paired reader credential', async ({ page 
   await expect.poll(() => socketCount(page)).toBe(1);
   await handshake(page, 0, { capabilities: ['attention_classification', 'pane_size_lease'] });
   await page.evaluate(() => {
-    localStorage.setItem('herdr_device_auth_v1', JSON.stringify({
+    localStorage.setItem('lerdr_device_auth_v1', JSON.stringify({
       version: 1,
       relays: {
         fedora: {
@@ -2945,7 +2945,7 @@ test('a reader speaks the latest transcript turn without the relay copy command'
   await boot(page, [fedora]);
   await expect.poll(() => socketCount(page)).toBe(1);
   await page.evaluate(() => {
-    localStorage.setItem('herdr_device_auth_v1', JSON.stringify({
+    localStorage.setItem('lerdr_device_auth_v1', JSON.stringify({
       version: 1,
       relays: {
         fedora: {
@@ -3189,7 +3189,7 @@ test('restores a non-bottom anchor after a Resize Session width change', async (
 test('leases measured terminal columns and releases on teardown', async ({ page }) => {
   // Height leasing is opt-in: resizing the shared pane's height strands
   // stale status-bar copies of inline agents in the scrollback.
-  await page.addInitScript(() => localStorage.setItem('herdr_terminal_height_lease', 'true'));
+  await page.addInitScript(() => localStorage.setItem('lerdr_terminal_height_lease', 'true'));
   await boot(page, [fedora]);
   await expect.poll(() => socketCount(page)).toBe(1);
   await handshake(page, 0, {
@@ -3421,7 +3421,7 @@ test('paints again when the relay keeps a pane settling after a resize', async (
   // whose desktop client keeps fighting the leased size re-arms the relay's
   // settling window on every read, and an unbounded wait freezes the phone on
   // its last painted frame for as long as that lasts.
-  await page.addInitScript(() => localStorage.setItem('herdr_terminal_height_lease', 'true'));
+  await page.addInitScript(() => localStorage.setItem('lerdr_terminal_height_lease', 'true'));
   await boot(page, [fedora]);
   await expect.poll(() => socketCount(page)).toBe(1);
   await handshake(page, 0, {
@@ -4087,7 +4087,7 @@ test('default agent view: Conversation opens directly and persists across reload
   await page.getByRole('button', { name: 'Settings' }).click();
   const settingsViews = page.getByRole('group', { name: 'Default View' });
   await settingsViews.getByRole('button', { name: 'Conversation' }).click();
-  expect(await page.evaluate(() => localStorage.getItem('herdr_default_agent_view'))).toBe('conversation');
+  expect(await page.evaluate(() => localStorage.getItem('lerdr_default_agent_view'))).toBe('conversation');
   await page.getByRole('button', { name: 'Back' }).click();
   await setConversationFixture(page, {
     entries: [{ id: 'turn-1', timestamp: '2026-09-02T12:00:00Z', role: 'assistant', text: 'Direct conversation answer' }],
@@ -4234,7 +4234,7 @@ test('default agent view: unavailable initial page replaces history without an e
     data: { available: false, state: 'ready', mode: 'recent', entries: [], has_more: false, total: null, diagnostics: {}, reason: 'Native transcript unavailable' },
   });
   await expect(page.getByRole('main', { name: 'Terminal for Unavailable transcript' })).toBeVisible();
-  expect(await page.evaluate(() => localStorage.getItem('herdr_default_agent_view'))).toBe('conversation');
+  expect(await page.evaluate(() => localStorage.getItem('lerdr_default_agent_view'))).toBe('conversation');
   await page.getByRole('button', { name: 'Back' }).click();
   await expect(page.getByRole('button', { name: 'Open Unavailable transcript on Fedora' })).toBeVisible();
   await setAutoCommands(page, true);
@@ -4292,7 +4292,7 @@ test('default agent view: manual switching ignores preferences and keeps explici
   await expect(page.getByRole('heading', { name: 'Conversation', exact: true })).toBeVisible();
   await page.getByRole('button', { name: 'Terminal view' }).click();
   await expect(page.getByRole('main', { name: 'Terminal for Manual switching' })).toBeVisible();
-  expect(await page.evaluate(() => localStorage.getItem('herdr_default_agent_view'))).toBe('conversation');
+  expect(await page.evaluate(() => localStorage.getItem('lerdr_default_agent_view'))).toBe('conversation');
   await setAutoCommands(page, false);
   await page.getByRole('button', { name: 'Conversation history' }).click();
   const historyRequest = (await commands(page)).filter((command) => command.type === 'get_conversation_history').at(-1);
@@ -4353,7 +4353,7 @@ test('pane view override: readers can change it while mutation actions stay disa
   await expect.poll(() => socketCount(page)).toBe(1);
   await handshake(page, 0, { capabilities: ['conversation_history'] });
   await page.evaluate(() => {
-    localStorage.setItem('herdr_device_auth_v1', JSON.stringify({
+    localStorage.setItem('lerdr_device_auth_v1', JSON.stringify({
       version: 1,
       relays: {
         fedora: {
@@ -4380,7 +4380,7 @@ test('pane view override: readers can change it while mutation actions stay disa
   await expect(dialog.getByRole('button', { name: 'Clear Agent' })).toBeDisabled();
   const before = await commands(page);
   await dialog.getByRole('combobox', { name: 'Default View' }).selectOption('conversation');
-  expect(await page.evaluate(() => localStorage.getItem('herdr_pane_agent_view_overrides'))).toContain('conversation');
+  expect(await page.evaluate(() => localStorage.getItem('lerdr_pane_agent_view_overrides'))).toContain('conversation');
   expect((await commands(page)).slice(before.length).some((command) => String(command.type).startsWith('agent_'))).toBe(false);
   await dialog.getByRole('button', { name: 'Close' }).click();
   await page.getByRole('button', { name: 'Conversation history' }).click();
@@ -5198,16 +5198,16 @@ test('scales the whole interface from accessible settings', async ({ page }) => 
 
   expect(largeHeadingSize).toBeGreaterThan(compactHeadingSize);
   expect(await page.evaluate(() => document.documentElement.dataset.interfaceSize)).toBe('large');
-  expect(await page.evaluate(() => localStorage.getItem('herdr_terminal_font_size'))).toBe('large');
+  expect(await page.evaluate(() => localStorage.getItem('lerdr_terminal_font_size'))).toBe('large');
   await expect(page.getByRole('group', { name: 'Terminal Width' })).toHaveCount(0);
   await expect(page.getByRole('button', { name: 'Fit to Phone' })).toHaveCount(0);
   await expect(page.getByRole('button', { name: 'Original Columns' })).toHaveCount(0);
   await expect(page.getByText(/Resize Session automatically leases/)).toBeVisible();
 
   await history.getByRole('button', { name: '500' }).click();
-  expect(await page.evaluate(() => localStorage.getItem('herdr_terminal_history_lines'))).toBe('500');
+  expect(await page.evaluate(() => localStorage.getItem('lerdr_terminal_history_lines'))).toBe('500');
   await refresh.getByRole('button', { name: '100 ms' }).click();
-  expect(await page.evaluate(() => localStorage.getItem('herdr_terminal_refresh_ms'))).toBe('100');
+  expect(await page.evaluate(() => localStorage.getItem('lerdr_terminal_refresh_ms'))).toBe('100');
   await handshake(page, 0, {
     capabilities: ['attention_classification', 'pane_realtime_delta', 'slash_commands'],
   });

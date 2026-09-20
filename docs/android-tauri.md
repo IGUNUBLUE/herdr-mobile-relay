@@ -103,22 +103,22 @@ whoever holds it controls updates:
 
 ```bash
 # one-time
-keytool -genkeypair -keystore ~/.local/share/herdr-mobile-relay/android-release.jks \
+keytool -genkeypair -keystore ~/.local/share/lerdr/android-release.jks \
   -alias herdr-mobile -keyalg RSA -keysize 2048 -validity 10950
 
 # per release
-zipalign -p -f 4 app-universal-release-unsigned.apk herdr-mobile-0.23.0-universal.apk
-apksigner sign --ks ~/.local/share/herdr-mobile-relay/android-release.jks \
-  --ks-key-alias herdr-mobile herdr-mobile-0.23.0-universal.apk
-apksigner verify herdr-mobile-0.23.0-universal.apk
-sha256sum herdr-mobile-*.apk > checksums.txt
-gh release upload v0.23.0 herdr-mobile-*.apk checksums.txt \
+zipalign -p -f 4 app-universal-release-unsigned.apk lerdr-0.23.0-universal.apk
+apksigner sign --ks ~/.local/share/lerdr/android-release.jks \
+  --ks-key-alias herdr-mobile lerdr-0.23.0-universal.apk
+apksigner verify lerdr-0.23.0-universal.apk
+sha256sum lerdr-*.apk > apk-checksums.txt
+gh release upload v0.23.0 lerdr-*.apk apk-checksums.txt \
   --repo IGUNUBLUE/lerdr
 ```
 
 `zipalign` and `apksigner` live in `$ANDROID_HOME/build-tools/35.0.0/`.
 Lerdr releases are signed with the key under
-`~/.local/share/herdr-mobile-relay/` on the maintainer's machine — never
+`~/.local/share/lerdr/` on the maintainer's machine — never
 committed, never in CI secrets unless reproducibility is explicitly traded
 for convenience.
 

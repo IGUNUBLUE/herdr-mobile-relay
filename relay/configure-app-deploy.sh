@@ -7,7 +7,7 @@ WRANGLER_VERSION="4.125.0"
 # shellcheck source=common.sh
 . "$SCRIPT_DIR/common.sh"
 
-ENV_FILE="${HERDR_RELAY_ENV:-}"
+ENV_FILE="${LERDR_RELAY_ENV:-${HERDR_RELAY_ENV:-}}"
 if [ -z "$ENV_FILE" ]; then
     ENV_FILE="$(installed_service_env_file)"
 fi
@@ -27,7 +27,7 @@ if ! NODE_DIR="$(node_bin_dir "$ENV_FILE")"; then
     echo "  \${NVM_DIR:-~/.nvm}/current/bin, the newest ~/.nvm/versions/node/*/bin," >&2
     echo "  ~/.local/share/fnm/aliases/default/bin, ~/.volta/bin, ~/.asdf/shims," >&2
     echo "  /opt/homebrew/bin, /usr/local/bin, ~/.local/bin, and /usr/bin." >&2
-    echo "  Set HERDR_APP_DEPLOY_NODE_DIR in $ENV_FILE to the directory holding" >&2
+    echo "  Set LERDR_APP_DEPLOY_NODE_DIR in $ENV_FILE to the directory holding" >&2
     echo "  node and npx, or install Node.js 22 or newer, then rerun this action." >&2
     exit 1
 fi
@@ -37,7 +37,7 @@ echo "Using Node.js $("$NODE_BIN" --version) from $NODE_DIR"
 
 CONFIGURED_ORIGIN="$(dirname "$ENV_FILE")/phone-app-origin-configured"
 OBSERVED_ORIGIN="$(dirname "$ENV_FILE")/phone-app-origin"
-DEFAULT_ORIGIN="${HERDR_APP_DEPLOY_ORIGIN:-}"
+DEFAULT_ORIGIN="${LERDR_APP_DEPLOY_ORIGIN:-${HERDR_APP_DEPLOY_ORIGIN:-}}"
 if [ -z "$DEFAULT_ORIGIN" ] && [ -r "$CONFIGURED_ORIGIN" ]; then
     DEFAULT_ORIGIN="$(head -1 "$CONFIGURED_ORIGIN")"
 elif [ -z "$DEFAULT_ORIGIN" ] && [ -r "$OBSERVED_ORIGIN" ]; then
@@ -73,7 +73,7 @@ prompt_app_origin() {
             '') continue ;;
         esac
         if APP_ORIGIN="$(
-            HERDR_PHONE_APP_URL="$entered" phone_app_base_url "" "$ENV_FILE"
+            LERDR_PHONE_APP_URL="$entered" phone_app_base_url "" "$ENV_FILE"
         )"; then
             return 0
         fi
@@ -157,11 +157,11 @@ attach_pages_domain() {
 
 # Attaching a domain changes the Cloudflare account, so it is never silent:
 # a terminal is asked, and a script has to say so with
-# HERDR_APP_DEPLOY_ATTACH_DOMAIN=true.
+# LERDR_APP_DEPLOY_ATTACH_DOMAIN=true.
 attach_requested() {
     local answer
 
-    case "${HERDR_APP_DEPLOY_ATTACH_DOMAIN:-}" in
+    case "${LERDR_APP_DEPLOY_ATTACH_DOMAIN:-${HERDR_APP_DEPLOY_ATTACH_DOMAIN:-}}" in
         true) return 0 ;;
         false) return 1 ;;
     esac
@@ -225,10 +225,10 @@ if [ -z "$(printf '%s\n' "$MATCHING_PROJECTS" | sed '/^$/d')" ]; then
 fi
 
 DEFAULT_PROJECT=""
-if [ -n "${HERDR_CLOUDFLARE_PAGES_PROJECT:-}" ] \
+if [ -n "${LERDR_CLOUDFLARE_PAGES_PROJECT:-${HERDR_CLOUDFLARE_PAGES_PROJECT:-}}" ] \
     && printf '%s\n' "$MATCHING_PROJECTS" \
-        | grep -Fxq "$HERDR_CLOUDFLARE_PAGES_PROJECT"; then
-    DEFAULT_PROJECT="$HERDR_CLOUDFLARE_PAGES_PROJECT"
+        | grep -Fxq "${LERDR_CLOUDFLARE_PAGES_PROJECT:-$HERDR_CLOUDFLARE_PAGES_PROJECT}"; then
+    DEFAULT_PROJECT="${LERDR_CLOUDFLARE_PAGES_PROJECT:-$HERDR_CLOUDFLARE_PAGES_PROJECT}"
 elif [ "$(printf '%s\n' "$MATCHING_PROJECTS" | sed '/^$/d' | wc -l)" -eq 1 ]; then
     DEFAULT_PROJECT="$(printf '%s\n' "$MATCHING_PROJECTS" | sed -n '1p')"
 fi
@@ -262,11 +262,11 @@ while true; do
     printf '%s\n' "$MATCHING_PROJECTS" | sed '/^$/d;s/^/  /'
 done
 
-set_env_value_atomic "$ENV_FILE" HERDR_APP_DEPLOY_ORIGIN "$APP_ORIGIN"
-set_env_value_atomic "$ENV_FILE" HERDR_CLOUDFLARE_PAGES_PROJECT "$PAGES_PROJECT"
-set_env_value_atomic "$ENV_FILE" HERDR_CLOUDFLARE_PAGES_BRANCH "main"
-set_env_value_atomic "$ENV_FILE" HERDR_APP_DEPLOY_NPX "$NPX_BIN"
-set_env_value_atomic "$ENV_FILE" HERDR_APP_DEPLOY_NODE_DIR "$NODE_DIR"
+set_env_value_atomic "$ENV_FILE" LERDR_APP_DEPLOY_ORIGIN "$APP_ORIGIN"
+set_env_value_atomic "$ENV_FILE" LERDR_CLOUDFLARE_PAGES_PROJECT "$PAGES_PROJECT"
+set_env_value_atomic "$ENV_FILE" LERDR_CLOUDFLARE_PAGES_BRANCH "main"
+set_env_value_atomic "$ENV_FILE" LERDR_APP_DEPLOY_NPX "$NPX_BIN"
+set_env_value_atomic "$ENV_FILE" LERDR_APP_DEPLOY_NODE_DIR "$NODE_DIR"
 record_phone_app_origin "$APP_ORIGIN" "$ENV_FILE"
 
 echo ""

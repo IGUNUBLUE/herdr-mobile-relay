@@ -3,7 +3,10 @@
 set -eu
 
 REPO=${LERDR_RELEASE_REPOSITORY:-${HERDR_RELEASE_REPOSITORY:-IGUNUBLUE/lerdr}}
-BINARY=herdr-mobile-relay
+BINARY=lerdr
+LEGACY_BINARY=herdr-mobile-relay
+SENTINEL_NAME=.lerdr-installation
+LEGACY_SENTINEL=.herdr-mobile-relay-installation
 
 info() { printf '==> %s\n' "$1" >&2; }
 fatal() { printf 'error: %s\n' "$1" >&2; exit 1; }
@@ -25,47 +28,47 @@ detect_arch() {
 }
 
 run_with_timeout() {
-    herdr_timeout_seconds=$1
+    lerdr_timeout_seconds=$1
     shift
     "$@" &
-    herdr_command_pid=$!
-    herdr_elapsed=0
-    while kill -0 "$herdr_command_pid" 2>/dev/null; do
-        if [ "$herdr_elapsed" -ge "$herdr_timeout_seconds" ]; then
-            kill -9 "$herdr_command_pid" 2>/dev/null || true
-            wait "$herdr_command_pid" 2>/dev/null || true
-            herdr_command_pid=
+    lerdr_command_pid=$!
+    lerdr_elapsed=0
+    while kill -0 "$lerdr_command_pid" 2>/dev/null; do
+        if [ "$lerdr_elapsed" -ge "$lerdr_timeout_seconds" ]; then
+            kill -9 "$lerdr_command_pid" 2>/dev/null || true
+            wait "$lerdr_command_pid" 2>/dev/null || true
+            lerdr_command_pid=
             return 124
         fi
         sleep 1
-        herdr_elapsed=$((herdr_elapsed + 1))
+        lerdr_elapsed=$((lerdr_elapsed + 1))
     done
-    if wait "$herdr_command_pid"; then
-        herdr_status=0
+    if wait "$lerdr_command_pid"; then
+        lerdr_status=0
     else
-        herdr_status=$?
+        lerdr_status=$?
     fi
-    herdr_command_pid=
-    return "$herdr_status"
+    lerdr_command_pid=
+    return "$lerdr_status"
 }
 
 terminate_active_command() {
-    herdr_signal=$1
-    if [ -z "${herdr_command_pid:-}" ]; then
+    lerdr_signal=$1
+    if [ -z "${lerdr_command_pid:-}" ]; then
         return 0
     fi
-    kill "$herdr_signal" "$herdr_command_pid" 2>/dev/null || true
-    herdr_signal_elapsed=0
-    while kill -0 "$herdr_command_pid" 2>/dev/null; do
-        if [ "$herdr_signal_elapsed" -ge 2 ]; then
-            kill -KILL "$herdr_command_pid" 2>/dev/null || true
+    kill "$lerdr_signal" "$lerdr_command_pid" 2>/dev/null || true
+    lerdr_signal_elapsed=0
+    while kill -0 "$lerdr_command_pid" 2>/dev/null; do
+        if [ "$lerdr_signal_elapsed" -ge 2 ]; then
+            kill -KILL "$lerdr_command_pid" 2>/dev/null || true
             break
         fi
         sleep 1
-        herdr_signal_elapsed=$((herdr_signal_elapsed + 1))
+        lerdr_signal_elapsed=$((lerdr_signal_elapsed + 1))
     done
-    wait "$herdr_command_pid" 2>/dev/null || true
-    herdr_command_pid=
+    wait "$lerdr_command_pid" 2>/dev/null || true
+    lerdr_command_pid=
 }
 
 on_install_exit() {
@@ -76,10 +79,10 @@ on_install_exit() {
 }
 
 on_install_signal() {
-    herdr_signal=$1
-    herdr_exit_status=$2
-    terminate_active_command "$herdr_signal"
-    exit "$herdr_exit_status"
+    lerdr_signal=$1
+    lerdr_exit_status=$2
+    terminate_active_command "$lerdr_signal"
+    exit "$lerdr_exit_status"
 }
 
 fetch() {
@@ -233,7 +236,9 @@ validate_legacy_root() {
     for legacy_entry in "$legacy_root"/* "$legacy_root"/.[!.]* "$legacy_root"/..?*; do
         [ -e "$legacy_entry" ] || continue
         legacy_name=${legacy_entry##*/}
-        [ "$legacy_name" != ".herdr-mobile-relay-installation" ] || continue
+        case "$legacy_name" in
+            "$SENTINEL_NAME"|"$LEGACY_SENTINEL") continue ;;
+        esac
         legacy_root_entry_allowed "$root_kind" "$legacy_name" "$legacy_entry" || return 1
         found=true
         case "$legacy_name" in
@@ -256,21 +261,39 @@ validate_legacy_root() {
     fi
 }
 
+verify_sentinel() {
+    sentinel_file=$1
+    sentinel_root=$2
+    canonical_root=$(CDPATH='' cd "$sentinel_root" && pwd -P)
+    grep -Fx "root=$canonical_root" "$sentinel_file" >/dev/null || return 1
+    grep -Fx 'product=lerdr' "$sentinel_file" >/dev/null ||
+        grep -Fx 'product=herdr-mobile-relay' "$sentinel_file" >/dev/null
+}
+
 write_install_sentinel() {
     sentinel_root=$1
     root_kind=${2:-new}
-    sentinel="$sentinel_root/.herdr-mobile-relay-installation"
+    sentinel="$sentinel_root/$SENTINEL_NAME"
+    legacy_sentinel="$sentinel_root/$LEGACY_SENTINEL"
+    # A pre-rename install carried the old sentinel name: verify ownership under
+    # the old product name, then rewrite it as the current sentinel.
+    sentinel_owned=
+    if [ -f "$legacy_sentinel" ] && [ ! -e "$sentinel" ]; then
+        verify_sentinel "$legacy_sentinel" "$sentinel_root" ||
+            fatal "installation root has a mismatched ownership sentinel: $sentinel_root"
+        rm -f "$legacy_sentinel"
+        sentinel_owned=1
+    fi
     if [ -f "$sentinel" ]; then
-        canonical_root=$(CDPATH='' cd "$sentinel_root" && pwd -P)
-        grep -Fx 'product=herdr-mobile-relay' "$sentinel" >/dev/null &&
-            grep -Fx "root=$canonical_root" "$sentinel" >/dev/null ||
+        verify_sentinel "$sentinel" "$sentinel_root" ||
             fatal "installation root has a mismatched ownership sentinel: $sentinel_root"
         return
     fi
     if [ -e "$sentinel_root" ]; then
         [ -d "$sentinel_root" ] ||
             fatal "installation root is not a directory: $sentinel_root"
-        if [ -n "$(find "$sentinel_root" -mindepth 1 -maxdepth 1 -print -quit)" ]; then
+        if [ -z "$sentinel_owned" ] &&
+           [ -n "$(find "$sentinel_root" -mindepth 1 -maxdepth 1 -print -quit)" ]; then
             case "$root_kind" in
                 config|cache)
                     validate_legacy_root "$sentinel_root" "$root_kind" ||
@@ -286,52 +309,158 @@ write_install_sentinel() {
     fi
     chmod 700 "$sentinel_root"
     canonical_root=$(CDPATH='' cd "$sentinel_root" && pwd -P)
-    sentinel_temp="$sentinel_root/.herdr-mobile-relay-installation.$$"
+    sentinel_temp="$sentinel_root/$SENTINEL_NAME.$$"
     {
-        printf 'product=herdr-mobile-relay\n'
+        printf 'product=lerdr\n'
         printf 'root=%s\n' "$canonical_root"
     } > "$sentinel_temp"
     chmod 600 "$sentinel_temp"
-    mv -f "$sentinel_temp" "$sentinel_root/.herdr-mobile-relay-installation"
+    mv -f "$sentinel_temp" "$sentinel"
+}
+
+# The release root keeps a `current` symlink into its own releases/ directory.
+# A link recorded as an absolute path breaks when the root is renamed, so it is
+# repointed at the new root while relative links survive a move untouched.
+fixup_current_link() {
+    root=$1
+    old_root=$2
+    [ -L "$root/current" ] || return 0
+    current_target=$(readlink "$root/current")
+    case "$current_target" in
+        "$old_root"/*)
+            rm -f "$root/current"
+            ln -s "$root/${current_target#"$old_root"/}" "$root/current" || return 1
+            ;;
+    esac
+}
+
+# Carries a pre-rename install root forward to its lerdr name. A missing new
+# root takes the whole old directory; when both exist (for example a fresh
+# install ran before this upgrade) the old entries merge in without replacing
+# anything, and leftovers stay behind rather than being deleted.
+migrate_install_root() {
+    new_root=$1
+    old_root=$2
+    root_kind=${3:-new}
+    [ "$new_root" != "$old_root" ] || return 0
+    [ -e "$old_root" ] || [ -L "$old_root" ] || return 0
+    [ ! -L "$old_root" ] ||
+        fatal "refusing to migrate a symlinked installation root: $old_root"
+    [ -d "$old_root" ] ||
+        fatal "refusing to migrate a non-directory installation root: $old_root"
+    if [ ! -e "$old_root/$SENTINEL_NAME" ] && [ ! -e "$old_root/$LEGACY_SENTINEL" ]; then
+        case "$root_kind" in
+            config|cache)
+                validate_legacy_root "$old_root" "$root_kind" ||
+                    fatal "refusing to migrate unowned directory: $old_root"
+                ;;
+            *)
+                fatal "refusing to migrate directory without an ownership sentinel: $old_root"
+                ;;
+        esac
+    fi
+    if [ ! -e "$new_root" ] && [ ! -L "$new_root" ]; then
+        mv "$old_root" "$new_root" ||
+            fatal "could not migrate pre-rename directory $old_root"
+        # A sentinel carried by the move still records the old canonical root;
+        # repoint it so ownership verification sees the directory's new home.
+        for carried in "$new_root/$SENTINEL_NAME" "$new_root/$LEGACY_SENTINEL"; do
+            if [ -f "$carried" ]; then
+                carried_new=$(CDPATH='' cd "$new_root" && pwd -P)
+                carried_temp="$carried.$$"
+                sed "s|^root=.*|root=$carried_new|" "$carried" > "$carried_temp" &&
+                    chmod 600 "$carried_temp" &&
+                    mv -f "$carried_temp" "$carried" ||
+                    fatal "could not repoint ownership sentinel in $new_root"
+            fi
+        done
+        fixup_current_link "$new_root" "$old_root" ||
+            fatal "could not repoint current release link in $new_root"
+        info "Migrated pre-rename directory $old_root to $new_root"
+        return 0
+    fi
+    [ -d "$new_root" ] ||
+        fatal "cannot merge $old_root into a non-directory: $new_root"
+    for old_entry in "$old_root"/* "$old_root"/.[!.]* "$old_root"/..?*; do
+        [ -e "$old_entry" ] || [ -L "$old_entry" ] || continue
+        old_name=${old_entry##*/}
+        case "$old_name" in
+            "$SENTINEL_NAME"|"$LEGACY_SENTINEL")
+                [ ! -e "$new_root/$SENTINEL_NAME" ] &&
+                    [ ! -e "$new_root/$LEGACY_SENTINEL" ] || continue
+                ;;
+            releases)
+                if [ -d "$new_root/releases" ]; then
+                    for old_release in "$old_entry"/*; do
+                        [ -e "$old_release" ] || [ -L "$old_release" ] || continue
+                        release_name=${old_release##*/}
+                        if [ ! -e "$new_root/releases/$release_name" ]; then
+                            mv "$old_release" "$new_root/releases/$release_name" ||
+                                fatal "could not migrate release $release_name"
+                        fi
+                    done
+                    rmdir "$old_entry" 2>/dev/null || true
+                    continue
+                fi
+                ;;
+        esac
+        if [ ! -e "$new_root/$old_name" ] && [ ! -L "$new_root/$old_name" ]; then
+            mv "$old_entry" "$new_root/$old_name" ||
+                fatal "could not migrate $old_entry"
+        fi
+    done
+    fixup_current_link "$new_root" "$old_root" ||
+        fatal "could not repoint current release link in $new_root"
+    rmdir "$old_root" 2>/dev/null ||
+        info "Kept pre-rename leftovers in $old_root"
+    [ -d "$old_root" ] ||
+        info "Migrated pre-rename directory $old_root into $new_root"
 }
 
 prepare_install_roots() {
     release_root=$1
     config_root=$2
     cache_root=$3
-    legacy_cache="$HOME/.cache/herdr-mobile-relay"
+    migrate_release=${4:-0}
+    migrate_config=${5:-0}
+    legacy_release_root="${XDG_DATA_HOME:-$HOME/.local/share}/herdr-mobile-relay"
+    legacy_config_root="${XDG_CONFIG_HOME:-$HOME/.config}/herdr-mobile-relay"
+    legacy_cache_root="${XDG_CACHE_HOME:-$HOME/.cache}/herdr-mobile-relay"
+
+    [ "$migrate_release" = 1 ] &&
+        migrate_install_root "$release_root" "$legacy_release_root" new
+    [ "$migrate_config" = 1 ] &&
+        migrate_install_root "$config_root" "$legacy_config_root" config
+    migrate_install_root "$cache_root" "$legacy_cache_root" cache
 
     write_install_sentinel "$release_root" new
     write_install_sentinel "$config_root" config
-
-    if [ "$cache_root" != "$legacy_cache" ] &&
-       [ -d "$legacy_cache" ] &&
-       [ ! -e "$legacy_cache/.herdr-mobile-relay-installation" ]; then
-        validate_legacy_root "$legacy_cache" cache ||
-            fatal "legacy Python cache has unexpected contents: $legacy_cache"
-        if [ -e "$cache_root" ]; then
-            [ -d "$cache_root" ] || fatal "cache destination is not a directory: $cache_root"
-            if [ -n "$(find "$cache_root" -mindepth 1 -maxdepth 1 -print -quit)" ] &&
-               [ ! -f "$cache_root/.herdr-mobile-relay-installation" ]; then
-                validate_legacy_root "$cache_root" cache ||
-                    fatal "cannot migrate the Python cache into unowned destination: $cache_root"
-            fi
-        else
-            mkdir -p "$cache_root"
-        fi
-        for legacy_entry in "$legacy_cache"/* "$legacy_cache"/.[!.]* "$legacy_cache"/..?*; do
-            [ -e "$legacy_entry" ] || continue
-            legacy_name=${legacy_entry##*/}
-            [ ! -e "$cache_root/$legacy_name" ] ||
-                fatal "legacy Python cache entry already exists at destination: $legacy_name"
-            mv "$legacy_entry" "$cache_root/$legacy_name" ||
-                fatal "could not migrate legacy Python cache entry: $legacy_name"
-        done
-        rmdir "$legacy_cache" ||
-            fatal "could not remove migrated legacy Python cache root"
-        info "Migrated Python cache from $legacy_cache to $cache_root"
-    fi
     write_install_sentinel "$cache_root" cache
+}
+
+retire_legacy_service() {
+    case "$(uname -s)" in
+        Linux)
+            command -v systemctl >/dev/null 2>&1 || return 0
+            if [ -f "$HOME/.config/systemd/user/herdr-mobile-relay.service" ] ||
+               systemctl --user is-active --quiet herdr-mobile-relay.service 2>/dev/null ||
+               systemctl --user is-enabled --quiet herdr-mobile-relay.service 2>/dev/null; then
+                systemctl --user stop herdr-mobile-relay.service 2>/dev/null || true
+                systemctl --user disable herdr-mobile-relay.service 2>/dev/null || true
+                info "Stopped and disabled pre-rename service herdr-mobile-relay.service"
+            fi
+            ;;
+        Darwin)
+            legacy_label=com.herdr-mobile-relay.service
+            legacy_plist="$HOME/Library/LaunchAgents/$legacy_label.plist"
+            if [ -f "$legacy_plist" ] ||
+               launchctl print "gui/$(id -u)/$legacy_label" >/dev/null 2>&1; then
+                launchctl bootout "gui/$(id -u)" "$legacy_plist" 2>/dev/null ||
+                    launchctl bootout "gui/$(id -u)/$legacy_label" 2>/dev/null || true
+                info "Unloaded pre-rename service $legacy_label"
+            fi
+            ;;
+    esac
 }
 
 main() {
@@ -351,18 +480,27 @@ main() {
     os=$(detect_os)
     arch=$(detect_arch)
     target="$os/$arch"
-    archive="${BINARY}_${version}_${os}_${arch}.tar.gz"
+    archive="lerdr_${version}_${os}_${arch}.tar.gz"
+    # Releases through v0.25.0 shipped assets under the pre-rename name.
+    legacy_archive="${LEGACY_BINARY}_${version}_${os}_${arch}.tar.gz"
     tag="v$version"
-    release_root=${INSTALL_ROOT:-"${XDG_DATA_HOME:-$HOME/.local/share}/herdr-mobile-relay"}
+    default_release_root="${XDG_DATA_HOME:-$HOME/.local/share}/lerdr"
+    release_root=${INSTALL_ROOT:-$default_release_root}
     shim_dir=${BIN_DIR:-"$HOME/.local/bin"}
-    if [ -n "${HERDR_RELAY_ENV:-}" ]; then
-        config_root=$(dirname "$HERDR_RELAY_ENV")
+    relay_env_file=${LERDR_RELAY_ENV:-${HERDR_RELAY_ENV:-}}
+    default_config_root="${XDG_CONFIG_HOME:-$HOME/.config}/lerdr"
+    if [ -n "$relay_env_file" ]; then
+        config_root=$(dirname "$relay_env_file")
     else
-        config_root=${HERDR_PLUGIN_CONFIG_DIR:-"${XDG_CONFIG_HOME:-$HOME/.config}/herdr-mobile-relay"}
+        config_root=${HERDR_PLUGIN_CONFIG_DIR:-$default_config_root}
     fi
-    cache_root="${XDG_CACHE_HOME:-$HOME/.cache}/herdr-mobile-relay"
+    cache_root="${XDG_CACHE_HOME:-$HOME/.cache}/lerdr"
+    migrate_release=0
+    migrate_config=0
+    [ "$release_root" = "$default_release_root" ] && migrate_release=1
+    [ "$config_root" = "$default_config_root" ] && migrate_config=1
 
-    work_dir=$(mktemp -d "${TMPDIR:-/tmp}/herdr-install.XXXXXX")
+    work_dir=$(mktemp -d "${TMPDIR:-/tmp}/lerdr-install.XXXXXX")
     trap 'on_install_exit' EXIT
     trap 'on_install_signal -INT 130' INT
     trap 'on_install_signal -TERM 143' TERM
@@ -388,6 +526,13 @@ main() {
             fatal "could not fetch release metadata from GitHub API"
         release_json=$(awk '{ printf "%s", $0 }' "$release_json_path")
         archive_url=$(resolve_asset_url "$release_json" "$archive")
+        if [ -z "$archive_url" ] && [ "$archive" != "$legacy_archive" ]; then
+            archive_url=$(resolve_asset_url "$release_json" "$legacy_archive")
+            if [ -n "$archive_url" ]; then
+                archive=$legacy_archive
+                info "Falling back to pre-rename asset ${archive}"
+            fi
+        fi
         checksum_url=$(resolve_asset_url "$release_json" "checksums.txt")
         [ -n "$archive_url" ] || fatal "release has no asset named $archive"
         [ -n "$checksum_url" ] || fatal "release has no asset named checksums.txt"
@@ -396,11 +541,15 @@ main() {
         fetch "$archive_url" "$archive_path" ||
             fatal "release archive download failed"
     else
-        base_url=${HERDR_RELEASE_BASE_URL:-"https://github.com/${REPO}/releases/download/${tag}"}
+        base_url=${LERDR_RELEASE_BASE_URL:-${HERDR_RELEASE_BASE_URL:-"https://github.com/${REPO}/releases/download/${tag}"}}
         fetch "$base_url/checksums.txt" "$checksums_path" ||
             fatal "required checksums.txt download failed"
-        fetch "$base_url/$archive" "$archive_path" ||
-            fatal "release archive download failed"
+        if ! fetch "$base_url/$archive" "$archive_path"; then
+            archive=$legacy_archive
+            info "Falling back to pre-rename asset ${archive}"
+            fetch "$base_url/$archive" "$archive_path" ||
+                fatal "release archive download failed"
+        fi
     fi
 
     matches=$(awk -v name="$archive" '
@@ -420,10 +569,15 @@ main() {
     mkdir -p "$stage"
     chmod 700 "$stage"
     tar -xzf "$archive_path" -C "$stage" || fatal "release extraction failed"
-    [ -x "$stage/$BINARY" ] || fatal "archive is missing the relay executable"
+    # Pre-rename archives carry the relay under its old executable name.
+    release_binary=$BINARY
+    if [ ! -x "$stage/$release_binary" ] && [ -x "$stage/$LEGACY_BINARY" ]; then
+        release_binary=$LEGACY_BINARY
+    fi
+    [ -x "$stage/$release_binary" ] || fatal "archive is missing the relay executable"
     [ -f "$stage/release-manifest.json" ] || fatal "archive is missing release-manifest.json"
 
-    "$stage/$BINARY" verify-release --target "$target" "$stage" >/dev/null ||
+    "$stage/$release_binary" verify-release --target "$target" "$stage" >/dev/null ||
         fatal "offline release verification failed"
     manifest_version=$(sed -n 's/^[[:space:]]*"version":[[:space:]]*"\([^"]*\)".*/\1/p' "$stage/release-manifest.json" | head -1)
     revision=$(sed -n 's/^[[:space:]]*"revision":[[:space:]]*"\([^"]*\)".*/\1/p' "$stage/release-manifest.json" | head -1)
@@ -433,6 +587,10 @@ main() {
 
     releases_dir="$release_root/releases"
     final_dir="$releases_dir/${version}-${revision}-${os}-${arch}"
+    prepare_install_roots "$release_root" "$config_root" "$cache_root" \
+        "$migrate_release" "$migrate_config"
+    # Read `current` only after migration: fixup_current_link may have
+    # repointed an absolute link left over from the pre-rename root.
     previous_dir=
     if [ -L "$release_root/current" ]; then
         previous_link=$(readlink "$release_root/current")
@@ -441,31 +599,41 @@ main() {
             *) previous_dir="$release_root/$previous_link" ;;
         esac
     fi
-    prepare_install_roots "$release_root" "$config_root" "$cache_root"
     mkdir -p "$releases_dir" "$shim_dir"
     chmod 700 "$release_root" "$releases_dir"
     if [ -e "$final_dir" ]; then
-        "$stage/$BINARY" verify-release --target "$target" "$final_dir" >/dev/null ||
+        "$stage/$release_binary" verify-release --target "$target" "$final_dir" >/dev/null ||
             fatal "existing target release directory is invalid"
     else
         mv "$stage" "$final_dir" || fatal "could not install release directory"
     fi
-    "$final_dir/$BINARY" seal-release "$final_dir" ||
+    "$final_dir/$release_binary" seal-release "$final_dir" ||
         fatal "could not seal installed release directory"
     if [ -n "$previous_dir" ]; then
-        "$final_dir/$BINARY" prune-releases "$release_root" "$final_dir" "$previous_dir" ||
+        "$final_dir/$release_binary" prune-releases "$release_root" "$final_dir" "$previous_dir" ||
             fatal "could not prune obsolete releases"
     else
-        "$final_dir/$BINARY" prune-releases "$release_root" "$final_dir" ||
+        "$final_dir/$release_binary" prune-releases "$release_root" "$final_dir" ||
             fatal "could not prune obsolete releases"
     fi
+    # A still-running pre-rename service would hold the old install alive.
+    retire_legacy_service
     shim_temp="$shim_dir/.${BINARY}.$$"
     rm -f "$shim_temp"
-    ln -s "$release_root/current/$BINARY" "$shim_temp"
+    ln -s "$release_root/current/$release_binary" "$shim_temp"
     mv -f "$shim_temp" "$shim_dir/$BINARY" ||
         fatal "could not install executable shim"
+    legacy_shim="$shim_dir/$LEGACY_BINARY"
+    if [ -L "$legacy_shim" ]; then
+        legacy_shim_target=$(readlink "$legacy_shim")
+        case "$legacy_shim_target" in
+            "$release_root"/*|"${XDG_DATA_HOME:-$HOME/.local/share}/herdr-mobile-relay"/*)
+                rm -f "$legacy_shim"
+                ;;
+        esac
+    fi
 
-    "$final_dir/$BINARY" activate-release "$release_root" "$final_dir" ||
+    "$final_dir/$release_binary" activate-release "$release_root" "$final_dir" ||
         fatal "could not atomically activate the complete release"
 
     info "Installed ${BINARY} ${version} to $final_dir"

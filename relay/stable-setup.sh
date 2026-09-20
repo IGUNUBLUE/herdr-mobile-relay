@@ -9,8 +9,8 @@ export PATH="$HOME/.local/bin:$PATH:/opt/homebrew/bin:/usr/local/bin:/home/linux
 
 ENV_FILE="$(relay_env_file "$SCRIPT_DIR")"
 ENV_FILE="$(canonical_file_path "$ENV_FILE")"
-STATE_FILE="${HERDR_STABLE_STATE_FILE:-$(dirname "$ENV_FILE")/stable-setup.json}"
-WORK_DIR="$(mktemp -d "${TMPDIR:-/tmp}/herdr-stable-setup.XXXXXX")"
+STATE_FILE="${LERDR_STABLE_STATE_FILE:-${HERDR_STABLE_STATE_FILE:-$(dirname "$ENV_FILE")/stable-setup.json}}"
+WORK_DIR="$(mktemp -d "${TMPDIR:-/tmp}/lerdr-stable-setup.XXXXXX")"
 ENV_WAS_PRESENT=false
 ENV_CONFIG_WAS_PRESENT=false
 STATE_WAS_PRESENT=false
@@ -44,11 +44,11 @@ state_update() {
 
 rerun_command() {
     if [ -n "${HERDR_PLUGIN_CONFIG_DIR:-}" ]; then
-        echo "herdr plugin action invoke install-service --plugin herdr-mobile-relay.events"
+        echo "herdr plugin action invoke install-service --plugin lerdr.events"
         return
     fi
     if [ "$ENV_FILE" != "$(canonical_file_path "$SCRIPT_DIR/.env")" ]; then
-        printf 'HERDR_RELAY_ENV=%q make stable-setup\n' "$ENV_FILE"
+        printf 'LERDR_RELAY_ENV=%q make stable-setup\n' "$ENV_FILE"
         return
     fi
     echo "make stable-setup"
@@ -69,11 +69,11 @@ confirm_cloudflare_creation() {
     echo "About to create Cloudflare resources in your account:"
     echo "  Tunnel:    $TUNNEL_NAME"
     echo "  DNS route: $RELAY_HOSTNAME"
-    if [ "${HERDR_STABLE_YES:-}" = "1" ]; then
+    if [ "${LERDR_STABLE_YES:-${HERDR_STABLE_YES:-}}" = "1" ]; then
         return
     fi
     if [ ! -t 0 ]; then
-        echo "✗ Confirmation required. Run interactively, or set HERDR_STABLE_YES=1." >&2
+        echo "✗ Confirmation required. Run interactively, or set LERDR_STABLE_YES=1." >&2
         return 1
     fi
     read -r -p "Create this tunnel and DNS route? [y/N] " confirmation || confirmation=""
@@ -107,13 +107,13 @@ confirm_existing_config_reuse() {
     echo "This config was not created by the current stable-setup state. Reusing it"
     echo "keeps the same tunnel and hostname; it does not create a new relay."
 
-    case "${HERDR_STABLE_REUSE_CONFIG:-}" in
+    case "${LERDR_STABLE_REUSE_CONFIG:-${HERDR_STABLE_REUSE_CONFIG:-}}" in
         1|true) return 0 ;;
         0|false) return 1 ;;
     esac
     if [ ! -t 0 ]; then
         echo "✗ Explicit confirmation is required before reusing this config." >&2
-        echo "  Run interactively, or set HERDR_STABLE_REUSE_CONFIG=1." >&2
+        echo "  Run interactively, or set LERDR_STABLE_REUSE_CONFIG=1." >&2
         return 1
     fi
     read -r -p "Reuse this existing tunnel and hostname? [y/N] " confirmation ||
@@ -126,8 +126,14 @@ confirm_existing_config_reuse() {
 
 service_file_present() {
     case "$(uname -s)" in
-        Darwin) [ -f "$HOME/Library/LaunchAgents/com.herdr-mobile-relay.service.plist" ] ;;
-        Linux) [ -f "$HOME/.config/systemd/user/herdr-mobile-relay.service" ] ;;
+        Darwin)
+            [ -f "$HOME/Library/LaunchAgents/com.lerdr.service.plist" ] ||
+                [ -f "$HOME/Library/LaunchAgents/com.herdr-mobile-relay.service.plist" ]
+            ;;
+        Linux)
+            [ -f "$HOME/.config/systemd/user/lerdr.service" ] ||
+                [ -f "$HOME/.config/systemd/user/herdr-mobile-relay.service" ]
+            ;;
         *) return 1 ;;
     esac
 }
@@ -212,7 +218,7 @@ ensure_hostname_certificate_zone() {
     echo ""
     echo "✗ The current Cloudflare login authorizes $cert_zone, not $hostname." >&2
     echo "  Continuing would create $hostname.$cert_zone instead." >&2
-    case "${HERDR_STABLE_RELOGIN:-}" in
+    case "${LERDR_STABLE_RELOGIN:-${HERDR_STABLE_RELOGIN:-}}" in
         1|true) confirmation="y" ;;
         0|false) confirmation="n" ;;
         *)
@@ -303,14 +309,14 @@ choose_hostname() {
     local dns_status
 
     while true; do
-        if [ -n "${HERDR_STABLE_HOSTNAME:-}" ]; then
-            candidate="$HERDR_STABLE_HOSTNAME"
+        if [ -n "${LERDR_STABLE_HOSTNAME:-${HERDR_STABLE_HOSTNAME:-}}" ]; then
+            candidate="${LERDR_STABLE_HOSTNAME:-$HERDR_STABLE_HOSTNAME}"
         elif [ -n "$recorded_hostname" ]; then
             read -r -p "Public hostname [$recorded_hostname]: " candidate || candidate=""
             candidate="${candidate:-$recorded_hostname}"
         else
-            if [ -n "${HERDR_STABLE_DOMAIN:-}" ]; then
-                domain="$HERDR_STABLE_DOMAIN"
+            if [ -n "${LERDR_STABLE_DOMAIN:-${HERDR_STABLE_DOMAIN:-}}" ]; then
+                domain="${LERDR_STABLE_DOMAIN:-$HERDR_STABLE_DOMAIN}"
             else
                 if ! select_cloudflare_domain; then
                     return 1
@@ -323,7 +329,7 @@ choose_hostname() {
             domain="${domain%.}"
             if ! valid_hostname "$domain" || [[ "$domain" != *.* ]]; then
                 echo "✗ Enter a valid Cloudflare domain such as example.com." >&2
-                [ -z "${HERDR_STABLE_DOMAIN:-}" ] || return 1
+                [ -z "${LERDR_STABLE_DOMAIN:-${HERDR_STABLE_DOMAIN:-}}" ] || return 1
                 continue
             fi
             proposed="relay-$(host_label | tr '[:upper:]_' '[:lower:]-' | tr -cd 'a-z0-9-').$domain"
@@ -338,13 +344,13 @@ choose_hostname() {
         candidate="${candidate%.}"
         if ! valid_hostname "$candidate" || [[ "$candidate" != *.* ]]; then
             echo "✗ Enter a valid full hostname such as relay-workstation.example.com." >&2
-            [ -z "${HERDR_STABLE_HOSTNAME:-}" ] || return 1
+            [ -z "${LERDR_STABLE_HOSTNAME:-${HERDR_STABLE_HOSTNAME:-}}" ] || return 1
             recorded_hostname=""
             continue
         fi
 
         if ! ensure_hostname_certificate_zone "$candidate"; then
-            [ -z "${HERDR_STABLE_HOSTNAME:-}" ] || return 1
+            [ -z "${LERDR_STABLE_HOSTNAME:-${HERDR_STABLE_HOSTNAME:-}}" ] || return 1
             recorded_hostname=""
             continue
         fi
@@ -370,7 +376,7 @@ choose_hostname() {
 
         echo "✗ $candidate already has a public DNS record." >&2
         echo "  The wizard will not overwrite it. Choose another hostname." >&2
-        [ -z "${HERDR_STABLE_HOSTNAME:-}" ] || return 1
+        [ -z "${LERDR_STABLE_HOSTNAME:-${HERDR_STABLE_HOSTNAME:-}}" ] || return 1
         recorded_hostname=""
     done
 }
@@ -401,7 +407,7 @@ list_tunnels() {
             return 1
         fi
     fi
-    if ! state_command tunnel-id-by-name "$output" "__herdr_validation_only__" >/dev/null; then
+    if ! state_command tunnel-id-by-name "$output" "__lerdr_validation_only__" >/dev/null; then
         return 1
     fi
     LIST_FILE="$output"
@@ -461,8 +467,8 @@ EOF
 }
 
 wait_for_public_dns() {
-    local timeout="${HERDR_STABLE_DNS_TIMEOUT:-90}"
-    local delay="${HERDR_STABLE_POLL_DELAY:-2}"
+    local timeout="${LERDR_STABLE_DNS_TIMEOUT:-${HERDR_STABLE_DNS_TIMEOUT:-90}}"
+    local delay="${LERDR_STABLE_POLL_DELAY:-${HERDR_STABLE_POLL_DELAY:-2}}"
     local deadline=$((SECONDS + timeout))
     local status
 
@@ -487,8 +493,8 @@ wait_for_public_dns() {
 }
 
 wait_for_agent_readiness() {
-    local timeout="${HERDR_STABLE_READY_TIMEOUT:-30}"
-    local delay="${HERDR_STABLE_POLL_DELAY:-2}"
+    local timeout="${LERDR_STABLE_READY_TIMEOUT:-${HERDR_STABLE_READY_TIMEOUT:-30}}"
+    local delay="${LERDR_STABLE_POLL_DELAY:-${HERDR_STABLE_POLL_DELAY:-2}}"
     local deadline=$((SECONDS + timeout))
     local ready_file="$WORK_DIR/local-ready.json"
 
@@ -518,8 +524,8 @@ wait_for_agent_readiness() {
 }
 
 wait_for_public_health() {
-    local timeout="${HERDR_STABLE_HTTP_TIMEOUT:-60}"
-    local delay="${HERDR_STABLE_POLL_DELAY:-2}"
+    local timeout="${LERDR_STABLE_HTTP_TIMEOUT:-${HERDR_STABLE_HTTP_TIMEOUT:-60}}"
+    local delay="${LERDR_STABLE_POLL_DELAY:-${HERDR_STABLE_POLL_DELAY:-2}}"
     local deadline=$((SECONDS + timeout))
     local public_file="$WORK_DIR/public-health.json"
     local mismatch_file="$WORK_DIR/public-health.err"
@@ -566,14 +572,14 @@ install_service() {
     fi
 }
 
-if [ "${HERDR_STABLE_SETUP_WRAPPED:-}" != 1 ]; then
+if [ "${LERDR_STABLE_SETUP_WRAPPED:-${HERDR_STABLE_SETUP_WRAPPED:-}}" != 1 ]; then
     echo "🐑 Lerdr stable tunnel setup"
     echo ""
 fi
 
 require_supported_platform
 assert_service_env_matches "$ENV_FILE"
-export HERDR_RELAY_ENV="$ENV_FILE"
+export LERDR_RELAY_ENV="$ENV_FILE"
 
 if ! "$SCRIPT_DIR/setup.sh" --install-missing; then
     echo "✗ Prerequisite setup did not complete." >&2
@@ -591,10 +597,10 @@ fi
 
 load_relay_env "$ENV_FILE"
 ORIGIN_CERT="${TUNNEL_ORIGIN_CERT:-$HOME/.cloudflared/cert.pem}"
-PORT="${HERDR_RELAY_PORT:-8375}"
+PORT="${LERDR_RELAY_PORT:-${HERDR_RELAY_PORT:-8375}}"
 case "$PORT" in
     ""|*[!0-9]*|0)
-        echo "✗ HERDR_RELAY_PORT must be a positive integer." >&2
+        echo "✗ relay port must be a positive integer." >&2
         fail_resumable
         exit 1
         ;;
@@ -603,8 +609,8 @@ esac
 PREVIOUS_STAGE="$(state_get stage)"
 STATE_CREATED_CONFIG="$(state_get created_config)"
 CONFIG="${CLOUDFLARED_CONFIG:-}"
-if [ -z "$CONFIG" ] && [ -r "$HOME/.cloudflared/config-herdr-mobile-relay.yml" ]; then
-    CONFIG="$HOME/.cloudflared/config-herdr-mobile-relay.yml"
+if [ -z "$CONFIG" ]; then
+    CONFIG="$(cloudflared_config_default)"
 fi
 
 if [ "$STATE_CREATED_CONFIG" != true ] && [ -n "$CONFIG" ] && [ -f "$CONFIG" ]; then
@@ -667,7 +673,7 @@ else
 
     if [ -z "$TUNNEL_NAME" ]; then
         COMPUTER_LABEL="$(host_label | tr '[:upper:]_' '[:lower:]-' | tr -cd 'a-z0-9-')"
-        TUNNEL_NAME="herdr-mobile-relay-${COMPUTER_LABEL:-relay}"
+        TUNNEL_NAME="lerdr-${COMPUTER_LABEL:-relay}"
     fi
     if [ -z "$CONFIG" ]; then
         CONFIG="$(dirname "$ENV_FILE")/cloudflared/config.yml"

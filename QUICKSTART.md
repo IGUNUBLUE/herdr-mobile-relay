@@ -23,7 +23,7 @@ Choose **Temporary Cloudflare Tunnel** when the setup menu opens. If it does
 not:
 
 ```bash
-herdr plugin action invoke setup --plugin herdr-mobile-relay.events
+herdr plugin action invoke setup --plugin lerdr.events
 ```
 
 Approve missing user-level tools if prompted. The plugin downloads the exact
@@ -42,7 +42,7 @@ On the tunnel path, wait for the temporary tunnel, then choose:
 
 On the gateway path the QR follows registration, and the app origin has to be an
 installed Lerdr app — a gateway carries relay traffic only. It reuses a recorded
-or `HERDR_PHONE_APP_URL` origin, and asks for one when neither exists.
+or `LERDR_PHONE_APP_URL` origin, and asks for one when neither exists.
 
 Scan the QR or open the complete HTTPS setup link. Keep it private: it contains
 the one-use bootstrap invitation in the URL fragment, which is never sent in
@@ -80,7 +80,7 @@ QR. No account, no domain, no `cloudflared`. The gateways are run by the
 project: free, shared, best-effort.
 
 A gateway carries relay traffic only, so the phone app lives elsewhere: point
-`HERDR_PHONE_APP_URL` at an installed Lerdr app, or host one with
+`LERDR_PHONE_APP_URL` at an installed Lerdr app, or host one with
 `make web-deploy`.
 
 A gateway cannot read your traffic — it copies frames that are already encrypted
@@ -96,7 +96,7 @@ own gateway.
 Add a domain to Cloudflare, then run:
 
 ```bash
-herdr plugin action invoke install-service --plugin herdr-mobile-relay.events
+herdr plugin action invoke install-service --plugin lerdr.events
 ```
 
 The wizard creates or resumes a dedicated tunnel, installs a background user
@@ -110,7 +110,7 @@ changes, the full action list, teardown, and uninstall.
 
 - **Port 8375 is busy:** stop the previous Quick Start or installed service.
 - **Temporary URL fails:** rerun Quick Start for a fresh hostname.
-- **Gateway registration times out:** check `HERDR_GATEWAY_URL` and outbound
+- **Gateway registration times out:** check `LERDR_GATEWAY_URL` and outbound
   HTTPS access; `curl -s localhost:8375/healthz` reports `gateway.registered`.
 - **App still shows the previous release after the relay updates:** open Settings,
   choose **Check for Updates**, then **Load Update**. A separately hosted app

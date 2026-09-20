@@ -164,14 +164,14 @@ func runtimeBinary() string {
 }
 
 func voiceBaseURL() string {
-	if base := os.Getenv("HERDR_PIPER_VOICE_BASE_URL"); base != "" {
+	if base := speechEnv("PIPER_VOICE_BASE_URL"); base != "" {
 		return base
 	}
 	return "https://huggingface.co/rhasspy/piper-voices/resolve/v1.0.0"
 }
 
 func runtimeBaseURL() string {
-	if base := os.Getenv("HERDR_PIPER_RUNTIME_BASE_URL"); base != "" {
+	if base := speechEnv("PIPER_RUNTIME_BASE_URL"); base != "" {
 		return base
 	}
 	return "https://github.com/rhasspy/piper/releases/download/2023.11.14-2"
@@ -468,7 +468,7 @@ func download(ctx context.Context, url, destination, digest string) error {
 // Makefile use to cache voices from a shell.
 func Run(ctx context.Context, args []string, stdout, stderr io.Writer) error {
 	if len(args) == 0 {
-		return fmt.Errorf("%w: herdr-mobile-relay speech-voices {list|missing|install|reinstall-runtime|remove} [--languages en,fr]", ErrUsage)
+		return fmt.Errorf("%w: lerdr speech-voices {list|missing|install|reinstall-runtime|remove} [--languages en,fr]", ErrUsage)
 	}
 	operation, args := args[0], args[1:]
 	flags := flag.NewFlagSet("speech-voices", flag.ContinueOnError)

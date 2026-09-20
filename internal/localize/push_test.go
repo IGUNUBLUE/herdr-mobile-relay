@@ -37,13 +37,13 @@ func TestEveryPushCategoryInBothLocales(t *testing.T) {
 		{name: "English blocked", locale: English, category: PushBlocked, labels: agentProject, want: PushMessage{Title: "Claude is blocked", Body: "Open mobile-app on relay-one to review it."}},
 		{name: "English question", locale: English, category: PushQuestion, labels: agentProject, want: PushMessage{Title: "Claude has a question", Body: "Open mobile-app on relay-one to respond."}},
 		{name: "English completion", locale: English, category: PushCompletion, labels: agentProject, want: PushMessage{Title: "Claude completed its work", Body: "mobile-app on relay-one is ready to review."}},
-		{name: "English update", locale: English, category: PushUpdate, labels: relayOnly, want: PushMessage{Title: "Herdr update available", Body: "An update is available for relay-one."}},
+		{name: "English update", locale: English, category: PushUpdate, labels: relayOnly, want: PushMessage{Title: "Lerdr update available", Body: "An update is available for relay-one."}},
 		{name: "English trust change", locale: English, category: PushTrustChange, labels: relayOnly, want: PushMessage{Title: "Device trust changed", Body: "Review trusted devices for relay-one."}},
 		{name: "Chinese test", locale: SimplifiedChinese, category: PushTest, labels: relayOnly, want: PushMessage{Title: "测试通知", Body: "来自 relay-one 的通知已正常工作。"}},
 		{name: "Chinese blocked", locale: SimplifiedChinese, category: PushBlocked, labels: agentProject, want: PushMessage{Title: "Claude 已被阻塞", Body: "打开 relay-one 上的 mobile-app 进行查看。"}},
 		{name: "Chinese question", locale: SimplifiedChinese, category: PushQuestion, labels: agentProject, want: PushMessage{Title: "Claude 有一个问题", Body: "打开 relay-one 上的 mobile-app 进行回复。"}},
 		{name: "Chinese completion", locale: SimplifiedChinese, category: PushCompletion, labels: agentProject, want: PushMessage{Title: "Claude 已完成工作", Body: "relay-one 上的 mobile-app 已可供查看。"}},
-		{name: "Chinese update", locale: SimplifiedChinese, category: PushUpdate, labels: relayOnly, want: PushMessage{Title: "Herdr 有可用更新", Body: "relay-one 有可用更新。"}},
+		{name: "Chinese update", locale: SimplifiedChinese, category: PushUpdate, labels: relayOnly, want: PushMessage{Title: "Lerdr 有可用更新", Body: "relay-one 有可用更新。"}},
 		{name: "Chinese trust change", locale: SimplifiedChinese, category: PushTrustChange, labels: relayOnly, want: PushMessage{Title: "设备信任状态已更改", Body: "请查看 relay-one 的受信任设备。"}},
 	}
 

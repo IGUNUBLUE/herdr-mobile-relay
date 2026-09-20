@@ -271,7 +271,10 @@ var cloudflareCredentialKeys = [...]string{
 
 func commandEnvironmentWithCloudflareCredentials(nodeDir string, environment []string) ([]string, error) {
 	result := commandEnvironment(nodeDir, environment)
-	filename := strings.TrimSpace(os.Getenv("HERDR_RELAY_ENV"))
+	filename := strings.TrimSpace(os.Getenv("LERDR_RELAY_ENV"))
+	if filename == "" {
+		filename = strings.TrimSpace(os.Getenv("HERDR_RELAY_ENV"))
+	}
 	if filename == "" {
 		if directory := strings.TrimSpace(os.Getenv("HERDR_PLUGIN_CONFIG_DIR")); directory != "" {
 			filename = filepath.Join(directory, "relay.env")
@@ -769,7 +772,7 @@ func publicResourceURL(origin, resource, cacheBust string) (string, error) {
 		return "", err
 	}
 	parsed.Path = "/" + resource
-	parsed.RawQuery = "herdr_deploy_check=" + url.QueryEscape(cacheBust)
+	parsed.RawQuery = "lerdr_deploy_check=" + url.QueryEscape(cacheBust)
 	return parsed.String(), nil
 }
 

@@ -26,15 +26,15 @@ func TestInstallPluginPinsExactCommitAndSuppressesSetup(t *testing.T) {
 	envPath := filepath.Join(root, "env")
 	herdrBin := filepath.Join(root, "herdr")
 	script := `#!/bin/sh
-printf '%s\n' "$@" > "$HERDR_TEST_ARGS"
-printf '%s\n' "$HERDR_MOBILE_RELAY_NO_AUTO_SETUP" > "$HERDR_TEST_ENV"
+printf '%s\n' "$@" > "$LERDR_TEST_ARGS"
+printf '%s\n' "$LERDR_NO_AUTO_SETUP" > "$LERDR_TEST_ENV"
 `
 	if err := os.WriteFile(herdrBin, []byte(script), 0o700); err != nil {
 		t.Fatal(err)
 	}
-	t.Setenv("HERDR_TEST_ARGS", argsPath)
-	t.Setenv("HERDR_TEST_ENV", envPath)
-	t.Setenv("HERDR_MOBILE_RELAY_NO_AUTO_SETUP", "0")
+	t.Setenv("LERDR_TEST_ARGS", argsPath)
+	t.Setenv("LERDR_TEST_ENV", envPath)
+	t.Setenv("LERDR_NO_AUTO_SETUP", "0")
 
 	job := Job{HerdrBin: herdrBin, TargetRevision: strings.ToUpper(nextTestRevision)}
 	if err := installPlugin(t.Context(), job); err != nil {
@@ -44,7 +44,7 @@ printf '%s\n' "$HERDR_MOBILE_RELAY_NO_AUTO_SETUP" > "$HERDR_TEST_ENV"
 	if err != nil {
 		t.Fatal(err)
 	}
-	wantArgs := "plugin\ninstall\n0cv/herdr-mobile-relay\n--ref\n" + nextTestRevision + "\n--yes\n"
+	wantArgs := "plugin\ninstall\nIGUNUBLUE/lerdr\n--ref\n" + nextTestRevision + "\n--yes\n"
 	if string(args) != wantArgs {
 		t.Fatalf("Herdr arguments = %q, want %q", args, wantArgs)
 	}
@@ -53,7 +53,7 @@ printf '%s\n' "$HERDR_MOBILE_RELAY_NO_AUTO_SETUP" > "$HERDR_TEST_ENV"
 		t.Fatal(err)
 	}
 	if string(value) != "1\n" {
-		t.Fatalf("HERDR_MOBILE_RELAY_NO_AUTO_SETUP = %q", value)
+		t.Fatalf("LERDR_NO_AUTO_SETUP = %q", value)
 	}
 }
 
@@ -443,12 +443,12 @@ func workerTestStagedRelease(t *testing.T, job Job) stagedRelease {
 func writeWorkerTestRelease(t *testing.T, root, version, revision string) {
 	t.Helper()
 	files := []string{
-		"herdr-mobile-relay",
+		"lerdr",
 		"web/index.html",
 		"LICENSE",
 		"README.md",
 		"relay/common.sh",
-		"relay/herdr-mobile-relay-service.sh",
+		"relay/lerdr-service.sh",
 		"relay/plugin-on-event.sh",
 		"relay/setup-link.sh",
 		"relay/stable-setup.sh",
@@ -461,7 +461,7 @@ func writeWorkerTestRelease(t *testing.T, root, version, revision string) {
 			t.Fatal(err)
 		}
 		mode := os.FileMode(0o644)
-		if name == "herdr-mobile-relay" {
+		if name == "lerdr" {
 			mode = 0o755
 		}
 		if err := os.WriteFile(filename, []byte(name+"\n"), mode); err != nil {

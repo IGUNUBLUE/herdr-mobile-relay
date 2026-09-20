@@ -58,6 +58,18 @@ const (
 	HermesListEnv   = "HERDR_HERMES_DATA_DIRS"
 )
 
+// configEnv resolves an operator-facing list variable by its LERDR_ spelling
+// first and falls back to the HERDR_ constant names above, so installs that
+// predated the rename keep working.
+func configEnv(name string) string {
+	if rest, ok := strings.CutPrefix(name, "HERDR_"); ok {
+		if v := os.Getenv("LERDR_" + rest); v != "" {
+			return v
+		}
+	}
+	return os.Getenv(name)
+}
+
 // Claude reports the transcript roots for Claude Code, honouring
 // CLAUDE_CONFIG_DIR exactly as it did when a single root was resolved.
 func Claude(home string) []string {
@@ -398,11 +410,11 @@ func resolve(home, listEnv, singleEnv, homeBase, leaf string, discovered ...stri
 		seen[root] = true
 		roots = append(roots, root)
 	}
-	for _, base := range filepath.SplitList(os.Getenv(listEnv)) {
+	for _, base := range filepath.SplitList(configEnv(listEnv)) {
 		add(base)
 	}
 	if singleEnv != "" {
-		add(os.Getenv(singleEnv))
+		add(configEnv(singleEnv))
 	}
 	for _, base := range discovered {
 		add(base)

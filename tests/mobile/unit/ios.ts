@@ -17,7 +17,7 @@ import recordedIteration13 from './fixtures/ios/ios-iteration13-recorded.json';
 
 const origin = 'https://localhost:52101';
 const fixtureDir = fileURLToPath(new URL('./fixtures/ios/', import.meta.url));
-const outputRoot = process.env.IOS_TEST_OUTPUT || join(tmpdir(), 'herdr-mobile-ci-ios-unit');
+const outputRoot = process.env.IOS_TEST_OUTPUT || join(tmpdir(), 'lerdr-ci-ios-unit');
 const value = (data: unknown) => Response.json({ value: data });
 const element = (id: string) => ({ 'element-6066-11e4-a52e-4f735466cecf': id });
 const missing = () => Response.json({ value: { error: 'no such element', message: 'No such element' } }, { status: 404 });

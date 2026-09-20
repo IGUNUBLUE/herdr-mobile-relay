@@ -1,6 +1,6 @@
 import { base64UrlDecode } from './base64url';
 
-export const DEVICE_AUTH_STORAGE_KEY = 'herdr_device_auth_v1';
+export const DEVICE_AUTH_STORAGE_KEY = 'lerdr_device_auth_v1';
 
 export type DeviceRole = 'reader' | 'controller';
 export type DeviceAuthenticationKind = 'credential' | 'invitation';

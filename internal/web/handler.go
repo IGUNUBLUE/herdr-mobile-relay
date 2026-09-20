@@ -29,7 +29,7 @@ var allowedAssets = map[string]bool{
 	"sw.js":                 true,
 	"version.json":          true,
 	"release.json":          true,
-	"herdr-bootstrap.js":    true,
+	"lerdr-bootstrap.js":    true,
 	// Legacy stable asset names remain readable during the cutover. New
 	// bundles are admitted through the descriptor below.
 	"assets/app.js":  true,
@@ -83,7 +83,8 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		http.Redirect(w, r, target.String(), http.StatusTemporaryRedirect)
 		return
 	}
-	if requestPath == "index.html" && r.URL.Path == "/" && r.URL.Query().Has("herdr_reload") {
+	if requestPath == "index.html" && r.URL.Path == "/" &&
+		(r.URL.Query().Has("lerdr_reload") || r.URL.Query().Has("herdr_reload")) {
 		target := *r.URL
 		target.Path = "/index.html"
 		http.Redirect(w, r, target.String(), http.StatusTemporaryRedirect)
@@ -304,7 +305,7 @@ func setCacheHeaders(w http.ResponseWriter, asset string, immutable bool) {
 		return
 	}
 	switch asset {
-	case "index.html", "herdr-bootstrap.js", "manifest-loader.js", "manifest.webmanifest",
+	case "index.html", "lerdr-bootstrap.js", "manifest-loader.js", "manifest.webmanifest",
 		"setup.webmanifest", "sw.js", "version.json", "release.json":
 		w.Header().Set("Cache-Control", "no-cache, no-store")
 	default:

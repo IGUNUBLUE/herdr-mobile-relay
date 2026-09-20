@@ -2,7 +2,7 @@
 set -euo pipefail
 
 ENTRYPOINT="${1:-}"
-PLUGIN_ID="${HERDR_PLUGIN_ID:-herdr-mobile-relay.events}"
+PLUGIN_ID="${LERDR_PLUGIN_ID:-${HERDR_PLUGIN_ID:-lerdr.events}}"
 HERDR_COMMAND="${HERDR_BIN_PATH:-herdr}"
 
 if [ -z "$ENTRYPOINT" ]; then

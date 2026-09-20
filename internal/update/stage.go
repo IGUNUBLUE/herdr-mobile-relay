@@ -48,7 +48,7 @@ func prepareTargetReleaseFrom(
 	}
 
 	target := strings.ReplaceAll(relayrelease.CurrentTarget(), "/", "_")
-	archiveName := fmt.Sprintf("herdr-mobile-relay_%s_%s.tar.gz", job.TargetVersion, target)
+	archiveName := fmt.Sprintf("lerdr_%s_%s.tar.gz", job.TargetVersion, target)
 	base := strings.TrimRight(assetBase, "/") + "/v" + url.PathEscape(job.TargetVersion)
 	checksums, err := downloadBytes(ctx, client, base+"/checksums.txt", maxChecksumBytes)
 	if err != nil {
@@ -56,7 +56,13 @@ func prepareTargetReleaseFrom(
 	}
 	expectedChecksum, err := checksumForArchive(checksums, archiveName)
 	if err != nil {
-		return stagedRelease{}, err
+		// Pre-rename releases publish assets under the old product name.
+		legacyName := fmt.Sprintf("herdr-mobile-relay_%s_%s.tar.gz", job.TargetVersion, target)
+		expectedChecksum, err = checksumForArchive(checksums, legacyName)
+		if err != nil {
+			return stagedRelease{}, err
+		}
+		archiveName = legacyName
 	}
 
 	runtimeDir := filepath.Dir(job.StatePath)
@@ -185,7 +191,7 @@ func get(ctx context.Context, client *http.Client, endpoint string) (*http.Respo
 	if err != nil {
 		return nil, err
 	}
-	request.Header.Set("User-Agent", "herdr-mobile-relay-update-stage")
+	request.Header.Set("User-Agent", "lerdr-update-stage")
 	response, err := client.Do(request)
 	if err != nil {
 		return nil, err

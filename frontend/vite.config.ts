@@ -35,7 +35,7 @@ function digest(source: string | Uint8Array): { sha256: string; integrity: strin
 }
 
 function releaseBootstrap(): string {
-  return '<!doctype html><script src="/herdr-bootstrap.js"></script>\n';
+  return '<!doctype html><script src="/lerdr-bootstrap.js"></script>\n';
 }
 
 function bootstrapScript(entryPath: string): string {
@@ -61,7 +61,7 @@ function compactReleaseStyleNames(source: string): string {
 }
 
 function immutableHeaders(): string {
-  return `/* Stable bootstrap and metadata are deliberately revalidated. Only\n * digest-addressed build entries and assets may be stored indefinitely. */\n/herdr-bootstrap.js\n  Cache-Control: no-cache, no-store\n\n/manifest-loader.js\n  Cache-Control: no-cache, no-store\n\n/manifest.webmanifest\n  Cache-Control: no-cache, no-store\n\n/setup.webmanifest\n  Cache-Control: no-cache, no-store\n\n/sw.js\n  Cache-Control: no-cache, no-store\n\n/version.json\n  Cache-Control: no-cache, no-store\n\n/release.json\n  Cache-Control: no-cache, no-store\n\n/\n  Cache-Control: no-cache, no-store\n\n/index.html\n  Cache-Control: no-cache, no-store\n\n/builds/*\n  Cache-Control: public, max-age=31536000, immutable\n\n/assets/*\n  Cache-Control: public, max-age=31536000, immutable\n`;
+  return `/* Stable bootstrap and metadata are deliberately revalidated. Only\n * digest-addressed build entries and assets may be stored indefinitely. */\n/lerdr-bootstrap.js\n  Cache-Control: no-cache, no-store\n\n/manifest-loader.js\n  Cache-Control: no-cache, no-store\n\n/manifest.webmanifest\n  Cache-Control: no-cache, no-store\n\n/setup.webmanifest\n  Cache-Control: no-cache, no-store\n\n/sw.js\n  Cache-Control: no-cache, no-store\n\n/version.json\n  Cache-Control: no-cache, no-store\n\n/release.json\n  Cache-Control: no-cache, no-store\n\n/\n  Cache-Control: no-cache, no-store\n\n/index.html\n  Cache-Control: no-cache, no-store\n\n/builds/*\n  Cache-Control: public, max-age=31536000, immutable\n\n/assets/*\n  Cache-Control: public, max-age=31536000, immutable\n`;
 }
 
 function stableReleaseAssets(): Plugin {
@@ -176,7 +176,7 @@ function stableReleaseAssets(): Plugin {
 
       this.emitFile({ type: 'asset', fileName: entryPath, source: entrySource });
       html.source = releaseBootstrap();
-      this.emitFile({ type: 'asset', fileName: 'herdr-bootstrap.js', source: bootstrapScript(entryPath) });
+      this.emitFile({ type: 'asset', fileName: 'lerdr-bootstrap.js', source: bootstrapScript(entryPath) });
       this.emitFile({ type: 'asset', fileName: 'release.json', source: serializedDescriptor });
       this.emitFile({ type: 'asset', fileName: 'version.json', source: serializedVersion });
       this.emitFile({

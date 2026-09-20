@@ -1,21 +1,21 @@
 # herdr-plugin.toml registers Lerdr with herdr as a plugin.
-# Install it with `herdr plugin install 0cv/herdr-mobile-relay` (herdr clones
+# Install it with `herdr plugin install IGUNUBLUE/lerdr` (herdr clones
 # this repo, runs the [[build]] pre-warm below after confirmation, and
 # registers the entry points), or `herdr plugin link .` from a local checkout.
 #
 # Every install and upgrade schedules the Setup action after the build finishes,
 # so transport and self-hosted gateway status are visible immediately. Invoke it
 # explicitly as a universal fallback, or set
-# HERDR_MOBILE_RELAY_NO_AUTO_SETUP=1 to suppress it:
-#   herdr plugin action invoke setup --plugin herdr-mobile-relay.events
+# LERDR_NO_AUTO_SETUP=1 to suppress it:
+#   herdr plugin action invoke setup --plugin lerdr.events
 # or bind keys in herdr's config.toml and `herdr server reload-config`:
 #   [[keys.command]]
 #   key = "prefix+m"
 #   type = "plugin_action"
-#   command = "herdr-mobile-relay.events.setup"
+#   command = "lerdr.events.setup"
 #   description = "Lerdr: Setup"
 
-id = "herdr-mobile-relay.events"
+id = "lerdr.events"
 name = "Lerdr"
 version = "0.25.0"
 
@@ -26,7 +26,7 @@ platforms = ["macos", "linux"]
 
 # Install the exact versioned, checksum- and manifest-verified release bundle.
 # This never compiles Go and has no Python, uv, Node, Git, or toolchain
-# dependency. With HERDR_GATEWAY_URL set, Quick Start needs no Cloudflare
+# dependency. With LERDR_GATEWAY_URL set, Quick Start needs no Cloudflare
 # account at all; otherwise cloudflared remains an interactive Quick Start
 # decision because it opens a public tunnel.
 [[build]]
@@ -177,7 +177,7 @@ command = ["bash", "relay/plugin-status.sh"]
 # changes; the hook forwards it over UDP to the local relay so phones see
 # blocked/finished transitions instantly instead of on the next poll. herdr
 # runs this for you — never invoke it by hand. Output is captured in
-# `herdr plugin log list --plugin herdr-mobile-relay.events`.
+# `herdr plugin log list --plugin lerdr.events`.
 [[events]]
 on = "pane.agent_status_changed"
 command = ["sh", "relay/plugin-on-event.sh"]

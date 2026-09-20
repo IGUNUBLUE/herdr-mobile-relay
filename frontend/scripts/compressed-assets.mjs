@@ -6,7 +6,7 @@ import { join } from 'node:path';
 // stable app.js/app.css scheme here.
 export const compressedAssets = [
   'index.html',
-  'herdr-bootstrap.js',
+  'lerdr-bootstrap.js',
   'notification-icons.js',
   'sw.js',
   'manifest-loader.js',

@@ -6,12 +6,11 @@ set -euo pipefail
 # tailscaled owns the tailnet listener and persists the serve configuration,
 # so this unit runs only the relay.
 
-LABEL="herdr-mobile-relay.service"
-LEGACY_LABEL="herdr-remote.service"
+LABEL="lerdr.service"
+LEGACY_LABELS=("herdr-mobile-relay.service" "herdr-remote.service")
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 UNIT_DIR="$HOME/.config/systemd/user"
 UNIT_FILE="$UNIT_DIR/$LABEL"
-LEGACY_UNIT_FILE="$UNIT_DIR/$LEGACY_LABEL"
 
 export PATH="$HOME/.local/bin:/usr/local/bin:/home/linuxbrew/.linuxbrew/bin:/usr/bin:/bin:/usr/sbin:/sbin:$PATH"
 
@@ -19,7 +18,7 @@ export PATH="$HOME/.local/bin:/usr/local/bin:/home/linuxbrew/.linuxbrew/bin:/usr
 . "$SCRIPT_DIR/common.sh"
 
 ENV_FILE="$(relay_env_file "$SCRIPT_DIR")"
-PORT="${HERDR_RELAY_PORT:-8375}"
+PORT="${LERDR_RELAY_PORT:-${HERDR_RELAY_PORT:-8375}}"
 
 if [ "$(uname -s)" != "Linux" ]; then
     echo "The Tailscale transport currently supports Linux only."
@@ -61,11 +60,13 @@ Wants=network-online.target
 [Service]
 Type=simple
 WorkingDirectory=$WORK_DIR
-Environment=HERDR_RELAY_ENV=$ENV_FILE
-# The binary uses HERDR_RELAY_ENV only to locate its runtime directory; the
+Environment=LERDR_RELAY_ENV=$ENV_FILE
+# The binary uses LERDR_RELAY_ENV only to locate its runtime directory; the
 # relay key itself must come from the env file, like the foreground wrappers
 # source it before exec. EnvironmentFile is the systemd-native equivalent.
 EnvironmentFile=$ENV_FILE
+Environment=LERDR_RELAY_HOST=127.0.0.1
+Environment=LERDR_RELAY_PORT=$PORT
 Environment=HERDR_RELAY_HOST=127.0.0.1
 Environment=HERDR_RELAY_PORT=$PORT
 Environment=PATH=$SERVICE_PATH
@@ -78,8 +79,10 @@ WantedBy=default.target
 EOF
 
 systemctl --user daemon-reload
-systemctl --user disable --now "$LEGACY_LABEL" >/dev/null 2>&1 || true
-rm -f "$LEGACY_UNIT_FILE"
+for legacy_label in "${LEGACY_LABELS[@]}"; do
+    systemctl --user disable --now "$legacy_label" >/dev/null 2>&1 || true
+    rm -f "$UNIT_DIR/$legacy_label"
+done
 systemctl --user daemon-reload
 systemctl --user enable "$LABEL"
 systemctl --user restart "$LABEL"

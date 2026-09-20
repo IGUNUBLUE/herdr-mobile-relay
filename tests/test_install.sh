@@ -2,7 +2,7 @@
 set -eu
 
 REPO_DIR=$(CDPATH='' cd "${0%/*}/.." && pwd)
-WORK_DIR=$(mktemp -d "${TMPDIR:-/tmp}/herdr-install-test.XXXXXX")
+WORK_DIR=$(mktemp -d "${TMPDIR:-/tmp}/lerdr-install-test.XXXXXX")
 trap 'rm -rf "$WORK_DIR"' EXIT INT TERM
 
 # Load the installer functions without executing main.
@@ -12,13 +12,13 @@ sed '$d' "$REPO_DIR/install.sh" > "$WORK_DIR/install-functions.sh"
 
 release_json='{
   "assets": [{
-    "url": "https://api.github.com/repos/0cv/herdr-mobile-relay/releases/assets/123",
-    "name": "herdr-mobile-relay_0.9.0_linux_amd64.tar.gz",
+    "url": "https://api.github.com/repos/IGUNUBLUE/lerdr/releases/assets/123",
+    "name": "lerdr_0.9.0_linux_amd64.tar.gz",
     "uploader": {
       "url": "https://api.github.com/users/0cv"
     }
   }, {
-    "url": "https://api.github.com/repos/0cv/herdr-mobile-relay/releases/assets/124",
+    "url": "https://api.github.com/repos/IGUNUBLUE/lerdr/releases/assets/124",
     "name": "checksums.txt",
     "uploader": {
       "url": "https://api.github.com/users/0cv"
@@ -26,10 +26,10 @@ release_json='{
   }]
 }'
 
-archive_url=$(resolve_asset_url "$release_json" "herdr-mobile-relay_0.9.0_linux_amd64.tar.gz")
+archive_url=$(resolve_asset_url "$release_json" "lerdr_0.9.0_linux_amd64.tar.gz")
 checksum_url=$(resolve_asset_url "$release_json" "checksums.txt")
-test "$archive_url" = "https://api.github.com/repos/0cv/herdr-mobile-relay/releases/assets/123"
-test "$checksum_url" = "https://api.github.com/repos/0cv/herdr-mobile-relay/releases/assets/124"
+test "$archive_url" = "https://api.github.com/repos/IGUNUBLUE/lerdr/releases/assets/123"
+test "$checksum_url" = "https://api.github.com/repos/IGUNUBLUE/lerdr/releases/assets/124"
 
 commit_json='{"sha":"0123456789abcdef0123456789abcdef01234567","commit":{"tree":{"sha":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"}}}'
 test "$(resolve_tag_revision "$commit_json")" = "0123456789abcdef0123456789abcdef01234567"
@@ -37,8 +37,18 @@ test "$(resolve_tag_revision "$commit_json")" = "0123456789abcdef0123456789abcde
 sentinel_root="$WORK_DIR/custom-root"
 write_install_sentinel "$sentinel_root"
 canonical_root=$(CDPATH='' cd "$sentinel_root" && pwd -P)
-grep -Fx 'product=herdr-mobile-relay' "$sentinel_root/.herdr-mobile-relay-installation" >/dev/null
-grep -Fx "root=$canonical_root" "$sentinel_root/.herdr-mobile-relay-installation" >/dev/null
+grep -Fx 'product=lerdr' "$sentinel_root/.lerdr-installation" >/dev/null
+grep -Fx "root=$canonical_root" "$sentinel_root/.lerdr-installation" >/dev/null
+
+# A sentinel left by a pre-rename install proves ownership, then upgrades.
+upgrade_root="$WORK_DIR/upgrade-root"
+mkdir -p "$upgrade_root"
+printf 'product=herdr-mobile-relay\nroot=%s\n' \
+    "$(CDPATH='' cd "$upgrade_root" && pwd -P)" > "$upgrade_root/.herdr-mobile-relay-installation"
+write_install_sentinel "$upgrade_root"
+test -f "$upgrade_root/.lerdr-installation"
+test ! -e "$upgrade_root/.herdr-mobile-relay-installation"
+grep -Fx 'product=lerdr' "$upgrade_root/.lerdr-installation" >/dev/null
 
 unowned_root="$WORK_DIR/unowned"
 mkdir -p "$unowned_root"
@@ -48,10 +58,14 @@ if (write_install_sentinel "$unowned_root") 2>/dev/null; then
     exit 1
 fi
 [ -f "$unowned_root/keep.txt" ]
-[ ! -e "$unowned_root/.herdr-mobile-relay-installation" ]
+[ ! -e "$unowned_root/.lerdr-installation" ]
 
+# A pre-rename install moves wholesale to the lerdr paths: config and cache
+# contents land under the new roots and the old directories are gone.
 legacy_home="$WORK_DIR/legacy-home"
-legacy_release="$legacy_home/.local/share/herdr-mobile-relay"
+new_release="$legacy_home/.local/share/lerdr"
+new_config="$legacy_home/.config/lerdr"
+new_cache="$legacy_home/.cache/lerdr"
 legacy_config="$legacy_home/.config/herdr-mobile-relay"
 legacy_cache="$legacy_home/.cache/herdr-mobile-relay"
 mkdir -p "$legacy_config/device-auth" "$legacy_config/push" "$legacy_cache/claude-history" "$legacy_cache/uploads"
@@ -70,31 +84,61 @@ printf 'private-key\n' > "$legacy_cache/push/vapid_private.pem"
 printf 'verified\n' > "$legacy_cache/approval-verification-1"
 printf '{"history":["preserved"]}\n' > "$legacy_cache/claude-history/pane.json"
 HOME="$legacy_home"
-prepare_install_roots "$legacy_release" "$legacy_config" "$legacy_cache"
-test -f "$legacy_config/.herdr-mobile-relay-installation"
-test -f "$legacy_cache/.herdr-mobile-relay-installation"
-grep -F legacy-token "$legacy_config/relay.env" >/dev/null
-test "$(cat "$legacy_config/phone-app-origin-configured")" = "https://app.example.test"
-test "$(cat "$legacy_config/device-auth/devices.json")" = '{"schema_version":1,"credentials":[]}'
-grep -F failed "$legacy_config/update-state.json" >/dev/null
-grep -F idle "$legacy_config/app-deploy-state.json" >/dev/null
-grep -F preserved "$legacy_cache/claude-history/pane.json" >/dev/null
+XDG_DATA_HOME="$legacy_home/.local/share"
+XDG_CONFIG_HOME="$legacy_home/.config"
+XDG_CACHE_HOME="$legacy_home/.cache"
+prepare_install_roots "$new_release" "$new_config" "$new_cache" 1 1
+test ! -e "$legacy_config"
+test ! -e "$legacy_cache"
+test -f "$new_config/.lerdr-installation"
+test -f "$new_cache/.lerdr-installation"
+grep -F legacy-token "$new_config/relay.env" >/dev/null
+test "$(cat "$new_config/phone-app-origin-configured")" = "https://app.example.test"
+test "$(cat "$new_config/device-auth/devices.json")" = '{"schema_version":1,"credentials":[]}'
+grep -F failed "$new_config/update-state.json" >/dev/null
+grep -F idle "$new_config/app-deploy-state.json" >/dev/null
+grep -F preserved "$new_cache/claude-history/pane.json" >/dev/null
+
+# A sentinel'd pre-rename release root moves too, and an absolute `current`
+# link recorded under the old path is repointed at the new root.
+moved_home="$WORK_DIR/moved-home"
+moved_release="$moved_home/.local/share/lerdr"
+old_release="$moved_home/.local/share/herdr-mobile-relay"
+mkdir -p "$old_release/releases/0.25.0-abc-linux-amd64"
+old_release_real=$(CDPATH='' cd "$old_release" && pwd -P)
+printf 'product=herdr-mobile-relay\nroot=%s\n' "$old_release_real" \
+    > "$old_release/.herdr-mobile-relay-installation"
+ln -s "$old_release_real/releases/0.25.0-abc-linux-amd64" "$old_release/current"
+HOME="$moved_home"
+XDG_DATA_HOME="$moved_home/.local/share"
+XDG_CONFIG_HOME="$moved_home/.config"
+XDG_CACHE_HOME="$moved_home/.cache"
+prepare_install_roots "$moved_release" "$moved_home/.config/lerdr" \
+    "$moved_home/.cache/lerdr" 1 1
+test ! -e "$old_release"
+test -f "$moved_release/.lerdr-installation"
+test "$(readlink "$moved_release/current")" = \
+    "$moved_release/releases/0.25.0-abc-linux-amd64" ||
+    test "$(readlink "$moved_release/current")" = \
+    "$(CDPATH='' cd "$moved_release" && pwd -P)/releases/0.25.0-abc-linux-amd64"
 
 symlink_config="$WORK_DIR/symlink-config"
 mkdir -p "$symlink_config"
 printf "HERDR_RELAY_TOKEN='legacy-token'\n" > "$symlink_config/relay.env"
-ln -s "$legacy_config/relay.env" "$symlink_config/linked.env"
+ln -s "$new_config/relay.env" "$symlink_config/linked.env"
 if (write_install_sentinel "$symlink_config" config) 2>/dev/null; then
     echo "write_install_sentinel accepted a symlinked legacy config" >&2
     exit 1
 fi
-test ! -e "$symlink_config/.herdr-mobile-relay-installation"
+test ! -e "$symlink_config/.lerdr-installation"
 
+# When the new cache already exists, old entries merge in without replacing
+# anything and the emptied old root is removed.
 xdg_home="$WORK_DIR/xdg-home"
-xdg_release="$xdg_home/.local/share/herdr-mobile-relay"
-xdg_config="$xdg_home/.config/herdr-mobile-relay"
+xdg_release="$xdg_home/.local/share/lerdr"
+xdg_config="$xdg_home/.config/lerdr"
 old_cache="$xdg_home/.cache/herdr-mobile-relay"
-new_cache="$xdg_home/custom-cache/herdr-mobile-relay"
+new_cache="$xdg_home/custom-cache/lerdr"
 mkdir -p "$xdg_config/push" "$old_cache/claude-history"
 printf "HERDR_RELAY_TOKEN='xdg-token'\n" > "$xdg_config/relay.env"
 printf '[]\n' > "$xdg_config/push/subscriptions.json"
@@ -103,11 +147,14 @@ mkdir -p "$new_cache"
 printf '#!/bin/sh\n' > "$new_cache/post-install.sh"
 printf 'legacy waiter\n' > "$new_cache/post-install.log"
 HOME="$xdg_home"
-prepare_install_roots "$xdg_release" "$xdg_config" "$new_cache"
+XDG_DATA_HOME="$xdg_home/.local/share"
+XDG_CONFIG_HOME="$xdg_home/.config"
+XDG_CACHE_HOME="$xdg_home/.cache"
+prepare_install_roots "$xdg_release" "$xdg_config" "$new_cache" 1 1
 test ! -e "$old_cache"
 grep -F migrated "$new_cache/claude-history/pane.json" >/dev/null
 grep -F 'legacy waiter' "$new_cache/post-install.log" >/dev/null
-test -f "$new_cache/.herdr-mobile-relay-installation"
+test -f "$new_cache/.lerdr-installation"
 
 timeout_started=$(date +%s)
 if run_with_timeout 1 sleep 3; then
@@ -206,6 +253,9 @@ run_signal_install() {
     (
         PATH="$signal_bin" \
         HOME="$signal_home" \
+        XDG_DATA_HOME="$signal_home/.local/share" \
+        XDG_CONFIG_HOME="$signal_home/.config" \
+        XDG_CACHE_HOME="$signal_home/.cache" \
         TMPDIR="$signal_tmp" \
         VERSION=1.2.3 \
         DOWNLOAD_HANG_STAGE="$signal_stage" \

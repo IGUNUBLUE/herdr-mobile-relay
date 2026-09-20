@@ -142,10 +142,28 @@ func espeakArgv(voice, out string) []string {
 // directory outside any release, so an update never re-downloads them. The
 // setup scripts resolve the same path.
 func speechCache(home string) string {
-	if dir := os.Getenv("XDG_CACHE_HOME"); dir != "" {
-		return filepath.Join(dir, "herdr-mobile-relay", "speech")
+	base := os.Getenv("XDG_CACHE_HOME")
+	if base == "" {
+		base = filepath.Join(home, ".cache")
 	}
-	return filepath.Join(home, ".cache", "herdr-mobile-relay", "speech")
+	current := filepath.Join(base, "lerdr", "speech")
+	if _, err := os.Stat(current); err == nil {
+		return current
+	}
+	legacy := filepath.Join(base, "herdr-mobile-relay", "speech")
+	if _, err := os.Stat(legacy); err == nil {
+		return legacy
+	}
+	return current
+}
+
+// speechEnv reads a relay speech setting, preferring the LERDR_ spelling and
+// accepting the legacy HERDR_ spelling.
+func speechEnv(key string) string {
+	if value := os.Getenv("LERDR_" + key); value != "" {
+		return value
+	}
+	return os.Getenv("HERDR_" + key)
 }
 
 // piperVoices maps each language to its installed model. Voice files keep
@@ -153,7 +171,7 @@ func speechCache(home string) string {
 // and the model's sidecar config has to sit beside it.
 func piperVoices(home, cache string) map[string]string {
 	dirs := []string{}
-	if configured := os.Getenv("HERDR_PIPER_VOICES"); configured != "" {
+	if configured := speechEnv("PIPER_VOICES"); configured != "" {
 		dirs = append(dirs, configured)
 	}
 	dirs = append(dirs,
@@ -296,7 +314,7 @@ func Synthesize(ctx context.Context, text, language string) ([]byte, error) {
 	if !ok {
 		return nil, fmt.Errorf("no installed engine speaks %s", language)
 	}
-	dir, err := os.MkdirTemp("", "herdr-speech-")
+	dir, err := os.MkdirTemp("", "lerdr-speech-")
 	if err != nil {
 		return nil, fmt.Errorf("create synthesis workspace: %w", err)
 	}

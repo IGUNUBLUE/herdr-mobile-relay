@@ -13,7 +13,7 @@ const required = [
   '_headers',
   '_redirects',
   'index.html',
-  'herdr-bootstrap.js',
+  'lerdr-bootstrap.js',
   'manifest-loader.js',
   'manifest.webmanifest',
   'setup.webmanifest',
@@ -167,7 +167,7 @@ if (version.version !== productVersion
 
 const headers = await readFile(join(root, '_headers'), 'utf8');
 const headerLines = headers.split(/\r?\n/);
-for (const route of ['/', '/index.html', '/version.json', '/release.json', '/herdr-bootstrap.js']) {
+for (const route of ['/', '/index.html', '/version.json', '/release.json', '/lerdr-bootstrap.js']) {
   const routeIndex = headerLines.findIndex((line) => line === route);
   const cacheLine = routeIndex >= 0
     ? headerLines.slice(routeIndex + 1, routeIndex + 5).find((line) => line.trim() === 'Cache-Control: no-cache, no-store')

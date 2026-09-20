@@ -26,7 +26,7 @@ server's SSH address (`root@203.0.113.10`), then:
 3. runs `docker compose up -d --build --force-recreate gateway caddy` so both
    containers rejoin the current Compose network, then waits for `/healthz` on
    the server and for the first certificate on the public name;
-4. records the verified `wss://` URL as `HERDR_GATEWAY_URL` in the relay
+4. records the verified `wss://` URL as `LERDR_GATEWAY_URL` in the relay
    environment.
 
 The image is built on the server from the bundled source, so the server needs
@@ -58,16 +58,16 @@ server it stops after writing the bundle and prints the manual `scp` and
 
 Answers are remembered, so a later run against the same host offers them as
 defaults. To skip the deployment prompts entirely, set
-`HERDR_GATEWAY_DEPLOY_HOST`, `HERDR_GATEWAY_DEPLOY_SERVER`,
-`HERDR_GATEWAY_DEPLOY_REMOTE_DIR` (default `/opt/herdr-gateway`),
-`HERDR_GATEWAY_DEPLOY_EMAIL` (ACME contact), `HERDR_GATEWAY_DEPLOY_DIR` (local
-bundle directory), and `HERDR_GATEWAY_DEPLOY_INSTALL_DOCKER=true`.
+`LERDR_GATEWAY_DEPLOY_HOST`, `LERDR_GATEWAY_DEPLOY_SERVER`,
+`LERDR_GATEWAY_DEPLOY_REMOTE_DIR` (default `/opt/lerdr-gateway`),
+`LERDR_GATEWAY_DEPLOY_EMAIL` (ACME contact), `LERDR_GATEWAY_DEPLOY_DIR` (local
+bundle directory), and `LERDR_GATEWAY_DEPLOY_INSTALL_DOCKER=true`.
 
 A completed own-gateway path ends by showing the complete ordered list the relay and
 phone may use. The default places your gateway first and appends the community
 gateways as cold fallbacks; edit that list to keep, add, reorder, or remove
 candidates. For unattended deployment, set the same comma-separated choice in
-`HERDR_GATEWAY_SUBSCRIPTIONS`. The relay takes the first healthy entry, so a
+`LERDR_GATEWAY_SUBSCRIPTIONS`. The relay takes the first healthy entry, so a
 community gateway is used only when every earlier gateway is unhealthy.
 
 ## DNS and firewall
@@ -108,7 +108,7 @@ cannot get past the relay.
 
 Logs hold transport events at `INFO`, with relay ids truncated to six characters;
 frame bytes, nonces, and proofs are never logged. The only thing persisted, and
-only if you set `HERDR_GATEWAY_STATE`, is quota bookkeeping: relay ids, the
+only if you set `LERDR_GATEWAY_STATE`, is quota bookkeeping: relay ids, the
 current UTC month, relayed byte totals, and whether a warning was sent.
 
 ## Capacity and bandwidth
@@ -121,7 +121,7 @@ As a planning figure, budget 0.5–1 GB of egress per month per *relayed* active
 user; sessions that reach the direct path cost almost nothing. The gateway
 counts each relayed payload once per direction, so a phone→relay byte and its
 reply are both billed. On a metered host, check whether inbound traffic is
-charged too, and set a budget alarm plus a lower `HERDR_GATEWAY_MONTHLY_BYTES`
+charged too, and set a budget alarm plus a lower `LERDR_GATEWAY_MONTHLY_BYTES`
 so the quota refuses new relayed connections before the bill grows.
 
 Latency, not capacity, is the reason to add a second instance. Separate gateway
@@ -134,22 +134,22 @@ registration lives in the process that accepted it.
 ### Docker
 
 ```sh
-docker build -f Dockerfile.gateway -t herdr-gateway .
-docker run -d --name herdr-gateway \
+docker build -f Dockerfile.gateway -t lerdr-gateway .
+docker run -d --name lerdr-gateway \
   -p 127.0.0.1:8443:8443 \
   -p 3478:3478/udp \
-  -e HERDR_GATEWAY_MONTHLY_BYTES=0 \
-  -e HERDR_GATEWAY_LOG_FORMAT=json \
-  herdr-gateway
+  -e LERDR_GATEWAY_MONTHLY_BYTES=0 \
+  -e LERDR_GATEWAY_LOG_FORMAT=json \
+  lerdr-gateway
 ```
 
 The image is `gcr.io/distroless/static:nonroot`: one static binary, no shell. For
-quotas that survive restarts, drop `HERDR_GATEWAY_MONTHLY_BYTES=0`, add `-v
-/var/lib/herdr-gateway:/state -e HERDR_GATEWAY_STATE=/state/counters.json`, and
+quotas that survive restarts, drop `LERDR_GATEWAY_MONTHLY_BYTES=0`, add `-v
+/var/lib/lerdr-gateway:/state -e LERDR_GATEWAY_STATE=/state/counters.json`, and
 make that directory writable by uid 65532 (`nonroot`).
 
 `3478/udp` is published on every interface because address discovery is raw UDP
-and no TLS proxy can carry it. `HERDR_GATEWAY_STUN_ADDR=` (empty) turns the
+and no TLS proxy can carry it. `LERDR_GATEWAY_STUN_ADDR=` (empty) turns the
 listener off — for a container you start yourself, for the plain binary, and for
 the generated Compose bundle alike. Deleting the published `3478:3478/udp`
 mapping is what closes the port on the host.
@@ -157,23 +157,23 @@ mapping is what closes the port on the host.
 ### Plain binary
 
 ```sh
-go build -trimpath -o /usr/local/bin/herdr-gateway ./cmd/herdr-gateway
+go build -trimpath -o /usr/local/bin/lerdr-gateway ./cmd/lerdr-gateway
 ```
 
 ```ini
-# /etc/systemd/system/herdr-gateway.service
+# /etc/systemd/system/lerdr-gateway.service
 [Unit]
 Description=Herdr blind WSS gateway
 After=network-online.target
 
 [Service]
-ExecStart=/usr/local/bin/herdr-gateway
-Environment=HERDR_GATEWAY_ADDR=127.0.0.1:8443
-Environment=HERDR_GATEWAY_LOG_FORMAT=json
-Environment=HERDR_GATEWAY_STATE=/var/lib/herdr-gateway/counters.json
-Environment=HERDR_GATEWAY_TRUSTED_PROXY=true
+ExecStart=/usr/local/bin/lerdr-gateway
+Environment=LERDR_GATEWAY_ADDR=127.0.0.1:8443
+Environment=LERDR_GATEWAY_LOG_FORMAT=json
+Environment=LERDR_GATEWAY_STATE=/var/lib/lerdr-gateway/counters.json
+Environment=LERDR_GATEWAY_TRUSTED_PROXY=true
 DynamicUser=yes
-StateDirectory=herdr-gateway
+StateDirectory=lerdr-gateway
 Restart=on-failure
 NoNewPrivileges=yes
 ProtectSystem=strict
@@ -223,7 +223,7 @@ server {
 }
 ```
 
-Set `HERDR_GATEWAY_TRUSTED_PROXY=true` behind a proxy, so the per-IP connect
+Set `LERDR_GATEWAY_TRUSTED_PROXY=true` behind a proxy, so the per-IP connect
 limit and `/probe` see the real client address. Leave it `false` when the gateway
 is exposed directly, or any client can forge `X-Forwarded-For` and bypass the
 rate limit. Do not compress these routes: the payloads are ciphertext, so
@@ -235,18 +235,18 @@ Everything is read from the environment at startup; there are no flags.
 
 | Variable | Default | Meaning |
 | --- | --- | --- |
-| `HERDR_GATEWAY_ADDR` | `:8443` | Listen address. Use `127.0.0.1:8443` behind a proxy. |
-| `HERDR_GATEWAY_STUN_ADDR` | `:3478` | UDP address-discovery listener. Must be reachable directly; a proxy cannot carry it. Empty disables it. |
-| `HERDR_GATEWAY_MAX_CLIENTS_PER_RELAY` | `8` | Concurrent phone connections per relay. Negative removes the cap. Refusals return `too_many_clients`. |
-| `HERDR_GATEWAY_MAX_RELAYS` | `1024` | Registered relays this gateway will hold. Negative removes the cap. Refusals return `at_capacity`. |
-| `HERDR_GATEWAY_MAX_CLIENTS` | `512` | Phone connections across every relay. Negative removes the cap. Refusals return `at_capacity`. |
-| `HERDR_GATEWAY_CONNECT_RATE_PER_MINUTE` | `30` | Phone connection attempts per client IP per minute; relay registrations are counted separately against the same number. Negative removes the limit. Phone refusals return `rate_limited`, relay registrations HTTP 429. |
-| `HERDR_GATEWAY_MONTHLY_BYTES` | `5368709120` (5 GiB) | Bytes copied in both directions, per relay, per UTC calendar month. `0` means unlimited. |
-| `HERDR_GATEWAY_QUOTA_WARN_PERCENT` | `80` | Percentage of the quota at which the relay receives one advisory warning. Negative disables it. |
-| `HERDR_GATEWAY_IDLE_TIMEOUT` | `300` | Seconds a phone connection may carry no traffic before it is closed. Negative disables idle reaping. Relay links use ping/pong instead. |
-| `HERDR_GATEWAY_STATE` | unset | JSON file holding the byte counters. Unset keeps them in memory only. |
-| `HERDR_GATEWAY_TRUSTED_PROXY` | `false` | Believe the leftmost `X-Forwarded-For` entry. Enable only behind a proxy you control. |
-| `HERDR_GATEWAY_LOG_FORMAT` | `text` | `text` or `json` structured logs on stderr. |
+| `LERDR_GATEWAY_ADDR` | `:8443` | Listen address. Use `127.0.0.1:8443` behind a proxy. |
+| `LERDR_GATEWAY_STUN_ADDR` | `:3478` | UDP address-discovery listener. Must be reachable directly; a proxy cannot carry it. Empty disables it. |
+| `LERDR_GATEWAY_MAX_CLIENTS_PER_RELAY` | `8` | Concurrent phone connections per relay. Negative removes the cap. Refusals return `too_many_clients`. |
+| `LERDR_GATEWAY_MAX_RELAYS` | `1024` | Registered relays this gateway will hold. Negative removes the cap. Refusals return `at_capacity`. |
+| `LERDR_GATEWAY_MAX_CLIENTS` | `512` | Phone connections across every relay. Negative removes the cap. Refusals return `at_capacity`. |
+| `LERDR_GATEWAY_CONNECT_RATE_PER_MINUTE` | `30` | Phone connection attempts per client IP per minute; relay registrations are counted separately against the same number. Negative removes the limit. Phone refusals return `rate_limited`, relay registrations HTTP 429. |
+| `LERDR_GATEWAY_MONTHLY_BYTES` | `5368709120` (5 GiB) | Bytes copied in both directions, per relay, per UTC calendar month. `0` means unlimited. |
+| `LERDR_GATEWAY_QUOTA_WARN_PERCENT` | `80` | Percentage of the quota at which the relay receives one advisory warning. Negative disables it. |
+| `LERDR_GATEWAY_IDLE_TIMEOUT` | `300` | Seconds a phone connection may carry no traffic before it is closed. Negative disables idle reaping. Relay links use ping/pong instead. |
+| `LERDR_GATEWAY_STATE` | unset | JSON file holding the byte counters. Unset keeps them in memory only. |
+| `LERDR_GATEWAY_TRUSTED_PROXY` | `false` | Believe the leftmost `X-Forwarded-For` entry. Enable only behind a proxy you control. |
+| `LERDR_GATEWAY_LOG_FORMAT` | `text` | `text` or `json` structured logs on stderr. |
 
 Fixed: protocol version 1, a 10-second hello deadline, the wire protocol's
 per-frame ciphertext cap, a 30-second relay ping interval (a relay is dropped
@@ -260,9 +260,9 @@ months are ignored on load and dropped from the next write.
 ### Opening the gateway to other people
 
 Most limits above are per-relay or per-IP, which is enough for a gateway that
-serves only you. `HERDR_GATEWAY_MAX_RELAYS` and `HERDR_GATEWAY_MAX_CLIENTS` are
+serves only you. `LERDR_GATEWAY_MAX_RELAYS` and `LERDR_GATEWAY_MAX_CLIENTS` are
 what bound a stranger who registers many self-generated relay ids from many
-addresses. `HERDR_GATEWAY_MAX_CLIENTS` bounds memory rather than bandwidth: each
+addresses. `LERDR_GATEWAY_MAX_CLIENTS` bounds memory rather than bandwidth: each
 connection may queue up to 4 MiB before being dropped as too slow, so the default
 512 caps the worst case near 2 GiB. Raise it with the RAM you have.
 
@@ -273,7 +273,7 @@ stays.
 
 ## Address discovery
 
-The gateway answers address discovery on UDP `HERDR_GATEWAY_STUN_ADDR`, so the
+The gateway answers address discovery on UDP `LERDR_GATEWAY_STUN_ADDR`, so the
 phone and the relay learn the address the internet sees them at and can offer it
 as an ICE candidate. The listener reports the address it observes, which is the
 one a NAT rewrote the packet to; no third-party STUN service is involved.
@@ -291,14 +291,14 @@ any UPnP/NAT-PMP mapping it obtained, which is what a LAN-only deployment needs.
 
 ## Quota tuning
 
-1. At `HERDR_GATEWAY_QUOTA_WARN_PERCENT` of the monthly limit, the relay receives
+1. At `LERDR_GATEWAY_QUOTA_WARN_PERCENT` of the monthly limit, the relay receives
    one advisory notice and shows it in its UI.
 2. At the limit, the relay receives one `quota_exceeded` notice and **new** phone
    connections are refused with that code. Established connections are never cut
    mid-session.
 3. Counters reset on the UTC month boundary.
 
-For yourself or a household, set `HERDR_GATEWAY_MONTHLY_BYTES=0`. For a group,
+For yourself or a household, set `LERDR_GATEWAY_MONTHLY_BYTES=0`. For a group,
 divide your monthly egress allowance by the number of relays you expect: the
 quota counts each relayed payload once per direction, so a request and its reply
 both land on the same counter — on a 1 TB plan with 20 relays, 25 GiB
@@ -311,7 +311,7 @@ moves its session traffic off the gateway after rendezvous.
 ## Point a relay at your gateway
 
 ```sh
-HERDR_GATEWAY_URL=wss://gw.example.com
+LERDR_GATEWAY_URL=wss://gw.example.com
 ```
 
 A base URL with no path; a trailing slash is trimmed for you, and the relay
@@ -321,7 +321,7 @@ setup links carry the new list.
 
 ## Routes
 
-Served on `HERDR_GATEWAY_ADDR`, normally behind the TLS proxy:
+Served on `LERDR_GATEWAY_ADDR`, normally behind the TLS proxy:
 
 | Route | Purpose |
 | --- | --- |
@@ -331,7 +331,7 @@ Served on `HERDR_GATEWAY_ADDR`, normally behind the TLS proxy:
 | `GET /whoami` | `{"ip":"<your public ip>"}`, used by relay reachability checks. |
 | `POST /probe` | Sends one UDP datagram back to the caller's own address, so the relay can test inbound UDP. |
 
-Address discovery listens separately on UDP `HERDR_GATEWAY_STUN_ADDR` and must be
+Address discovery listens separately on UDP `LERDR_GATEWAY_STUN_ADDR` and must be
 published directly on the host.
 
 Both WebSocket routes begin with a JSON hello exchange and carry binary frames
@@ -363,7 +363,7 @@ not forming — or is disabled — for a group of users, not that the gateway is
 watch -n30 'curl -sS https://gw.example.com/healthz'
 ```
 
-**Give `HERDR_GATEWAY_STATE` a disk that persists.** Losing the file resets the
+**Give `LERDR_GATEWAY_STATE` a disk that persists.** Losing the file resets the
 month's quota accounting and breaks no session.
 
 **Keep port 80 reachable.** Caddy renews certificates itself; the failure worth

@@ -2,7 +2,7 @@
 set -euo pipefail
 
 REPO_DIR="$(cd "$(dirname "$0")/.." && pwd)"
-WORK_DIR="$(mktemp -d "${TMPDIR:-/tmp}/herdr-plugin-build-test.XXXXXX")"
+WORK_DIR="$(mktemp -d "${TMPDIR:-/tmp}/lerdr-plugin-build-test.XXXXXX")"
 trap 'rm -rf "$WORK_DIR"' EXIT
 
 TEST_HOME="$WORK_DIR/home"
@@ -12,8 +12,8 @@ TEST_VERSION="$(sed -n 's/^version = "\([^"]*\)"/\1/p' "$REPO_DIR/herdr-plugin.t
 NEW_RELEASE="$RELEASE_ROOT/releases/$TEST_VERSION-new"
 SOURCE_CONFIG="$TEST_HOME/source-checkout/relay"
 SOURCE_ENV="$SOURCE_CONFIG/.env"
-TARGET_CONFIG="$TEST_HOME/.config/herdr/plugins/config/herdr-mobile-relay.events"
-UNIT_FILE="$TEST_HOME/.config/systemd/user/herdr-mobile-relay.service"
+TARGET_CONFIG="$TEST_HOME/.config/herdr/plugins/config/lerdr.events"
+UNIT_FILE="$TEST_HOME/.config/systemd/user/lerdr.service"
 FAKE_BIN="$WORK_DIR/bin"
 HEALTH_FILE="$WORK_DIR/health.json"
 CONFIG_RECORD="$WORK_DIR/installer-config-root"
@@ -58,7 +58,7 @@ printf '{\n  "version": "0.8.6",\n  "revision": "old-revision",\n  "web_hash": "
 printf '{\n  "version": "%s",\n  "revision": "new-revision",\n  "web_hash": "new-web"\n}\n' \
     "$TEST_VERSION" > "$NEW_RELEASE/release-manifest.json"
 
-cat > "$NEW_RELEASE/herdr-mobile-relay" <<'EOF'
+cat > "$NEW_RELEASE/lerdr" <<'EOF'
 #!/bin/sh
 case "$1" in
     verify-release) exit 0 ;;
@@ -73,22 +73,22 @@ case "$1" in
     *) exit 1 ;;
 esac
 EOF
-chmod 700 "$NEW_RELEASE/herdr-mobile-relay"
-cp "$NEW_RELEASE/herdr-mobile-relay" "$OLD_RELEASE/herdr-mobile-relay"
-printf '#!/bin/sh\nexit 0\n' > "$OLD_RELEASE/relay/herdr-mobile-relay-service.sh"
-printf '#!/bin/sh\nexit 0\n' > "$NEW_RELEASE/relay/herdr-mobile-relay-service.sh"
-chmod 700 "$OLD_RELEASE/relay/herdr-mobile-relay-service.sh" \
-    "$NEW_RELEASE/relay/herdr-mobile-relay-service.sh"
+chmod 700 "$NEW_RELEASE/lerdr"
+cp "$NEW_RELEASE/lerdr" "$OLD_RELEASE/lerdr"
+printf '#!/bin/sh\nexit 0\n' > "$OLD_RELEASE/relay/lerdr-service.sh"
+printf '#!/bin/sh\nexit 0\n' > "$NEW_RELEASE/relay/lerdr-service.sh"
+chmod 700 "$OLD_RELEASE/relay/lerdr-service.sh" \
+    "$NEW_RELEASE/relay/lerdr-service.sh"
 ln -s "releases/0.8.6-old" "$RELEASE_ROOT/current"
 
 cat > "$UNIT_FILE" <<EOF
 [Service]
 Environment=HERDR_RELAY_ENV=$SOURCE_ENV
-ExecStart=$SOURCE_CONFIG/herdr-mobile-relay-service.sh
+ExecStart=$SOURCE_CONFIG/lerdr-service.sh
 WorkingDirectory=$TEST_HOME/source-checkout
 EOF
-printf '#!/bin/sh\nexit 0\n' > "$SOURCE_CONFIG/herdr-mobile-relay-service.sh"
-chmod 700 "$SOURCE_CONFIG/herdr-mobile-relay-service.sh"
+printf '#!/bin/sh\nexit 0\n' > "$SOURCE_CONFIG/lerdr-service.sh"
+chmod 700 "$SOURCE_CONFIG/lerdr-service.sh"
 
 FAKE_INSTALLER="$WORK_DIR/install.sh"
 cat > "$FAKE_INSTALLER" <<EOF
@@ -96,7 +96,7 @@ cat > "$FAKE_INSTALLER" <<EOF
 set -eu
 printf '%s\n' "\$HERDR_PLUGIN_CONFIG_DIR" > "$CONFIG_RECORD"
 printf '%s\n' "\${GH_TOKEN:-}" > "$TOKEN_RECORD"
-printf '%s\n' "\${HERDR_RELEASE_REPOSITORY:-}" > "$REPO_RECORD"
+printf '%s\n' "\${LERDR_RELEASE_REPOSITORY:-}" > "$REPO_RECORD"
 [ "\${FAIL_INSTALLER:-}" != 1 ] || exit 1
 temp="\$INSTALL_ROOT/.current-install"
 rm -f "\$temp" "\$INSTALL_ROOT/current"
@@ -118,7 +118,7 @@ case " $* " in
         ;;
     *" restart "*)
         printf 'restart\n' >> "$RESTART_LOG"
-        if grep -Fx "ExecStart=$SOURCE_CONFIG/herdr-mobile-relay-service.sh" "$UNIT_FILE" 2>/dev/null >/dev/null ||
+        if grep -Fx "ExecStart=$SOURCE_CONFIG/lerdr-service.sh" "$UNIT_FILE" 2>/dev/null >/dev/null ||
            [ "$(readlink -f "$RELEASE_ROOT/current" 2>/dev/null || true)" = "$OLD_RELEASE" ]; then
             printf '{"status":"ok","instance":"test","version":"0.8.6","protocol":2,"release_version":"0.8.6","revision":"old-revision","bundle_hash":"old-web"}\n' > "$HEALTH_FILE"
         else
@@ -142,12 +142,12 @@ esac
 EOF
 cat > "$FAKE_BIN/herdr" <<'EOF'
 #!/bin/sh
-if [ "$*" = "plugin config-dir herdr-mobile-relay.events" ]; then
+if [ "$*" = "plugin config-dir lerdr.events" ]; then
     printf '%s\n' "$TARGET_CONFIG"
     exit 0
 fi
 case "$*" in
-    'plugin action invoke setup --plugin herdr-mobile-relay.events')
+    'plugin action invoke setup --plugin lerdr.events')
         printf '%s\n' "$*" >> "$SETUP_RECORD"
         exit 0
         ;;
@@ -180,8 +180,8 @@ export SETUP_RECORD
 export RELEASE_ROOT OLD_RELEASE
 if HOME="$TEST_HOME" \
     PATH="$FAKE_BIN:$PATH" \
-    HERDR_RELEASE_ROOT="$RELEASE_ROOT" \
-    HERDR_PLUGIN_INSTALLER="$FAKE_INSTALLER" \
+    LERDR_RELEASE_ROOT="$RELEASE_ROOT" \
+    LERDR_PLUGIN_INSTALLER="$FAKE_INSTALLER" \
     FAIL_INSTALLER=1 \
     bash "$REPO_DIR/relay/plugin-build.sh" >"$WORK_DIR/pre-cutover-output" 2>&1; then
     echo "plugin migration unexpectedly accepted an installer failure" >&2
@@ -193,8 +193,8 @@ grep -F "previous running service was left untouched" "$WORK_DIR/pre-cutover-out
 
 if HOME="$TEST_HOME" \
     PATH="$FAKE_BIN:$PATH" \
-    HERDR_RELEASE_ROOT="$RELEASE_ROOT" \
-    HERDR_PLUGIN_INSTALLER="$FAKE_INSTALLER" \
+    LERDR_RELEASE_ROOT="$RELEASE_ROOT" \
+    LERDR_PLUGIN_INSTALLER="$FAKE_INSTALLER" \
     bash "$REPO_DIR/relay/plugin-build.sh" >"$WORK_DIR/output" 2>&1; then
     echo "plugin migration unexpectedly accepted the wrong replacement identity" >&2
     cat "$WORK_DIR/output" >&2
@@ -202,7 +202,7 @@ if HOME="$TEST_HOME" \
 fi
 
 test "$(readlink -f "$RELEASE_ROOT/current")" = "$OLD_RELEASE"
-grep -Fx "ExecStart=$SOURCE_CONFIG/herdr-mobile-relay-service.sh" "$UNIT_FILE" >/dev/null
+grep -Fx "ExecStart=$SOURCE_CONFIG/lerdr-service.sh" "$UNIT_FILE" >/dev/null
 grep -Fx "WorkingDirectory=$TEST_HOME/source-checkout" "$UNIT_FILE" >/dev/null
 grep -Fx "Environment=HERDR_RELAY_ENV=$SOURCE_ENV" "$UNIT_FILE" >/dev/null
 test "$(cat "$CONFIG_RECORD")" = "$TARGET_CONFIG"
@@ -213,12 +213,12 @@ grep -F "previous service recovered successfully" "$WORK_DIR/output" >/dev/null
 rm -f "$RESTART_LOG"
 if ! HOME="$TEST_HOME" \
     PATH="$FAKE_BIN:$PATH" \
-    HERDR_RELEASE_ROOT="$RELEASE_ROOT" \
-    HERDR_PLUGIN_INSTALLER="$FAKE_INSTALLER" \
-    HERDR_MOBILE_RELAY_NO_AUTO_SETUP=1 \
+    LERDR_RELEASE_ROOT="$RELEASE_ROOT" \
+    LERDR_PLUGIN_INSTALLER="$FAKE_INSTALLER" \
+    LERDR_NO_AUTO_SETUP=1 \
     FORCE_INACTIVE=1 \
     REPLACEMENT_REVISION=new-revision \
-    HERDR_RELEASE_REPOSITORY=0cv/herdr-mobile-relay-dev \
+    LERDR_RELEASE_REPOSITORY=0cv/lerdr-dev \
     bash "$REPO_DIR/relay/plugin-build.sh" >"$WORK_DIR/success-output" 2>&1; then
     cat "$WORK_DIR/success-output" >&2
     exit 1
@@ -227,13 +227,13 @@ fi
 test "$(readlink -f "$RELEASE_ROOT/current")" = "$NEW_RELEASE"
 # The release comes from the repository the plugin was installed from, so a
 # private canary or a fork never downloads this project's bundle.
-test "$(cat "$REPO_RECORD")" = 0cv/herdr-mobile-relay-dev
-grep -Fx "ExecStart=$RELEASE_ROOT/current/relay/herdr-mobile-relay-service.sh" "$UNIT_FILE" >/dev/null
+test "$(cat "$REPO_RECORD")" = 0cv/lerdr-dev
+grep -Fx "ExecStart=$RELEASE_ROOT/current/relay/lerdr-service.sh" "$UNIT_FILE" >/dev/null
 grep -Fx "WorkingDirectory=$RELEASE_ROOT/current" "$UNIT_FILE" >/dev/null
-grep -Fx "Environment=HERDR_RELAY_ENV=$TARGET_CONFIG/relay.env" "$UNIT_FILE" >/dev/null
+grep -Fx "Environment=LERDR_RELAY_ENV=$TARGET_CONFIG/relay.env" "$UNIT_FILE" >/dev/null
 grep -F source-token "$TARGET_CONFIG/relay.env" >/dev/null
 grep -F source-instance "$TARGET_CONFIG/relay.env" >/dev/null
-grep -F "HERDR_GITHUB_TOKEN_FILE='$TARGET_CONFIG/github-token'" "$TARGET_CONFIG/relay.env" >/dev/null
+grep -F "LERDR_GITHUB_TOKEN_FILE='$TARGET_CONFIG/github-token'" "$TARGET_CONFIG/relay.env" >/dev/null
 grep -F source-credential "$TARGET_CONFIG/device-auth/devices.json" >/dev/null
 test "$(cat "$TARGET_CONFIG/push/subscriptions.json")" = source-subscriptions
 test "$(cat "$TARGET_CONFIG/update-state.json")" = source-update
@@ -244,15 +244,15 @@ grep -F "$TARGET_CONFIG/relay.env" "$TARGET_CONFIG/stable-setup.json" >/dev/null
 grep -F "$TARGET_CONFIG/cloudflared/config.yml" "$TARGET_CONFIG/stable-setup.json" >/dev/null
 grep -F "$TARGET_CONFIG/cloudflared/tunnel-credentials.json" \
     "$TARGET_CONFIG/cloudflared/config.yml" >/dev/null
-test ! -e "$SOURCE_CONFIG/.herdr-mobile-relay-installation"
-test ! -e "$REPO_DIR/relay/.herdr-mobile-relay-installation"
+test ! -e "$SOURCE_CONFIG/.lerdr-installation"
+test ! -e "$REPO_DIR/relay/.lerdr-installation"
 test "$(cat "$RESTART_LOG")" = "restart"
 
 BROKEN_ROOT="$WORK_DIR/deleted-release"
 cat > "$UNIT_FILE" <<EOF
 [Service]
 Environment=HERDR_RELAY_ENV=$BROKEN_ROOT/relay.env
-ExecStart=$BROKEN_ROOT/relay/herdr-mobile-relay-service.sh
+ExecStart=$BROKEN_ROOT/relay/lerdr-service.sh
 WorkingDirectory=$BROKEN_ROOT
 EOF
 rm -f "$RELEASE_ROOT/current" "$RESTART_LOG"
@@ -261,8 +261,8 @@ cp "$UNIT_FILE" "$WORK_DIR/broken-unit-before"
 
 if HOME="$TEST_HOME" \
     PATH="$FAKE_BIN:$PATH" \
-    HERDR_RELEASE_ROOT="$RELEASE_ROOT" \
-    HERDR_PLUGIN_INSTALLER="$FAKE_INSTALLER" \
+    LERDR_RELEASE_ROOT="$RELEASE_ROOT" \
+    LERDR_PLUGIN_INSTALLER="$FAKE_INSTALLER" \
     FORCE_INACTIVE=1 \
     REPLACEMENT_REVISION=new-revision \
     bash "$REPO_DIR/relay/plugin-build.sh" >"$WORK_DIR/missing-config-output" 2>&1; then
@@ -277,8 +277,8 @@ grep -F "persistent relay environment is unavailable" \
 mv "$WORK_DIR/persistent-relay.env" "$TARGET_CONFIG/relay.env"
 if ! HOME="$TEST_HOME" \
     PATH="$FAKE_BIN:$PATH" \
-    HERDR_RELEASE_ROOT="$RELEASE_ROOT" \
-    HERDR_PLUGIN_INSTALLER="$FAKE_INSTALLER" \
+    LERDR_RELEASE_ROOT="$RELEASE_ROOT" \
+    LERDR_PLUGIN_INSTALLER="$FAKE_INSTALLER" \
     FORCE_INACTIVE=1 \
     REPLACEMENT_REVISION=new-revision \
     bash "$REPO_DIR/relay/plugin-build.sh" >"$WORK_DIR/recovery-output" 2>&1; then
@@ -289,10 +289,10 @@ fi
 grep -F "recovering broken service paths from persistent plugin config" \
     "$WORK_DIR/recovery-output" >/dev/null
 test "$(readlink -f "$RELEASE_ROOT/current")" = "$NEW_RELEASE"
-grep -Fx "ExecStart=$RELEASE_ROOT/current/relay/herdr-mobile-relay-service.sh" \
+grep -Fx "ExecStart=$RELEASE_ROOT/current/relay/lerdr-service.sh" \
     "$UNIT_FILE" >/dev/null
 grep -Fx "WorkingDirectory=$RELEASE_ROOT/current" "$UNIT_FILE" >/dev/null
-grep -Fx "Environment=HERDR_RELAY_ENV=$TARGET_CONFIG/relay.env" "$UNIT_FILE" >/dev/null
+grep -Fx "Environment=LERDR_RELAY_ENV=$TARGET_CONFIG/relay.env" "$UNIT_FILE" >/dev/null
 test "$(cat "$RESTART_LOG")" = "restart"
 grep -F source-token "$TARGET_CONFIG/relay.env" >/dev/null
 
@@ -301,13 +301,13 @@ ln -s "releases/0.8.6-old" "$RELEASE_ROOT/current"
 cat > "$UNIT_FILE" <<EOF
 [Service]
 Environment=HERDR_RELAY_ENV=$BROKEN_ROOT/relay.env
-ExecStart=$BROKEN_ROOT/relay/herdr-mobile-relay-service.sh
+ExecStart=$BROKEN_ROOT/relay/lerdr-service.sh
 WorkingDirectory=$BROKEN_ROOT
 EOF
 if HOME="$TEST_HOME" \
     PATH="$FAKE_BIN:$PATH" \
-    HERDR_RELEASE_ROOT="$RELEASE_ROOT" \
-    HERDR_PLUGIN_INSTALLER="$FAKE_INSTALLER" \
+    LERDR_RELEASE_ROOT="$RELEASE_ROOT" \
+    LERDR_PLUGIN_INSTALLER="$FAKE_INSTALLER" \
     FORCE_INACTIVE=1 \
     bash "$REPO_DIR/relay/plugin-build.sh" >"$WORK_DIR/recovery-rollback-output" 2>&1; then
     echo "broken service recovery unexpectedly accepted the wrong replacement identity" >&2
@@ -315,10 +315,10 @@ if HOME="$TEST_HOME" \
 fi
 
 test "$(readlink -f "$RELEASE_ROOT/current")" = "$OLD_RELEASE"
-grep -Fx "ExecStart=$RELEASE_ROOT/current/relay/herdr-mobile-relay-service.sh" \
+grep -Fx "ExecStart=$RELEASE_ROOT/current/relay/lerdr-service.sh" \
     "$UNIT_FILE" >/dev/null
 grep -Fx "WorkingDirectory=$RELEASE_ROOT/current" "$UNIT_FILE" >/dev/null
-grep -Fx "Environment=HERDR_RELAY_ENV=$TARGET_CONFIG/relay.env" "$UNIT_FILE" >/dev/null
+grep -Fx "Environment=LERDR_RELAY_ENV=$TARGET_CONFIG/relay.env" "$UNIT_FILE" >/dev/null
 test "$(wc -l < "$RESTART_LOG")" -eq 2
 grep -F "previous service recovered successfully" \
     "$WORK_DIR/recovery-rollback-output" >/dev/null
@@ -328,7 +328,7 @@ grep -F "previous service recovered successfully" \
 # ready" leaves a person with no idea what exists or what is still missing. The
 # menu answers both and costs one keystroke to leave, so an upgrade opens it too.
 sleep 1
-grep -Fq 'plugin action invoke setup --plugin herdr-mobile-relay.events' "$SETUP_RECORD" ||
+grep -Fq 'plugin action invoke setup --plugin lerdr.events' "$SETUP_RECORD" ||
     { echo "an upgrade did not open the setup menu" >&2; exit 1; }
 rm -f "$SETUP_RECORD"
 
@@ -338,14 +338,14 @@ FRESH_CONFIG="$FRESH_HOME/config"
 FRESH_RELEASE="$FRESH_ROOT/releases/$TEST_VERSION-new"
 mkdir -p "$FRESH_RELEASE/relay" "$FRESH_CONFIG"
 cp "$NEW_RELEASE/release-manifest.json" "$FRESH_RELEASE/"
-cp "$NEW_RELEASE/herdr-mobile-relay" "$FRESH_RELEASE/"
-cp "$NEW_RELEASE/relay/herdr-mobile-relay-service.sh" "$FRESH_RELEASE/relay/"
+cp "$NEW_RELEASE/lerdr" "$FRESH_RELEASE/"
+cp "$NEW_RELEASE/relay/lerdr-service.sh" "$FRESH_RELEASE/relay/"
 FRESH_INSTALLER="$WORK_DIR/fresh-install.sh"
 cat > "$FRESH_INSTALLER" <<EOF
 #!/bin/sh
 set -eu
 printf '%s\n' "\${GH_TOKEN:-}" > "$FRESH_TOKEN_RECORD"
-printf '%s\n' "\${HERDR_RELEASE_REPOSITORY:-}" > "$FRESH_REPO_RECORD"
+printf '%s\n' "\${LERDR_RELEASE_REPOSITORY:-}" > "$FRESH_REPO_RECORD"
 temp="\$INSTALL_ROOT/.current-install"
 rm -f "\$temp" "\$INSTALL_ROOT/current"
 ln -s "$FRESH_RELEASE" "\$temp"
@@ -359,10 +359,10 @@ rm -f "$RESTART_LOG"
 run_fresh_build() {
     HOME="$FRESH_HOME" \
         PATH="$FAKE_BIN:$PATH" \
-        HERDR_RELEASE_ROOT="$FRESH_ROOT" \
+        LERDR_RELEASE_ROOT="$FRESH_ROOT" \
         HERDR_PLUGIN_CONFIG_DIR="$FRESH_CONFIG" \
-        HERDR_PLUGIN_INSTALLER="$FRESH_INSTALLER" \
-        UNIT_FILE="$FRESH_HOME/.config/systemd/user/herdr-mobile-relay.service" \
+        LERDR_PLUGIN_INSTALLER="$FRESH_INSTALLER" \
+        UNIT_FILE="$FRESH_HOME/.config/systemd/user/lerdr.service" \
         REPLACEMENT_REVISION=new-revision \
         FORCE_INACTIVE=1 \
         GH_TOKEN= \
@@ -374,7 +374,7 @@ run_fresh_build() {
 # An SSH-only private checkout has no credential for GitHub's HTTPS release API.
 # Diagnose that before migration instead of surfacing GitHub's deliberate 404.
 if run_fresh_build env GH_AUTH_FAIL=1 \
-    HERDR_RELEASE_REPOSITORY=0cv/herdr-mobile-relay-dev; then
+    LERDR_RELEASE_REPOSITORY=0cv/lerdr-dev; then
     echo "an SSH-only private install reached the release installer" >&2
     exit 1
 fi
@@ -386,29 +386,29 @@ grep -Fq 'gh auth login --hostname github.com --git-protocol ssh' \
 [ ! -e "$FRESH_ROOT/current" ] ||
     { echo "private release authentication failure changed the release" >&2; exit 1; }
 
-if ! run_fresh_build env HERDR_RELEASE_REPOSITORY=0cv/herdr-mobile-relay-dev; then
+if ! run_fresh_build env LERDR_RELEASE_REPOSITORY=0cv/lerdr-dev; then
     cat "$WORK_DIR/fresh-output" >&2
     exit 1
 fi
 test "$(cat "$FRESH_TOKEN_RECORD")" = "private-clone-api-token" ||
     { echo "a private checkout did not reuse the gh API credential" >&2; exit 1; }
-test "$(cat "$FRESH_REPO_RECORD")" = "0cv/herdr-mobile-relay-dev" ||
+test "$(cat "$FRESH_REPO_RECORD")" = "0cv/lerdr-dev" ||
     { echo "a private checkout downloaded from the wrong release repository" >&2; exit 1; }
 # The action is scheduled detached, so give it the moment it waits out.
 sleep 1
-grep -Fq 'plugin action invoke setup --plugin herdr-mobile-relay.events' "$SETUP_RECORD" ||
+grep -Fq 'plugin action invoke setup --plugin lerdr.events' "$SETUP_RECORD" ||
     { echo "a first install did not open the setup menu" >&2; exit 1; }
 
 # Only the documented opt-out suppresses it; a configured relay still gets the
 # menu, because seeing the current state is the point.
 rm -f "$SETUP_RECORD" "$FRESH_ROOT/current" "$RESTART_LOG"
-if ! run_fresh_build env HERDR_MOBILE_RELAY_NO_AUTO_SETUP=1; then
+if ! run_fresh_build env LERDR_NO_AUTO_SETUP=1; then
     cat "$WORK_DIR/fresh-output" >&2
     exit 1
 fi
 sleep 1
 if [ -e "$SETUP_RECORD" ]; then
-    echo "HERDR_MOBILE_RELAY_NO_AUTO_SETUP=1 still opened the setup menu" >&2
+    echo "LERDR_NO_AUTO_SETUP=1 still opened the setup menu" >&2
     exit 1
 fi
 
@@ -419,7 +419,7 @@ if ! run_fresh_build env; then
     exit 1
 fi
 sleep 1
-grep -Fq 'plugin action invoke setup --plugin herdr-mobile-relay.events' "$SETUP_RECORD" ||
+grep -Fq 'plugin action invoke setup --plugin lerdr.events' "$SETUP_RECORD" ||
     { echo "a configured relay did not open the setup menu" >&2; exit 1; }
 
 echo "plugin build migration, rollback, and recovery tests passed"

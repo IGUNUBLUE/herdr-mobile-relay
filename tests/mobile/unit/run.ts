@@ -73,7 +73,7 @@ const legacyExpected: BundleExpectation = {
 };
 
 async function legacyRoot(version = '0.20.8', assets = 361): Promise<string> {
-  const root = await mkdtemp(join(tmpdir(), 'herdr-mobile-ci-unit-'));
+  const root = await mkdtemp(join(tmpdir(), 'lerdr-ci-unit-'));
   await mkdir(join(root, 'assets'), { recursive: true });
   await writeFile(join(root, 'version.json'), JSON.stringify({ version, assets }));
   await writeFile(join(root, 'index.html'), '<html></html>');
@@ -122,7 +122,7 @@ function iosShareHierarchy(scrolls: number, populated = true): string {
 }
 
 test('transient baseline downloads retry without accepting a failed response', async () => {
-  const root = await mkdtemp(join(tmpdir(), 'herdr-mobile-download-'));
+  const root = await mkdtemp(join(tmpdir(), 'lerdr-download-'));
   const filename = join(root, 'baseline.tar.gz');
   let attempts = 0;
   await downloadWithRetry('https://example.invalid/baseline.tar.gz', filename, {
@@ -137,7 +137,7 @@ test('transient baseline downloads retry without accepting a failed response', a
 });
 
 test('repeated baseline download failure leaves no partial file', async () => {
-  const root = await mkdtemp(join(tmpdir(), 'herdr-mobile-download-failure-'));
+  const root = await mkdtemp(join(tmpdir(), 'lerdr-download-failure-'));
   const filename = join(root, 'baseline.tar.gz');
   await assert.rejects(
     downloadWithRetry('https://example.invalid/baseline.tar.gz', filename, {
@@ -152,7 +152,7 @@ test('repeated baseline download failure leaves no partial file', async () => {
 });
 
 test('checksum validation is terminal and leaves no downloaded artifact', async () => {
-  const root = await mkdtemp(join(tmpdir(), 'herdr-mobile-download-checksum-'));
+  const root = await mkdtemp(join(tmpdir(), 'lerdr-download-checksum-'));
   const filename = join(root, 'baseline.tar.gz');
   let attempts = 0;
   await assert.rejects(
@@ -202,7 +202,7 @@ test('iOS standalone ownership accepts bundle and pid evidence without Android a
 });
 
 test('evidence validation enforces matrix identity and platform-specific native proof', async () => {
-  const root = await mkdtemp(join(tmpdir(), 'herdr-mobile-evidence-'));
+  const root = await mkdtemp(join(tmpdir(), 'lerdr-evidence-'));
   const sourceCommit = 'a'.repeat(40);
   const headSha = 'b'.repeat(40);
   const webHash = 'c'.repeat(64);
@@ -348,7 +348,7 @@ test('directory preparation verifies legacy identity and hashes', async () => {
 
 test('candidate directories require an explicit local escape hatch', async () => {
   const source = await legacyRoot();
-  const output = await mkdtemp(join(tmpdir(), 'herdr-mobile-ci-directory-'));
+  const output = await mkdtemp(join(tmpdir(), 'lerdr-ci-directory-'));
   await assert.rejects(
     prepareBundle('directory', legacyExpected, source, join(output, 'directory')),
     /ARTIFACT_ARCHIVE_REQUIRED/,
@@ -360,9 +360,9 @@ test('candidate directories require an explicit local escape hatch', async () =>
 });
 
 test('archive checksum mismatch is rejected before extraction', async () => {
-  const source = join(await mkdtemp(join(tmpdir(), 'herdr-mobile-ci-archive-')), 'bad.tar.gz');
+  const source = join(await mkdtemp(join(tmpdir(), 'lerdr-ci-archive-')), 'bad.tar.gz');
   await writeFile(source, 'not an archive');
-  const output = await mkdtemp(join(tmpdir(), 'herdr-mobile-ci-output-'));
+  const output = await mkdtemp(join(tmpdir(), 'lerdr-ci-output-'));
   const expected = { ...legacyExpected, archiveSha256: '0'.repeat(64) };
   await assert.rejects(
     prepareBundle('bad', expected, source, join(output, 'bad')),
@@ -377,7 +377,7 @@ test('valid release archives extract through the verified GNU tar path', async (
   } catch {
     return 'GNU tar is unavailable';
   }
-  const sourceRoot = await mkdtemp(join(tmpdir(), 'herdr-mobile-ci-valid-archive-'));
+  const sourceRoot = await mkdtemp(join(tmpdir(), 'lerdr-ci-valid-archive-'));
   const web = join(sourceRoot, 'web');
   await mkdir(join(web, 'assets'), { recursive: true });
   await writeFile(join(web, 'version.json'), JSON.stringify({ version: '0.20.8', assets: 361 }));
@@ -389,7 +389,7 @@ test('valid release archives extract through the verified GNU tar path', async (
   await writeFile(join(sourceRoot, 'release-manifest.json'), JSON.stringify({ version: '0.20.8', revision: 'fixture', web_hash: '' }));
   const archive = join(sourceRoot, 'fixture.tar.gz');
   execFileSync(tar, ['-C', sourceRoot, '-czf', archive, 'web', 'relay', 'release-manifest.json']);
-  const output = await mkdtemp(join(tmpdir(), 'herdr-mobile-ci-valid-output-'));
+  const output = await mkdtemp(join(tmpdir(), 'lerdr-ci-valid-output-'));
   const expected = { ...legacyExpected, revision: 'fixture', archiveSha256: await fileSha256(archive) };
   const prepared = await prepareBundle('valid', expected, archive, join(output, 'valid'));
   assert.equal(prepared.identity.script, '/assets/app.js');
@@ -420,7 +420,7 @@ test('repository-relative CLI paths are anchored at the repository root', async 
 });
 
 test('mobile output preparation preserves existing files and rejects unsafe overlaps', async () => {
-  const root = await mkdtemp(join(tmpdir(), 'herdr-mobile-ci-output-safety-'));
+  const root = await mkdtemp(join(tmpdir(), 'lerdr-ci-output-safety-'));
   const output = join(root, 'output');
   await mkdir(output);
   const sentinel = join(output, 'sentinel.txt');
@@ -434,7 +434,7 @@ test('mobile output preparation preserves existing files and rejects unsafe over
 });
 
 test('PR provenance keeps merge build and PR head identities separate', async () => {
-  const repository = '0cv/herdr-mobile-relay';
+  const repository = 'IGUNUBLUE/lerdr';
   const prHead = 'f02fcb1d3742487ac4a1e541d60cf3988284caf8';
   const mergeBuild = '59fae417ab8d52e352dc4d6fa79cdbd214a8d6a4';
   const run: ProvenanceRun = {
@@ -465,16 +465,16 @@ test('the workflow provenance adapter uses the shared validator', async () => {
     env: {
       ...process.env,
       PROVENANCE_MODE: 'external',
-      PROVENANCE_REPOSITORY: '0cv/herdr-mobile-relay',
+      PROVENANCE_REPOSITORY: 'IGUNUBLUE/lerdr',
       PROVENANCE_ARTIFACT_RUN_ID: 'source-run',
       PROVENANCE_CALLER_RUN_ID: 'other-run',
       PROVENANCE_MANIFEST_REVISION: sha,
-      PROVENANCE_RUN_REPOSITORY: '0cv/herdr-mobile-relay',
+      PROVENANCE_RUN_REPOSITORY: 'IGUNUBLUE/lerdr',
       PROVENANCE_HEAD_SHA: sha,
       PROVENANCE_RUN_EVENT: 'push',
       PROVENANCE_RUN_BRANCH: 'main',
       PROVENANCE_RUN_WORKFLOW: '.github/workflows/check.yml',
-      PROVENANCE_HEAD_REPOSITORY: '0cv/herdr-mobile-relay',
+      PROVENANCE_HEAD_REPOSITORY: 'IGUNUBLUE/lerdr',
       PROVENANCE_RUN_STATUS: 'completed',
       PROVENANCE_RUN_CONCLUSION: 'success',
       PROVENANCE_SOURCE_COMMIT: sha,
@@ -484,7 +484,7 @@ test('the workflow provenance adapter uses the shared validator', async () => {
 });
 
 test('external provenance requires a successful same-repository main push', async () => {
-  const repository = '0cv/herdr-mobile-relay';
+  const repository = 'IGUNUBLUE/lerdr';
   const mainSha = '5d169cb2d43cbe80eccf5494978001b63dc2fca9';
   const run: ProvenanceRun = {
     repository,
@@ -500,7 +500,7 @@ test('external provenance requires a successful same-repository main push', asyn
     mode: 'external', repository, artifactRunId: '34321848225', callerRunId: 'other-run',
     sourceCommit: mainSha, manifestRevision: mainSha,
   }), { sourceSha: mainSha, headSha: mainSha });
-  assert.throws(() => validateProvenance({ ...run, headRepository: 'fork/herdr-mobile-relay' }, {
+  assert.throws(() => validateProvenance({ ...run, headRepository: 'fork/lerdr' }, {
     mode: 'external', repository, artifactRunId: '34321848225', callerRunId: 'other-run', manifestRevision: mainSha,
   }), /PROVENANCE_HEAD_REPOSITORY/);
   assert.throws(() => validateProvenance(run, {
@@ -509,9 +509,9 @@ test('external provenance requires a successful same-repository main push', asyn
 });
 
 test('Android emulator-console parser handles names, terminators, and errors', async () => {
-  assert.equal(parseAndroidAvdName('herdr-mobile-ci-42-1\r\nOK\r\n'), 'herdr-mobile-ci-42-1');
+  assert.equal(parseAndroidAvdName('lerdr-ci-42-1\r\nOK\r\n'), 'lerdr-ci-42-1');
   assert.equal(parseAndroidAvdName('other-avd\nOK\n'), 'other-avd');
-  assert.notEqual(parseAndroidAvdName('other-avd\nOK\n'), 'herdr-mobile-ci-42-1');
+  assert.notEqual(parseAndroidAvdName('other-avd\nOK\n'), 'lerdr-ci-42-1');
   assert.equal(parseAndroidAvdName('OK\n'), undefined);
   assert.equal(parseAndroidAvdName('KO: unknown command\n'), undefined);
   assert.equal(parseAndroidAvdName('\r\n'), undefined);
@@ -620,7 +620,7 @@ test('Android producer-shaped package sections are scoped, heading-relative and 
 });
 
 async function createAndroidEnvironmentFixture(): Promise<AndroidEnvironmentFixture> {
-  const root = await mkdtemp(join(process.env.ANDROID_TEST_OUTPUT || tmpdir(), 'herdr-android-environment-'));
+  const root = await mkdtemp(join(process.env.ANDROID_TEST_OUTPUT || tmpdir(), 'lerdr-android-environment-'));
   const fixtureDirectory = join(root, 'fixtures');
   const binDirectory = join(root, 'bin');
   await mkdir(fixtureDirectory, { recursive: true });
@@ -649,9 +649,9 @@ async function createAndroidEnvironmentFixture(): Promise<AndroidEnvironmentFixt
   const adb = join(binDirectory, 'adb');
   await writeFile(adb, `#!${process.execPath}\nimport ${JSON.stringify(repositoryPath('tests/mobile/unit/android-fake-adb.ts'))};\n`, { mode: 0o700 });
   await writeFile(join(root, 'ownership'), 'android:emulator-5554\n');
-  await mkdir(join(root, 'avd', 'herdr-mobile-ci-fixture.avd'), { recursive: true });
+  await mkdir(join(root, 'avd', 'lerdr-ci-fixture.avd'), { recursive: true });
   await mkdir(join(root, 'sdk', 'system-images', 'android-35', 'google_apis', 'x86_64'), { recursive: true });
-  await writeFile(join(root, 'avd', 'herdr-mobile-ci-fixture.avd', 'config.ini'), 'image.sysdir.1=system-images/android-35/google_apis/x86_64/\ntag.id=google_apis\nabi.type=x86_64\n');
+  await writeFile(join(root, 'avd', 'lerdr-ci-fixture.avd', 'config.ini'), 'image.sysdir.1=system-images/android-35/google_apis/x86_64/\ntag.id=google_apis\nabi.type=x86_64\n');
   await writeFile(join(root, 'sdk', 'system-images', 'android-35', 'google_apis', 'x86_64', 'source.properties'), 'Pkg.Revision=12\nAndroidVersion.ApiLevel=35\nSystemImage.TagId=google_apis\nSystemImage.Abi=x86_64\n');
   await writeFile(join(binDirectory, 'emulator'), '#!/bin/sh\nif [ "$*" != "-no-window -version" ]; then\n  printf "qemu-system-x86_64: error while loading shared libraries: libpulse.so.0\\n" >&2\n  exit 127\nfi\nprintf "Android emulator version 35.0.2.0\\n"\n', { mode: 0o700 });
   const properties = {
@@ -679,7 +679,7 @@ async function createAndroidEnvironmentFixture(): Promise<AndroidEnvironmentFixt
       PATH: `${binDirectory}:${process.env.PATH || ''}`,
       FAKE_ANDROID_FIXTURE_DIR: fixtureDirectory,
       FAKE_ANDROID_LOG: log,
-      ANDROID_AVD_NAME: 'herdr-mobile-ci-fixture',
+      ANDROID_AVD_NAME: 'lerdr-ci-fixture',
       ANDROID_HOME: join(root, 'sdk'),
       ANDROID_AVD_HOME: join(root, 'avd'),
       MOBILE_DEVICE_OWNERSHIP_FILE: join(root, 'ownership'),
@@ -939,7 +939,7 @@ test('Android Chrome startup only enables attach mode after explicit launch', as
 
 test('Android native settings are applied and read back before lookup', async () => {
   const platform = new AndroidPlatform({
-    origin: 'https://fixture.test', appiumUrl: 'http://fake.test', outputDir: join(tmpdir(), 'herdr-mobile-ci-unit'),
+    origin: 'https://fixture.test', appiumUrl: 'http://fake.test', outputDir: join(tmpdir(), 'lerdr-ci-unit'),
     certificate: '', setupUrl: '', deviceId: 'emulator-5554', budget: new PhaseBudget('android-settings-test', { timeoutMs: 1_000, recoveryLimit: 1 }),
   });
   const updates: Record<string, unknown>[] = [];
@@ -961,7 +961,7 @@ test('Android final launch verifies readiness only after bootstrap teardown', as
   const platform = new AndroidPlatform({
     origin: 'https://fixture.test',
     appiumUrl: 'http://fake.test',
-    outputDir: join(tmpdir(), 'herdr-mobile-ci-unit'),
+    outputDir: join(tmpdir(), 'lerdr-ci-unit'),
     certificate: '',
     setupUrl: '',
     deviceId: 'emulator-5554',
@@ -980,7 +980,7 @@ test('Android final launch verifies readiness only after bootstrap teardown', as
   (platform as any).waitForChromeDevTools = async () => { events.push('devtools'); };
   (platform as any).createChromeSession = async () => { events.push('create'); };
   (platform as any).attachToInstalledView = async () => { events.push('attach'); };
-  const ownershipRoot = await mkdtemp(join(tmpdir(), 'herdr-mobile-ci-ownership-'));
+  const ownershipRoot = await mkdtemp(join(tmpdir(), 'lerdr-ci-ownership-'));
   const ownershipFile = join(ownershipRoot, 'owned');
   await writeFile(ownershipFile, 'android:emulator-5554\n');
   const previousOwnershipFile = process.env.MOBILE_DEVICE_OWNERSHIP_FILE;
@@ -1001,7 +1001,7 @@ test('Android Chrome DevTools readiness recognizes the published socket', async 
 
 test('Android installed attachment selects the owned standalone window instead of a browser window', async () => {
   const platform = new AndroidPlatform({
-    origin: 'https://fixture.test', appiumUrl: 'http://fake.test', outputDir: join(tmpdir(), 'herdr-mobile-ci-unit'),
+    origin: 'https://fixture.test', appiumUrl: 'http://fake.test', outputDir: join(tmpdir(), 'lerdr-ci-unit'),
     certificate: '', setupUrl: '', deviceId: 'emulator-5554',
     budget: new PhaseBudget('android-attachment-test', { timeoutMs: 10_000, recoveryLimit: 1 }),
   });
@@ -1080,7 +1080,7 @@ test('Android web controls use supported locators and preserve ownership failure
     });
     await client.create({ capabilities: {}, budget });
     const platform = new AndroidPlatform({
-      origin: 'https://fixture.test', appiumUrl: 'http://fake.test', outputDir: join(tmpdir(), 'herdr-mobile-ci-unit'),
+      origin: 'https://fixture.test', appiumUrl: 'http://fake.test', outputDir: join(tmpdir(), 'lerdr-ci-unit'),
       certificate: '', setupUrl: '', deviceId: 'emulator-5554', budget,
     });
     (platform as any).driver = client;
@@ -1137,7 +1137,7 @@ test('Android web controls use supported locators and preserve ownership failure
 
 test('Android fixture verification keeps the HTTP status separate from the Appium response status', async () => {
   const platform = new AndroidPlatform({
-    origin: 'https://fixture.test', appiumUrl: 'http://fake.test', outputDir: join(tmpdir(), 'herdr-mobile-ci-unit'),
+    origin: 'https://fixture.test', appiumUrl: 'http://fake.test', outputDir: join(tmpdir(), 'lerdr-ci-unit'),
     certificate: '', setupUrl: '', deviceId: 'emulator-5554',
     budget: new PhaseBudget('android-fixture-test', { timeoutMs: 15_000, recoveryLimit: 1 }),
   });
@@ -1191,7 +1191,7 @@ test('Android fixture verification rejects unsafe HTTP response identities witho
   for (const [index, scenario] of cases.entries()) {
     const clock = { value: 0 };
     const platform = new AndroidPlatform({
-      origin: 'https://fixture.test', appiumUrl: 'http://fake.test', outputDir: join(tmpdir(), 'herdr-mobile-ci-unit'),
+      origin: 'https://fixture.test', appiumUrl: 'http://fake.test', outputDir: join(tmpdir(), 'lerdr-ci-unit'),
       certificate: '', setupUrl: '', deviceId: 'emulator-5554',
       budget: new PhaseBudget(`android-fixture-rejection-${index}`, { timeoutMs: 350, recoveryLimit: 1, now: () => clock.value }),
     });
@@ -1220,7 +1220,7 @@ test('Android Chrome shortcut output preserves the signed launch fields', async 
   });
   const args = androidChromeShortcutArgs('emulator-5554', shortcuts[0]);
   const platform = new AndroidPlatform({
-    origin: 'https://localhost:38289', appiumUrl: 'http://fake.test', outputDir: join(tmpdir(), 'herdr-mobile-ci-unit'),
+    origin: 'https://localhost:38289', appiumUrl: 'http://fake.test', outputDir: join(tmpdir(), 'lerdr-ci-unit'),
     certificate: '', setupUrl: '', deviceId: 'emulator-5554', budget: new PhaseBudget('shortcut-evidence', { timeoutMs: 10_000, recoveryLimit: 1 }),
   });
   const evidence = (platform as any).shortcutEvidence(shortcuts[0]);
@@ -1240,7 +1240,7 @@ test('Android setup URL survives ADB remote-shell serialization', async () => {
     '-e', 'process.stdout.write(JSON.stringify(process.argv.slice(1)))', '--', ...args,
   ]);
   assert.deepEqual(JSON.parse(serialized.stdout), args);
-  const fakeAdbBin = await mkdtemp(join(tmpdir(), 'herdr-mobile-ci-adb-'));
+  const fakeAdbBin = await mkdtemp(join(tmpdir(), 'lerdr-ci-adb-'));
   await writeFile(join(fakeAdbBin, 'am'), '#!/bin/sh\nprintf "%s\\n" "$@"\n', { mode: 0o700 });
   const remoteCommand = args.slice(3).join(' ');
   const fakeCommand = await command('/bin/sh', ['-c', remoteCommand], 30_000, {
@@ -1341,7 +1341,7 @@ test('runtime script observations satisfy baseline and candidate validation cont
       nativePid: '42',
     };
     assert.doesNotThrow(() => assertRunningIdentity(initial, expected, false));
-    const directory = await mkdtemp(join(tmpdir(), 'herdr-mobile-runtime-contract-'));
+    const directory = await mkdtemp(join(tmpdir(), 'lerdr-runtime-contract-'));
     const sourceCommit = 'a'.repeat(40);
     const result = {
       schema: 1, result: 'passed', suite: 'smoke', platform: 'android', baseline: expected.version,
@@ -1816,7 +1816,7 @@ test('native lookup wrappers preserve a fatal Appium operation and skip fallback
   });
   let androidScrolls = 0;
   const android = new AndroidPlatform({
-    origin: 'https://fixture.test', appiumUrl: 'http://fake.test', outputDir: join(tmpdir(), 'herdr-mobile-ci-unit'),
+    origin: 'https://fixture.test', appiumUrl: 'http://fake.test', outputDir: join(tmpdir(), 'lerdr-ci-unit'),
     certificate: '', setupUrl: '', deviceId: 'emulator-1', budget: new PhaseBudget('android-native-test', { timeoutMs: 10_000, recoveryLimit: 1 }),
   });
   (android as any).driver = {
@@ -1829,7 +1829,7 @@ test('native lookup wrappers preserve a fatal Appium operation and skip fallback
 
   let iosScrolls = 0;
   const ios = new IOSPlatform({
-    origin: 'https://fixture.test', appiumUrl: 'http://fake.test', outputDir: join(tmpdir(), 'herdr-mobile-ci-unit'),
+    origin: 'https://fixture.test', appiumUrl: 'http://fake.test', outputDir: join(tmpdir(), 'lerdr-ci-unit'),
     certificate: '', setupUrl: '', budget: new PhaseBudget('ios-native-test', { timeoutMs: 30_000, recoveryLimit: 1 }),
   });
   (ios as any).driver = {
@@ -1843,7 +1843,7 @@ test('native lookup wrappers preserve a fatal Appium operation and skip fallback
 
 test('native lookup scrolls between single-pass locator rounds', async () => {
   const android = new AndroidPlatform({
-    origin: 'https://fixture.test', appiumUrl: 'http://fake.test', outputDir: join(tmpdir(), 'herdr-mobile-ci-unit'),
+    origin: 'https://fixture.test', appiumUrl: 'http://fake.test', outputDir: join(tmpdir(), 'lerdr-ci-unit'),
     certificate: '', setupUrl: '', deviceId: 'emulator-1', budget: new PhaseBudget('android-scroll-test', { timeoutMs: 30_000, recoveryLimit: 1 }),
   });
   let androidLookups = 0;
@@ -1861,7 +1861,7 @@ test('native lookup scrolls between single-pass locator rounds', async () => {
   assert.equal(androidScrolls, 1);
 
   const ios = new IOSPlatform({
-    origin: 'https://fixture.test', appiumUrl: 'http://fake.test', outputDir: join(tmpdir(), 'herdr-mobile-ci-unit'),
+    origin: 'https://fixture.test', appiumUrl: 'http://fake.test', outputDir: join(tmpdir(), 'lerdr-ci-unit'),
     certificate: '', setupUrl: '', deviceId: 'simulator-1', budget: new PhaseBudget('ios-scroll-test', { timeoutMs: 30_000, recoveryLimit: 1 }),
   });
   let iosLookups = 0;
@@ -1890,7 +1890,7 @@ test('native lookup scrolls between single-pass locator rounds', async () => {
 });
 
 test('iOS native scrolling rejects a hidden match when the hierarchy shows no progress', async () => {
-  const outputDir = await mkdtemp(join(tmpdir(), 'herdr-mobile-ios-scroll-'));
+  const outputDir = await mkdtemp(join(tmpdir(), 'lerdr-ios-scroll-'));
   const platform = new IOSPlatform({
     origin: 'https://fixture.test', appiumUrl: 'http://fake.test', outputDir,
     certificate: '', setupUrl: '', deviceId: 'simulator-1',
@@ -1915,7 +1915,7 @@ test('iOS native scrolling rejects a hidden match when the hierarchy shows no pr
 });
 
 test('iOS native action controls stop when readiness is indeterminate', async () => {
-  const outputDir = await mkdtemp(join(tmpdir(), 'herdr-mobile-ios-indeterminate-'));
+  const outputDir = await mkdtemp(join(tmpdir(), 'lerdr-ios-indeterminate-'));
   const platform = new IOSPlatform({
     origin: 'https://fixture.test', appiumUrl: 'http://fake.test', outputDir,
     certificate: '', setupUrl: '', deviceId: 'simulator-1',
@@ -1940,7 +1940,7 @@ test('iOS native action controls stop when readiness is indeterminate', async ()
 
 test('iOS progress ignores browser bars and rejects a dismissed action list', async () => {
   const run = async (dismissAfterGesture: boolean): Promise<{ gestures: number; failure: string }> => {
-    const outputDir = await mkdtemp(join(tmpdir(), 'herdr-mobile-ios-progress-'));
+    const outputDir = await mkdtemp(join(tmpdir(), 'lerdr-ios-progress-'));
     const platform = new IOSPlatform({
       origin: 'https://fixture.test', appiumUrl: 'http://fake.test', outputDir,
       certificate: '', setupUrl: '', deviceId: 'simulator-1',
@@ -1984,7 +1984,7 @@ test('iOS progress ignores browser bars and rejects a dismissed action list', as
 });
 
 test('iOS installation scrolls the evidenced action list before clicking ready controls', async () => {
-  const outputDir = await mkdtemp(join(tmpdir(), 'herdr-mobile-ios-install-'));
+  const outputDir = await mkdtemp(join(tmpdir(), 'lerdr-ios-install-'));
   const platform = new IOSPlatform({
     origin: 'https://fixture.test', appiumUrl: 'http://fake.test', outputDir,
     certificate: '', setupUrl: '', deviceId: 'simulator-1',
@@ -2126,7 +2126,7 @@ test('Android context metadata keeps the recorded response beside canonical cont
 });
 
 test('iOS native installation rejects a disabled Share control', async () => {
-  const outputDir = await mkdtemp(join(tmpdir(), 'herdr-mobile-ios-install-'));
+  const outputDir = await mkdtemp(join(tmpdir(), 'lerdr-ios-install-'));
   const platform = new IOSPlatform({
     origin: 'https://fixture.test', appiumUrl: 'http://fake.test', outputDir,
     certificate: '', setupUrl: '', deviceId: 'simulator-1',
@@ -2157,7 +2157,7 @@ test('iOS openurl failures distinguish transient, terminal, and timeout outcomes
 
 test('iOS WebKit discovery retries until Safari publishes a delayed page', async () => {
   const platform = new IOSPlatform({
-    origin: 'https://fixture.test', appiumUrl: 'http://fake.test', outputDir: join(tmpdir(), 'herdr-mobile-ci-unit'),
+    origin: 'https://fixture.test', appiumUrl: 'http://fake.test', outputDir: join(tmpdir(), 'lerdr-ci-unit'),
     certificate: '', setupUrl: '', deviceId: 'simulator-1',
     budget: new PhaseBudget('ios-discovery-test', { timeoutMs: 30_000, recoveryLimit: 1 }),
   });
@@ -2202,7 +2202,7 @@ test('iOS attachment selects a page without enumerating windows', async () => {
   const platform = new IOSPlatform({
     origin: 'https://fixture.test',
     appiumUrl: 'http://fake.test',
-    outputDir: join(tmpdir(), 'herdr-mobile-ci-unit'),
+    outputDir: join(tmpdir(), 'lerdr-ci-unit'),
     certificate: '',
     setupUrl: '',
     budget: new PhaseBudget('ios-test', { timeoutMs: 30_000, recoveryLimit: 1 }),
@@ -2233,7 +2233,7 @@ test('iOS attachment rejects incorrect foreground, origin, and standalone state'
     const platform = new IOSPlatform({
       origin: 'https://fixture.test',
       appiumUrl: 'http://fake.test',
-      outputDir: join(tmpdir(), 'herdr-mobile-ci-unit'),
+      outputDir: join(tmpdir(), 'lerdr-ci-unit'),
       certificate: '',
       setupUrl: '',
       budget: new PhaseBudget('ios-negative-test', { timeoutMs: 30_000, recoveryLimit: 1 }),
@@ -2256,7 +2256,7 @@ test('iOS attachment rediscoveries only a stale cached context', async () => {
   const platform = new IOSPlatform({
     origin: 'https://fixture.test',
     appiumUrl: 'http://fake.test',
-    outputDir: join(tmpdir(), 'herdr-mobile-ci-unit'),
+    outputDir: join(tmpdir(), 'lerdr-ci-unit'),
     certificate: '',
     setupUrl: '',
     budget: new PhaseBudget('ios-stale-test', { timeoutMs: 30_000, recoveryLimit: 1 }),

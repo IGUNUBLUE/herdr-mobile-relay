@@ -30,13 +30,13 @@ Gateway**, then **I already run a gateway** and type its address. Unattended
 setups set the same list in the relay environment:
 
 ```bash
-HERDR_GATEWAY_URL=wss://gw.example.com
+LERDR_GATEWAY_URL=wss://gw.example.com
 ```
 
 The QR is printed once the gateway confirms the registration and the phone-app
 origin is settled — the gateway carries relay traffic, never the app itself, so
 the first run asks which installed Lerdr app to pair with, or takes
-`HERDR_PHONE_APP_URL`.
+`LERDR_PHONE_APP_URL`.
 
 A gateway holds no secrets and never learns the relay key: the relay registers
 under an id derived from that key, the phone answers a challenge that the *relay*
@@ -73,14 +73,14 @@ remains the only authorization for control on every path.
 
 ## Relay settings
 
-- `HERDR_GATEWAY_URL` — one or more gateway base URLs, separated by commas
+- `LERDR_GATEWAY_URL` — one or more gateway base URLs, separated by commas
   (`wss://gw.example.com,wss://backup.example.com`). Empty, the default, keeps the
   Cloudflare tunnel path. The relay probes every candidate's health endpoint at
   startup, keeps exactly one registration, and after a failure excludes that
   entry for the pass and takes the next healthy one. The pairing QR carries the
   whole list, so either side can fail over without a re-scan. The phone lists
   every saved candidate, in priority order, under the relay in **Settings**.
-- `HERDR_GATEWAY_SELECTION` — `ordered`, the default, takes the first healthy
+- `LERDR_GATEWAY_SELECTION` — `ordered`, the default, takes the first healthy
   entry in configured order, which makes a list you write yourself a priority
   list. `latency` keeps the lowest-latency healthy entry, with configured order
   breaking ties within 20 ms. You do not have to set this by hand: the setup
@@ -89,15 +89,15 @@ remains the only authorization for control on every path.
   list, whose gateways are interchangeable. The menu's status line names the
   rule in force, and setup prints each candidate's measured round trip so the
   order is an informed choice.
-- `HERDR_WEBRTC_UDP_PORT` — fixed UDP port for the direct path; `0` (default) uses
+- `LERDR_WEBRTC_UDP_PORT` — fixed UDP port for the direct path; `0` (default) uses
   an ephemeral port.
-- `HERDR_REACHABILITY_PORT_MAPPING` — ask the router for a PCP, NAT-PMP, or UPnP
+- `LERDR_REACHABILITY_PORT_MAPPING` — ask the router for a PCP, NAT-PMP, or UPnP
   mapping to raise direct-path success; `1` by default, `0` never talks to the
   router.
-- `HERDR_TRANSPORT_FORCE_RELAY` — `1` disables the direct upgrade and keeps every
+- `LERDR_TRANSPORT_FORCE_RELAY` — `1` disables the direct upgrade and keeps every
   frame on the gateway path.
 
 ## Troubleshooting
 
-- **Gateway never registers:** check `HERDR_GATEWAY_URL` and outbound HTTPS
+- **Gateway never registers:** check `LERDR_GATEWAY_URL` and outbound HTTPS
   access; `GET /healthz` reports `gateway.registered`.

@@ -24,22 +24,22 @@ runs:
       run: |
         set -euo pipefail
         umask 077
-        private="$RUNNER_TEMP/herdr-mobile-private"
-        output="$RUNNER_TEMP/herdr-mobile-output"
+        private="$RUNNER_TEMP/lerdr-private"
+        output="$RUNNER_TEMP/lerdr-output"
         mkdir -p "$private" "$output"
         printf 'MOBILE_SUITE=%s\n' "$WORKFLOW_SUITE" >> "$GITHUB_ENV"
         printf 'MOBILE_PLATFORM=%s\n' "$WORKFLOW_PLATFORM" >> "$GITHUB_ENV"
         printf 'MOBILE_SOURCE_RUN_HEAD_SHA=%s\n' "$SOURCE_HEAD_SHA" >> "$GITHUB_ENV"
         printf 'MOBILE_PRIVATE=%s\n' "$private" >> "$GITHUB_ENV"
         printf 'MOBILE_OUTPUT=%s\n' "$output" >> "$GITHUB_ENV"
-        printf 'MOBILE_FIXTURE_BINARY=%s\n' "$RUNNER_TEMP/herdr-mobile-fixture" >> "$GITHUB_ENV"
-        printf 'APPIUM_HOME=%s\n' "$RUNNER_TEMP/herdr-appium-home" >> "$GITHUB_ENV"
-        printf 'MOBILE_DEVICE_OWNERSHIP_FILE=%s\n' "$RUNNER_TEMP/herdr-mobile-device-owned" >> "$GITHUB_ENV"
+        printf 'MOBILE_FIXTURE_BINARY=%s\n' "$RUNNER_TEMP/lerdr-fixture" >> "$GITHUB_ENV"
+        printf 'APPIUM_HOME=%s\n' "$RUNNER_TEMP/lerdr-appium-home" >> "$GITHUB_ENV"
+        printf 'MOBILE_DEVICE_OWNERSHIP_FILE=%s\n' "$RUNNER_TEMP/lerdr-device-owned" >> "$GITHUB_ENV"
         printf 'IOS_PLATFORM_VERSION=18.5\n' >> "$GITHUB_ENV"
-        printf 'IOS_WDA_DERIVED_DATA_PATH=%s\n' "$RUNNER_TEMP/herdr-wda-derived-data" >> "$GITHUB_ENV"
-        printf 'IOS_WDA_BOOTSTRAP_PATH=%s/Build/Products\n' "$RUNNER_TEMP/herdr-wda-derived-data" >> "$GITHUB_ENV"
-        printf 'IOS_WDA_PREBUILT_PATH=%s/Build/Products/Debug-iphonesimulator/WebDriverAgentRunner-Runner.app\n' "$RUNNER_TEMP/herdr-wda-derived-data" >> "$GITHUB_ENV"
-        printf 'IOS_WDA_AGENT_PATH=%s/node_modules/appium-xcuitest-driver/node_modules/appium-webdriveragent/WebDriverAgent.xcodeproj\n' "$RUNNER_TEMP/herdr-appium-home" >> "$GITHUB_ENV"
+        printf 'IOS_WDA_DERIVED_DATA_PATH=%s\n' "$RUNNER_TEMP/lerdr-wda-derived-data" >> "$GITHUB_ENV"
+        printf 'IOS_WDA_BOOTSTRAP_PATH=%s/Build/Products\n' "$RUNNER_TEMP/lerdr-wda-derived-data" >> "$GITHUB_ENV"
+        printf 'IOS_WDA_PREBUILT_PATH=%s/Build/Products/Debug-iphonesimulator/WebDriverAgentRunner-Runner.app\n' "$RUNNER_TEMP/lerdr-wda-derived-data" >> "$GITHUB_ENV"
+        printf 'IOS_WDA_AGENT_PATH=%s/node_modules/appium-xcuitest-driver/node_modules/appium-webdriveragent/WebDriverAgent.xcodeproj\n' "$RUNNER_TEMP/lerdr-appium-home" >> "$GITHUB_ENV"
       shell: bash
     - uses: oven-sh/setup-bun@v2
       with:
@@ -106,7 +106,7 @@ runs:
         test "$android_system_image" = "system-images;android-35;google_apis;x86_64"
         test "$android_device_profile" = pixel_7
         sdkmanager "platform-tools" "emulator" "build-tools;35.0.0" "$android_system_image"
-        avd_name="herdr-mobile-ci-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+        avd_name="lerdr-ci-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
         echo no | avdmanager create avd --force --name "$avd_name" --package "$android_system_image" --device "$android_device_profile"
         avdmanager list avd
         printf 'ANDROID_AVD_NAME=%s\n' "$avd_name" >> "$GITHUB_ENV"
@@ -154,7 +154,7 @@ runs:
       if: inputs.platform == 'android'
       run: |
         set -euo pipefail
-        browser_dir="$RUNNER_TEMP/herdr-android-browser"
+        browser_dir="$RUNNER_TEMP/lerdr-android-browser"
         mkdir -p "$browser_dir/chrome"
         chrome_url="$(jq -r '.android.browserUrl' tests/mobile/toolchains.json)"
         chrome_sha256="$(jq -r '.android.browserSha256' tests/mobile/toolchains.json)"
@@ -209,7 +209,7 @@ runs:
         device_type="$(xcrun simctl list devicetypes | awk -F'[()]' '/iPhone 16 \(/ { print $2; exit }')"
         test -n "$runtime"
         test -n "$device_type"
-        device_name="herdr-mobile-ci-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+        device_name="lerdr-ci-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
         udid="$(xcrun simctl create "$device_name" "$device_type" "$runtime")"
         printf 'IOS_SIMULATOR_UDID=%s\n' "$udid" >> "$GITHUB_ENV"
         printf 'ios:%s\n' "$udid" > "$MOBILE_DEVICE_OWNERSHIP_FILE"
@@ -365,7 +365,7 @@ runs:
       uses: actions/upload-artifact@v4
       with:
         name: ${{ inputs.evidence_prefix }}-${{ inputs.platform }}-${{ inputs.baseline }}-${{ github.run_attempt }}
-        path: ${{ runner.temp }}/herdr-mobile-output
+        path: ${{ runner.temp }}/lerdr-output
         if-no-files-found: warn
         retention-days: 1
     - name: Stop owned mobile processes and devices

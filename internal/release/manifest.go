@@ -133,12 +133,12 @@ func Verify(root, expectedTarget string) (Manifest, error) {
 		return Manifest{}, fmt.Errorf("verify web release descriptor: %w", err)
 	}
 	for _, required := range []string{
-		"herdr-mobile-relay",
+		"lerdr",
 		"web/index.html",
 		"LICENSE",
 		"README.md",
 		"relay/common.sh",
-		"relay/herdr-mobile-relay-service.sh",
+		"relay/lerdr-service.sh",
 		"relay/plugin-on-event.sh",
 		"relay/setup-link.sh",
 		"relay/stable-setup.sh",
@@ -149,7 +149,7 @@ func Verify(root, expectedTarget string) (Manifest, error) {
 			return Manifest{}, fmt.Errorf("release manifest is missing %s", required)
 		}
 	}
-	binary, err := os.Stat(filepath.Join(root, "herdr-mobile-relay"))
+	binary, err := os.Stat(filepath.Join(root, "lerdr"))
 	if err != nil || binary.Mode()&0o111 == 0 {
 		return Manifest{}, errors.New("release relay binary is not executable")
 	}

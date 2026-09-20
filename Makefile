@@ -49,7 +49,7 @@ setup:
 	relay/setup.sh
 
 setup-link:
-	HERDR_PHONE_APP_URL="$(APP_URL)" relay/setup-link.sh $(HOST)
+	LERDR_PHONE_APP_URL="$(APP_URL)" HERDR_PHONE_APP_URL="$(APP_URL)" relay/setup-link.sh $(HOST)
 
 app-deploy-setup:
 	relay/configure-app-deploy.sh
@@ -115,7 +115,7 @@ android-init:
 # binary a user can self-host.
 gateway:
 	@mkdir -p bin
-	CGO_ENABLED=0 go build -trimpath -o bin/herdr-gateway ./cmd/herdr-gateway
+	CGO_ENABLED=0 go build -trimpath -o bin/lerdr-gateway ./cmd/lerdr-gateway
 
 # The NAT-behaviour matrix runs the relay, the gateway and a phone in Linux
 # network namespaces behind simulated NATs. It is deliberately outside `check`:
@@ -124,7 +124,7 @@ gateway:
 nat-matrix:
 	@echo "▸ Needs root: network namespaces, veth pairs and nftables rules are privileged."
 	@echo "  Without it the suite skips with the reason; run 'sudo -E make nat-matrix' to run it."
-	HERDR_NAT_MATRIX=1 go test ./tests/blackbox/ -run TestNATMatrix -count=1 -v -timeout 20m
+	LERDR_NAT_MATRIX=1 HERDR_NAT_MATRIX=1 go test ./tests/blackbox/ -run TestNATMatrix -count=1 -v -timeout 20m
 
 # `web-release-check` proves `frontend/dist` and `web/` are byte-identical and
 # then browser-tests `web/`, so running the same suite against `dist` here only
@@ -167,7 +167,7 @@ cross-build:
 	@tmp="$$(mktemp -d)"; trap 'rm -rf "$$tmp"' EXIT; \
 	for target in linux/amd64 linux/arm64 darwin/amd64 darwin/arm64; do \
 		os="$${target%/*}"; arch="$${target#*/}"; \
-		for command in ./cmd/herdr-mobile-relay ./cmd/herdr-gateway; do \
+		for command in ./cmd/lerdr ./cmd/lerdr-gateway; do \
 			CGO_ENABLED=0 GOOS="$$os" GOARCH="$$arch" go build -trimpath \
 				-o "$$tmp/$$(basename $$command)-$$os-$$arch" "$$command" || exit; \
 		done; \
@@ -178,11 +178,11 @@ release-bundle-check:
 	version="$$(sed -n 's/^version = "\([^"]*\)"/\1/p' herdr-plugin.toml)"; \
 	revision="$$(git rev-parse HEAD 2>/dev/null || echo test-revision)"; \
 	scripts/package-release.sh "$$version" "$$revision" "$$tmp"; \
-	test "$$(find "$$tmp" -name 'herdr-mobile-relay_*.tar.gz' | wc -l)" -eq 4; \
+	test "$$(find "$$tmp" -name 'lerdr_*.tar.gz' | wc -l)" -eq 4; \
 	test -s "$$tmp/checksums.txt"; \
 	host_os="$$(go env GOOS)"; host_arch="$$(go env GOARCH)"; \
 	scripts/check-installed-release.sh \
-		"$$tmp/herdr-mobile-relay_$${version}_$${host_os}_$${host_arch}.tar.gz" \
+		"$$tmp/lerdr_$${version}_$${host_os}_$${host_arch}.tar.gz" \
 		"$$tmp/checksums.txt" "$$version" "$$revision" "$${host_os}/$${host_arch}"
 
 frontend-check:
@@ -203,7 +203,7 @@ frontend-browser-release:
 	frontend/scripts/run-browser-tests.sh ../web
 
 frontend-browser-attention-release:
-	HERDR_WEB_ROOT=../web bun run --cwd frontend test:browser:attention
+	LERDR_WEB_ROOT=../web HERDR_WEB_ROOT=../web bun run --cwd frontend test:browser:attention
 
 relay-plugin:
 	herdr plugin link .
@@ -239,7 +239,7 @@ web-release-check: web-bundle-check
 
 web-deploy: web-bundle-check
 	npx --yes wrangler@$(WRANGLER_VERSION) pages deploy web --project-name "$(WEB_PROJECT)" --branch "$(WEB_BRANCH)" --skip-caching
-	go run ./cmd/herdr-mobile-relay verify-public --web-root web --origin "$(WEB_ORIGIN)"
+	go run ./cmd/lerdr verify-public --web-root web --origin "$(WEB_ORIGIN)"
 
 web-preview:
 	npx --yes wrangler@$(WRANGLER_VERSION) pages dev web

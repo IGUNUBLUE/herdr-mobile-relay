@@ -25,7 +25,7 @@ const (
 	updateWorkerTimeout = 15 * time.Minute
 	processTermGrace    = 2 * time.Second
 	processWaitDelay    = 4 * time.Second
-	updateRepository    = "0cv/herdr-mobile-relay"
+	updateRepository    = "IGUNUBLUE/lerdr"
 )
 
 var ErrConcurrent = errors.New("another update is already running")
@@ -194,7 +194,11 @@ func installPlugin(ctx context.Context, job Job) error {
 		strings.ToLower(job.TargetRevision),
 		"--yes",
 	)
-	command.Env = environmentWith("HERDR_MOBILE_RELAY_NO_AUTO_SETUP", "1")
+	command.Env = environmentWith(map[string]string{
+		// Both spellings: staged bundles may come from before the rename.
+		"LERDR_NO_AUTO_SETUP":              "1",
+		"HERDR_MOBILE_RELAY_NO_AUTO_SETUP": "1",
+	})
 	output, err := runCommandContext(ctx, command)
 	if err != nil {
 		return fmt.Errorf(
@@ -276,17 +280,20 @@ func processGroupAlive(pgid int) bool {
 	return err == nil || errors.Is(err, syscall.EPERM)
 }
 
-func environmentWith(key, value string) []string {
-	prefix := key + "="
+func environmentWith(overrides map[string]string) []string {
 	environment := os.Environ()
-	result := make([]string, 0, len(environment)+1)
+	result := make([]string, 0, len(environment)+len(overrides))
 	for _, item := range environment {
-		if strings.HasPrefix(item, prefix) {
+		key, _, found := strings.Cut(item, "=")
+		if _, overridden := overrides[key]; found && overridden {
 			continue
 		}
 		result = append(result, item)
 	}
-	return append(result, prefix+value)
+	for key, value := range overrides {
+		result = append(result, key+"="+value)
+	}
+	return result
 }
 
 func validateJob(job Job) error {

@@ -22,15 +22,21 @@ import (
 	relayrelease "github.com/IGUNUBLUE/lerdr/internal/release"
 )
 
-const canonicalAPI = "https://api.github.com/repos/0cv/herdr-mobile-relay"
+const canonicalAPI = "https://api.github.com/repos/IGUNUBLUE/lerdr"
 const canonicalWeb = "https://github.com/IGUNUBLUE/lerdr"
 
 var appDeployEnvironmentKeys = [...]string{
+	"LERDR_APP_DEPLOY_ORIGIN",
 	"HERDR_APP_DEPLOY_ORIGIN",
+	"LERDR_CLOUDFLARE_PAGES_PROJECT",
 	"HERDR_CLOUDFLARE_PAGES_PROJECT",
+	"LERDR_CLOUDFLARE_PAGES_BRANCH",
 	"HERDR_CLOUDFLARE_PAGES_BRANCH",
+	"LERDR_APP_DEPLOY_NPX",
 	"HERDR_APP_DEPLOY_NPX",
+	"LERDR_APP_DEPLOY_NODE_DIR",
 	"HERDR_APP_DEPLOY_NODE_DIR",
+	"LERDR_RELAY_ENV",
 	"HERDR_RELAY_ENV",
 	"HERDR_PLUGIN_CONFIG_DIR",
 }
@@ -99,7 +105,11 @@ func NewManager(releaseRoot, runtimeDir, herdrBin, version, revision, healthURL 
 			Timeout: 15 * time.Second,
 		},
 	}
-	if tokenFile := strings.TrimSpace(os.Getenv("HERDR_GITHUB_TOKEN_FILE")); filepath.IsAbs(tokenFile) {
+	tokenFile := strings.TrimSpace(os.Getenv("LERDR_GITHUB_TOKEN_FILE"))
+	if tokenFile == "" {
+		tokenFile = strings.TrimSpace(os.Getenv("HERDR_GITHUB_TOKEN_FILE"))
+	}
+	if filepath.IsAbs(tokenFile) {
 		manager.tokenFile = filepath.Clean(tokenFile)
 	}
 	manager.launch = manager.launchWorker
@@ -335,7 +345,7 @@ func (m *Manager) fetchLatestStableTag(ctx context.Context) (string, error) {
 		return "", err
 	}
 	request.Header.Set("Accept", "text/html")
-	request.Header.Set("User-Agent", "herdr-mobile-relay-update-check")
+	request.Header.Set("User-Agent", "lerdr-update-check")
 	// The redirect target carries the answer, so it must be read instead of
 	// followed; the copy keeps the configured transport and timeout.
 	client := *m.client
@@ -429,7 +439,7 @@ func (m *Manager) getJSON(ctx context.Context, endpoint string, destination any)
 		return err
 	}
 	request.Header.Set("Accept", "application/vnd.github+json")
-	request.Header.Set("User-Agent", "herdr-mobile-relay-update-check")
+	request.Header.Set("User-Agent", "lerdr-update-check")
 	if token := m.token(); token != "" {
 		request.Header.Set("Authorization", "token "+token)
 	}
@@ -450,7 +460,7 @@ func (m *Manager) getXML(ctx context.Context, endpoint string, destination any) 
 		return err
 	}
 	request.Header.Set("Accept", "application/atom+xml, application/xml")
-	request.Header.Set("User-Agent", "herdr-mobile-relay-update-check")
+	request.Header.Set("User-Agent", "lerdr-update-check")
 	response, err := m.client.Do(request)
 	if err != nil {
 		return err
@@ -529,7 +539,7 @@ func (m *Manager) launchWorker(ctx context.Context, jobPath string) error {
 	if err != nil {
 		return err
 	}
-	label := fmt.Sprintf("herdr-mobile-relay-update-%d", time.Now().Unix())
+	label := fmt.Sprintf("lerdr-update-%d", time.Now().Unix())
 	launch := updateWorkerLaunch(runtime.GOOS, label, executable, jobPath, os.LookupEnv)
 	command := exec.CommandContext(ctx, launch.application, launch.args...)
 	output, err := command.CombinedOutput()

@@ -23,7 +23,7 @@ func hermeticEnv(t *testing.T, binDir string) {
 	t.Setenv("PATH", binDir)
 	t.Setenv("HOME", t.TempDir())
 	t.Setenv("XDG_CACHE_HOME", t.TempDir())
-	t.Setenv("HERDR_PIPER_VOICES", t.TempDir())
+	t.Setenv("LERDR_PIPER_VOICES", t.TempDir())
 }
 
 func installVoice(t *testing.T, dir, name string, withConfig bool) string {
@@ -138,7 +138,7 @@ func TestLanguagesFollowInstalledVoices(t *testing.T) {
 	binDir := t.TempDir()
 	voiceDir := t.TempDir()
 	hermeticEnv(t, binDir)
-	t.Setenv("HERDR_PIPER_VOICES", voiceDir)
+	t.Setenv("LERDR_PIPER_VOICES", voiceDir)
 
 	if languages := Languages(); len(languages) != 0 {
 		t.Fatalf("Languages() with no engine = %v, want none", languages)
@@ -161,7 +161,7 @@ func TestLanguagesFollowInstalledVoices(t *testing.T) {
 	}
 
 	// flite reads English only.
-	t.Setenv("HERDR_PIPER_VOICES", t.TempDir())
+	t.Setenv("LERDR_PIPER_VOICES", t.TempDir())
 	if err := os.Remove(filepath.Join(binDir, "espeak-ng")); err != nil {
 		t.Fatal(err)
 	}
@@ -180,7 +180,7 @@ func TestCachedSetupDownloadIsEnough(t *testing.T) {
 	cache := t.TempDir()
 	hermeticEnv(t, t.TempDir())
 	t.Setenv("XDG_CACHE_HOME", cache)
-	speechCache := filepath.Join(cache, "herdr-mobile-relay", "speech")
+	speechCache := filepath.Join(cache, "lerdr", "speech")
 	voices := filepath.Join(speechCache, "voices")
 	runtime := filepath.Join(speechCache, "runtime", "piper")
 	if err := os.MkdirAll(voices, 0o755); err != nil {
@@ -209,7 +209,7 @@ func TestSynthesizeRoutesEachLanguageToItsVoice(t *testing.T) {
 	fakeEngine(t, binDir, "piper", "--output_file", fakeWAV(22050, 500, 0))
 	fakeEngine(t, binDir, "espeak-ng", "-w", fakeWAV(22050, 500, 0))
 	hermeticEnv(t, binDir)
-	t.Setenv("HERDR_PIPER_VOICES", voiceDir)
+	t.Setenv("LERDR_PIPER_VOICES", voiceDir)
 	french := installVoice(t, voiceDir, "fr_FR-siwis-medium.onnx", true)
 
 	if _, err := Synthesize(context.Background(), "bonjour", "fr"); err != nil {

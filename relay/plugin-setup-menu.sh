@@ -20,7 +20,7 @@ installed_release_version() {
 }
 
 running_health() {
-    local port="${HERDR_RELAY_PORT:-8375}"
+    local port="${LERDR_RELAY_PORT:-${HERDR_RELAY_PORT:-8375}}"
 
     curl -fsS --max-time 2 "http://127.0.0.1:$port/healthz" 2>/dev/null
 }
@@ -35,10 +35,10 @@ own_gateway_summary() {
     local action="redeploy with 3"
 
     state_file="$(dirname "$ENV_FILE")/gateway-deploy"
-    host="$(env_file_value "$state_file" HERDR_GATEWAY_DEPLOY_HOST)"
+    host="$(env_file_setting "$state_file" GATEWAY_DEPLOY_HOST)"
     [ -n "$host" ] || return 0
     if [ -n "$available" ] && [ -n "$installed" ] && [ "$available" != "$installed" ]; then
-        action="run herdr plugin install 0cv/herdr-mobile-relay, then redeploy with 3"
+        action="run herdr plugin install IGUNUBLUE/lerdr, then redeploy with 3"
     fi
     if ! health="$(curl -fsS --max-time 3 "https://$host/healthz" 2>/dev/null)"; then
         printf '%s is unreachable, version unknown' "$host"
@@ -64,14 +64,24 @@ own_gateway_summary() {
 service_state() {
     case "$(uname -s)" in
         Darwin)
-            [ -f "$HOME/Library/LaunchAgents/com.herdr-mobile-relay.service.plist" ] || return 1
-            launchd_service_loaded "gui/$(id -u)/com.herdr-mobile-relay.service" &&
+            local label
+            for label in com.lerdr.service com.herdr-mobile-relay.service; do
+                [ -f "$HOME/Library/LaunchAgents/$label.plist" ] && break
+                label=""
+            done
+            [ -n "$label" ] || return 1
+            launchd_service_loaded "gui/$(id -u)/$label" &&
                 printf 'installed (loaded)\n' || printf 'installed (not loaded)\n'
             ;;
         Linux)
-            [ -f "$HOME/.config/systemd/user/herdr-mobile-relay.service" ] || return 1
+            local unit
+            for unit in lerdr.service herdr-mobile-relay.service; do
+                [ -f "$HOME/.config/systemd/user/$unit" ] && break
+                unit=""
+            done
+            [ -n "$unit" ] || return 1
             printf 'installed (%s)\n' \
-                "$(systemctl --user is-active herdr-mobile-relay.service 2>/dev/null || echo unknown)"
+                "$(systemctl --user is-active "$unit" 2>/dev/null || echo unknown)"
             ;;
         *) return 1 ;;
     esac
@@ -110,7 +120,7 @@ transport_summary() {
             # Which rule picked this gateway is the answer to "why that one",
             # so it belongs beside the gateway rather than only in relay.env.
             printf ' (+%s fallback, %s)' "$((count - 1))" \
-                "$(gateway_selection_label "$(env_file_value "$ENV_FILE" HERDR_GATEWAY_SELECTION)")"
+                "$(gateway_selection_label "$(env_file_setting "$ENV_FILE" GATEWAY_SELECTION)")"
         fi
         printf '\n'
         return 0
@@ -220,7 +230,7 @@ render_menu() {
 # must survive it without swallowing it. A handler, never `trap '' INT` - an
 # ignored signal is inherited by children as SIG_IGN, which would leave a
 # prompt loop with no way out at all. Actions pause here rather than inside each
-# script, which is why pause_before_close stands down under HERDR_SETUP_MENU.
+# script, which is why pause_before_close stands down under LERDR_SETUP_MENU.
 run_action() {
     local action="$1"
     shift
@@ -229,9 +239,9 @@ run_action() {
     trap 'printf "\n"' INT
     (
         cd "$SCRIPT_DIR"
-        HERDR_SETUP_MENU=1 "$action" "$@"
+        LERDR_SETUP_MENU=1 "$action" "$@"
     ) || true
-    unset HERDR_GATEWAY_URL HERDR_GATEWAY_SELECTION
+    unset LERDR_GATEWAY_URL LERDR_GATEWAY_SELECTION HERDR_GATEWAY_URL HERDR_GATEWAY_SELECTION
     load_relay_env "$ENV_FILE"
     trap - INT
     if [ -t 0 ]; then

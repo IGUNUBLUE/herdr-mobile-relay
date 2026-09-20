@@ -213,7 +213,7 @@ describe('release updates', () => {
     ));
     expect(next.pathname).toBe('/index.html');
     expect(next.searchParams.get('setup')).toBe('preserved');
-    expect(next.searchParams.get('herdr_reload')).toBe('0.13.8-42');
+    expect(next.searchParams.get('lerdr_reload')).toBe('0.13.8-42');
     expect(next.hash).toBe('#settings');
     expect(normalizeReloadedAppUrl(next.toString()))
       .toBe('https://app.example.test/?setup=preserved#settings');
@@ -256,7 +256,7 @@ describe('release updates', () => {
   });
 
   it('records the known historical phone-accounting gap without inventing acknowledgement', () => {
-    sessionStorage.setItem('herdr_update_progress', JSON.stringify({
+    sessionStorage.setItem('lerdr_update_progress', JSON.stringify({
       targetVersion: '0.20.11',
       relayIds: ['alpha'],
       startedRelayIds: [],
@@ -391,7 +391,7 @@ describe('release updates', () => {
   it('attempts an automatic reload target only once per browser session', async () => {
     const [major, minor, patch] = semverTuple(APP_VERSION)!;
     const target = `${major}.${minor + 1}.${patch}`;
-    sessionStorage.setItem('herdr_app_reload_target', target);
+    sessionStorage.setItem('lerdr_app_reload_target', target);
     const fetcher = vi.fn();
     vi.stubGlobal('fetch', fetcher);
 
@@ -526,7 +526,7 @@ describe('release updates', () => {
   });
 
   it('fails an exhausted phone load from persisted state without relay events', () => {
-    sessionStorage.setItem('herdr_update_progress', JSON.stringify({
+    sessionStorage.setItem('lerdr_update_progress', JSON.stringify({
       targetVersion: '1.2.3',
       relayIds: [],
       startedRelayIds: [],

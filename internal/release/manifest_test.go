@@ -14,24 +14,24 @@ func testRelease(t *testing.T) string {
 	t.Helper()
 	root := t.TempDir()
 	for name, contents := range map[string]string{
-		"herdr-mobile-relay":                  "binary",
-		"web/index.html":                      "<html></html>",
-		"LICENSE":                             "license",
-		"README.md":                           "readme",
-		"relay/common.sh":                     "#!/bin/sh\n",
-		"relay/herdr-mobile-relay-service.sh": "#!/bin/sh\n",
-		"relay/plugin-on-event.sh":            "#!/bin/sh\n",
-		"relay/setup-link.sh":                 "#!/bin/sh\n",
-		"relay/stable-setup.sh":               "#!/bin/sh\n",
-		"relay/stable-teardown.sh":            "#!/bin/sh\n",
-		"relay/start.sh":                      "#!/bin/sh\n",
+		"lerdr":                    "binary",
+		"web/index.html":           "<html></html>",
+		"LICENSE":                  "license",
+		"README.md":                "readme",
+		"relay/common.sh":          "#!/bin/sh\n",
+		"relay/lerdr-service.sh":   "#!/bin/sh\n",
+		"relay/plugin-on-event.sh": "#!/bin/sh\n",
+		"relay/setup-link.sh":      "#!/bin/sh\n",
+		"relay/stable-setup.sh":    "#!/bin/sh\n",
+		"relay/stable-teardown.sh": "#!/bin/sh\n",
+		"relay/start.sh":           "#!/bin/sh\n",
 	} {
 		path := filepath.Join(root, filepath.FromSlash(name))
 		if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
 			t.Fatal(err)
 		}
 		mode := os.FileMode(0o644)
-		if name == "herdr-mobile-relay" || strings.HasSuffix(name, ".sh") {
+		if name == "lerdr" || strings.HasSuffix(name, ".sh") {
 			mode = 0o755
 		}
 		if err := os.WriteFile(path, []byte(contents), mode); err != nil {
@@ -89,7 +89,7 @@ func TestSealMakesVerifiedReleaseTreeReadOnly(t *testing.T) {
 		root,
 		filepath.Join(root, "web"),
 		filepath.Join(root, ManifestName),
-		filepath.Join(root, "herdr-mobile-relay"),
+		filepath.Join(root, "lerdr"),
 	} {
 		info, err := os.Stat(filename)
 		if err != nil {
@@ -99,7 +99,7 @@ func TestSealMakesVerifiedReleaseTreeReadOnly(t *testing.T) {
 			t.Fatalf("%s remains writable with mode %o", filename, info.Mode().Perm())
 		}
 	}
-	binary, err := os.Stat(filepath.Join(root, "herdr-mobile-relay"))
+	binary, err := os.Stat(filepath.Join(root, "lerdr"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -170,7 +170,7 @@ func TestVerifyRejectsInvalidWebHashAndNonExecutableBinary(t *testing.T) {
 	if _, err := Build(root, "1.2.3", "abc123", "linux/amd64"); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.Chmod(filepath.Join(root, "herdr-mobile-relay"), 0o644); err != nil {
+	if err := os.Chmod(filepath.Join(root, "lerdr"), 0o644); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := Verify(root, "linux/amd64"); err == nil || !strings.Contains(err.Error(), "not executable") {
