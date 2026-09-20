@@ -78,7 +78,10 @@ import { constants, gzipSync } from 'node:zlib';
 // Raised from 165 KiB for the m3-svelte adoption (Lerdr): the expressive2025
 // live theme, its component styles, the snackbar, the loading indicator, and
 // the ripple layer all land in the single bootstrap payload.
-const limitKiB = 180;
+// Raised from 180 KiB for the snackbar's top-layer host: a manual popover
+// wrapper restores the old toast's rendering above modal dialogs and its
+// role="status" live region, 37 B gzip over the previous ceiling.
+const limitKiB = 181;
 const limit = limitKiB * 1024 + 256;
 const root = resolve(process.argv[2] || 'dist');
 const assetNames = await readdir(join(root, 'assets'));
