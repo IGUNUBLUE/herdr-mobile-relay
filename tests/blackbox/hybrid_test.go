@@ -45,9 +45,9 @@ func setupHybridEnv(t *testing.T) *hybridEnv {
 	tmpDir := t.TempDir()
 
 	binaries := map[string]string{
-		"fake-herdr":         "./cmd/fake-herdr",
-		"lerdr": "./cmd/lerdr",
-		"lerdr-gateway":      "./cmd/lerdr-gateway",
+		"fake-herdr":    "./cmd/fake-herdr",
+		"lerdr":         "./cmd/lerdr",
+		"lerdr-gateway": "./cmd/lerdr-gateway",
 	}
 	paths := make(map[string]string, len(binaries))
 	for name, pkg := range binaries {
