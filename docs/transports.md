@@ -1,24 +1,26 @@
 # How your phone reaches your computer
 
-Three transports can carry traffic between your phone and a relay: a Cloudflare
-tunnel, the community gateway, or a gateway you run yourself. All three are
-end-to-end encrypted. Only the two gateway choices then try to leave the
-transport behind: phone and computer negotiate a direct peer-to-peer connection
-and the gateway is left carrying the fallback. Cloudflare tunnel traffic always
-goes through Cloudflare.
+Four transports can carry traffic between your phone and a relay: a Cloudflare
+tunnel, the community gateway, a gateway you run yourself, or Tailscale Serve.
+All four are end-to-end encrypted. Only the two gateway choices then try to
+leave the transport behind: phone and computer negotiate a direct peer-to-peer
+connection and the gateway is left carrying the fallback. Cloudflare tunnel
+traffic always goes through Cloudflare, and Tailscale traffic never leaves the
+tailnet.
 
-## The three choices
+## The four choices
 
 | Choice | What it needs from you | Who carries the traffic | When to pick it |
 | --- | --- | --- | --- |
 | **Cloudflare tunnel** | Nothing for Quick Start's temporary URL; a Cloudflare account with a domain for a permanent hostname and background service. | Cloudflare's edge | The default. See [cloudflare-tunnel.md](cloudflare-tunnel.md) for the permanent hostname. |
 | **Community gateway** | No account and no domain, but the phone app must already be hosted somewhere — a gateway serves no app. | A gateway operated by the project, until the direct path forms | Free, shared, best-effort; not for heavy transfers. Pick it to avoid Cloudflare setup entirely. |
 | **Your own gateway** | A small VPS with Docker and a public hostname. | Your own gateway, until the direct path forms | Dedicated bandwidth, and the transport logs stay on your machine. See [gateway-self-hosting.md](gateway-self-hosting.md). |
+| **Tailscale Serve** | Tailscale on the computer (Linux only for now) and the phone, with HTTPS certificates enabled on the tailnet. | Your tailnet | No third-party transport at all — the only external piece is Tailscale's coordination server. See [tailscale.md](tailscale.md). |
 
 Pick **Temporary Cloudflare Tunnel**, **Community WebRTC Gateway**, **Deploy or
-Upgrade Your Own WebRTC Gateway**, or **Stable Tunnel** directly from the setup
-menu. A completed choice is recorded, starts or restarts the relay, and prints
-the phone QR; there is no second Quick Start step.
+Upgrade Your Own WebRTC Gateway**, **Tailscale Serve**, or **Stable Tunnel**
+directly from the setup menu. A completed choice is recorded, starts or restarts
+the relay, and prints the phone QR; there is no second Quick Start step.
 
 ## The gateway path
 
