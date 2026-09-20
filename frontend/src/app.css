@@ -370,6 +370,10 @@ textarea { min-height: 6.5rem; resize: vertical; }
 .agent-identity { flex: 0 0 auto; height: 1.6rem; position: relative; width: 1.6rem; }
 .agent-logo { color: var(--foreground); display: inline-flex; height: 1.5rem; width: 1.5rem; }
 .agent-logo > svg { display: block; height: 100%; width: 100%; }
+.header-agent { flex: 0 0 auto; position: relative; }
+.header-agent .status-dot { bottom: -.12rem; box-shadow: 0 0 0 2px var(--background); position: absolute; right: -.12rem; }
+.activity-item .agent-identity { height: 1.3rem; width: 1.3rem; }
+.activity-item .agent-logo { height: 1.3rem; width: 1.3rem; }
 .agent-identity > .status-dot { bottom: -.02rem; box-shadow: 0 0 0 2px var(--card); height: .46rem; position: absolute; right: -.02rem; width: .46rem; }
 .agent-open:hover .agent-identity > .status-dot { box-shadow: 0 0 0 2px var(--card-hover); }
 .agent-copy { display: flex; flex: 1; flex-direction: column; min-width: 0; }

@@ -1,5 +1,6 @@
 <script lang="ts">
   import { onMount } from 'svelte';
+  import AgentLogo from '$components/AgentLogo.svelte';
   import AppDialog from '$components/ui/AppDialog.svelte';
   import Button from '$components/ui/Button.svelte';
   import { activityMatchesSearch, activityTone } from '$lib/activity';
@@ -91,7 +92,10 @@
     {#each visible as activity, index (activity.activity_key)}
       <button type="button" class="agent-card activity-item" style:--i={index} onclick={() => open(activity)}>
         <span class="activity-title">
-          <span class={`status-dot status-${activityTone(activity.status)}`}></span>
+          <span class="agent-identity">
+            <AgentLogo agent={activity.agent} />
+            <span class={`status-dot status-${activityTone(activity.status)}`}></span>
+          </span>
           <strong class="agent-project">{activity.summary || activity.kind || 'Activity'}</strong>
           <time datetime={new Date(Number(activity.timestamp)).toISOString()}>{new Date(Number(activity.timestamp)).toLocaleString([], { dateStyle: 'short', timeStyle: 'short' })}</time>
           <span class="activity-chevron" aria-hidden="true">›</span>
