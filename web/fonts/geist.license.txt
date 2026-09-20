@@ -1,0 +1,18 @@
+Geist Variable Font
+===================
+
+SIL Open Font License, Version 1.1 (OFL-1.1)
+
+Copyright (c) 2023 Vercel, Inc.
+
+The Geist font files in this directory were built by Vercel and are
+distributed under the SIL Open Font License 1.1. They were obtained from the
+Fontsource packaging of Geist (@fontsource-variable/geist), which republishes
+the upstream release at https://github.com/vercel/geist-font.
+
+The full license text is available at:
+https://openfontlicense.org/open-font-license-official-text/
+
+This license permits use, embedding, modification, and redistribution,
+provided the font is not sold by itself and the copyright notice and license
+are retained.
