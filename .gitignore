@@ -37,3 +37,4 @@ relay/phone-app-origin.*
 .ralph
 ralph.yml
 WATCHDOG.yml
+relay/device-auth/

@@ -88,8 +88,8 @@
     {:else if !visible.length}
       <div class="empty-state">No matching activity.</div>
     {/if}
-    {#each visible as activity (activity.activity_key)}
-      <button type="button" class="agent-card activity-item" onclick={() => open(activity)}>
+    {#each visible as activity, index (activity.activity_key)}
+      <button type="button" class="agent-card activity-item" style:--i={index} onclick={() => open(activity)}>
         <span class="activity-title">
           <span class={`status-dot status-${activityTone(activity.status)}`}></span>
           <strong class="agent-project">{activity.summary || activity.kind || 'Activity'}</strong>

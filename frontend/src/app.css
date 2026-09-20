@@ -12,6 +12,31 @@
    a gap at the bottom of the page the moment the bar changes. */
 :root { --app-header-height: 2.75rem; }
 
+/* Motion and elevation live beside the colors so every surface draws from the
+   same ramp: --dur drives state feedback, --ease-out keeps entrances from
+   feeling mechanical, and the --elev steps map flat → raised → floating. Light
+   themes soften the shadows below; motion itself is theme-neutral. */
+:root {
+  --dur-fast: 120ms;
+  --dur-med: 220ms;
+  --dur-slow: 380ms;
+  --ease-out: cubic-bezier(.22, 1, .36, 1);
+  --ease-spring: cubic-bezier(.34, 1.4, .64, 1);
+  --elev-1: 0 1px 2px rgb(0 0 0 / .22), 0 2px 6px rgb(0 0 0 / .16);
+  --elev-2: 0 6px 16px rgb(0 0 0 / .26), 0 2px 5px rgb(0 0 0 / .16);
+  --elev-3: 0 16px 40px rgb(0 0 0 / .36), 0 4px 10px rgb(0 0 0 / .2);
+}
+
+/* Decorative motion is information, not ornament: anything that pulses or
+   rises below must stop animating when the user asked for stillness. */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: .01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: .01ms !important;
+  }
+}
+
 :root,
 :root[data-theme='dark'] {
   color-scheme: dark;
@@ -33,6 +58,14 @@
   --terminal-text: #e5e5e5;
   --terminal-link: #80bfff;
   --terminal-link-visited: #c8a2ff;
+}
+
+/* Light surfaces need lighter elevation: dark-theme shadow weights read as
+   smudges on a white card. */
+:root[data-theme='light'], :root[data-theme='latte'] {
+  --elev-1: 0 1px 2px rgb(0 0 0 / .08), 0 2px 6px rgb(0 0 0 / .06);
+  --elev-2: 0 6px 16px rgb(0 0 0 / .1), 0 2px 5px rgb(0 0 0 / .06);
+  --elev-3: 0 16px 40px rgb(0 0 0 / .14), 0 4px 10px rgb(0 0 0 / .08);
 }
 
 :root[data-theme='light'] {
@@ -242,7 +275,7 @@ code { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
 
 .page, .agent-list { margin: 0 auto; max-width: 48rem; padding: 1rem .85rem calc(1.5rem + env(safe-area-inset-bottom)); }
 .page > h2 { font-size: 1.25rem; margin: 0 0 .8rem; }
-.card { background: var(--card); border: 1px solid var(--border); border-radius: .85rem; margin-bottom: .9rem; padding: 1rem; }
+.card { background: var(--card); border: 1px solid var(--border); border-radius: .85rem; box-shadow: var(--elev-1); margin-bottom: .9rem; padding: 1rem; }
 .card h3 { font-size: .95rem; margin: 0 0 .8rem; }
 .form-stack { display: flex; flex-direction: column; gap: .5rem; }
 .form-stack label, .field-label { font-size: .78rem; font-weight: 650; }
@@ -268,12 +301,32 @@ textarea { min-height: 6.5rem; resize: vertical; }
 .optional { font-weight: 400; }
 .warning { color: var(--warning) !important; }
 
-.status-dot { background: var(--muted); border-radius: 50%; display: inline-block; flex: 0 0 auto; height: .58rem; width: .58rem; }
+.status-dot { background: var(--muted); border-radius: 50%; display: inline-block; flex: 0 0 auto; height: .58rem; position: relative; width: .58rem; }
 .status-danger { background: var(--danger); }
 .status-success { background: var(--success); }
 .status-warning { background: var(--warning); }
 .status-muted { background: var(--muted); }
 .status-dot.hollow { background: transparent; border: 1.5px solid var(--muted); }
+
+/* Live = work is flowing through this dot right now (a working agent, a
+   reconnecting relay): a ring that expands out of the dot and fades, so the
+   eye picks it up peripherally without any label. Attention = the session is
+   blocked on the operator: a slower, larger breath — urgency without the
+   metronome feel of a working pulse. */
+@keyframes status-pulse {
+  0% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--dot-color, var(--warning)) 55%, transparent); }
+  70% { box-shadow: 0 0 0 .38rem transparent; }
+  100% { box-shadow: 0 0 0 .38rem transparent; }
+}
+@keyframes status-breathe {
+  0%, 100% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--danger) 60%, transparent); transform: scale(1); }
+  50% { box-shadow: 0 0 0 .3rem transparent; transform: scale(1.14); }
+}
+.status-dot.live { --dot-color: var(--warning); animation: status-pulse 1.6s var(--ease-out) infinite; }
+.status-dot.live.status-danger { --dot-color: var(--danger); }
+.status-dot.live.status-success { --dot-color: var(--success); }
+.status-dot.live.status-muted { --dot-color: var(--muted); }
+.status-dot.attention { animation: status-breathe 2.8s ease-in-out infinite; }
 
 .empty-state { color: var(--muted); padding: 3rem 1rem; text-align: center; }
 .empty-state h2 { color: var(--foreground); font-size: 1.05rem; }
@@ -285,11 +338,20 @@ textarea { min-height: 6.5rem; resize: vertical; }
 .section-heading { align-items: center; color: var(--muted); display: flex; font-size: .72rem; gap: .45rem; letter-spacing: .08em; margin: 0 0 .45rem .25rem; text-transform: uppercase; }
 .section-count { background: var(--secondary); border-radius: 999px; color: var(--muted); font-size: .62rem; letter-spacing: 0; margin-left: auto; padding: .08rem .38rem; }
 .agent-grid { display: grid; gap: .55rem; }
-.agent-card { background: var(--card); border: 1px solid var(--border); border-radius: .75rem; overflow: hidden; }
+/* rise-in is the one entrance every list shares: cards lift a few px as they
+   fade in, staggered by the --i each item sets on itself. Keyed lists keep
+   nodes across updates, so the animation only runs for genuinely new cards. */
+@keyframes rise-in {
+  from { opacity: 0; transform: translateY(.4rem); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.agent-card { animation: rise-in var(--dur-med) var(--ease-out) backwards; animation-delay: calc(var(--i, 0) * 35ms); background: var(--card); border: 1px solid var(--border); border-radius: .75rem; box-shadow: var(--elev-1); overflow: hidden; transition: border-color var(--dur-fast) ease, box-shadow var(--dur-fast) ease; }
+.agent-card:hover { box-shadow: var(--elev-2); }
 .agent-card.blocked { border-color: color-mix(in srgb, var(--danger) 65%, var(--border)); }
 .agent-card.stale { border-color: color-mix(in srgb, var(--warning) 55%, var(--border)); opacity: .78; }
-.agent-open { align-items: flex-start; background: transparent; border: 0; color: inherit; cursor: pointer; display: flex; gap: .65rem; padding: .82rem; text-align: left; width: 100%; }
+.agent-open { align-items: flex-start; background: transparent; border: 0; color: inherit; cursor: pointer; display: flex; gap: .65rem; padding: .82rem; text-align: left; transition: background var(--dur-fast) ease; width: 100%; }
 .agent-open:hover { background: var(--card-hover); }
+.agent-open:active { background: color-mix(in srgb, var(--card-hover) 70%, var(--border)); }
 .agent-open:disabled { cursor: not-allowed; }
 .agent-identity { flex: 0 0 auto; height: 1.6rem; position: relative; width: 1.6rem; }
 .agent-logo { color: var(--foreground); display: inline-flex; height: 1.5rem; width: 1.5rem; }
@@ -378,8 +440,8 @@ textarea { min-height: 6.5rem; resize: vertical; }
 .activity-summary-agents small, .activity-summary-agents > div > span:last-child { color: var(--muted); font-size: .58rem; }
 .activity-summary-agents > div > span:last-child { flex: 0 0 auto; font-variant-numeric: tabular-nums; }
 .activity-list { display: grid; gap: .55rem; min-width: 0; }
-.activity-item { background: var(--card); border: 1px solid var(--border); border-radius: .7rem; color: inherit; cursor: pointer; display: block; font: inherit; max-width: 100%; min-width: 0; overflow: hidden; padding: .75rem; text-align: left; width: 100%; }
-.activity-item:hover { border-color: var(--muted); }
+.activity-item { animation: rise-in var(--dur-med) var(--ease-out) backwards; animation-delay: calc(var(--i, 0) * 30ms); background: var(--card); border: 1px solid var(--border); border-radius: .7rem; box-shadow: var(--elev-1); color: inherit; cursor: pointer; display: block; font: inherit; max-width: 100%; min-width: 0; overflow: hidden; padding: .75rem; text-align: left; transition: border-color var(--dur-fast) ease, box-shadow var(--dur-fast) ease, transform .08s ease; width: 100%; }
+.activity-item:hover { border-color: var(--muted); box-shadow: var(--elev-2); }
 .activity-item:active { transform: scale(.995); }
 .activity-title { align-items: center; display: flex; gap: .45rem; }
 .activity-title strong { flex: 1; font-size: .82rem; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -481,6 +543,27 @@ textarea { min-height: 6.5rem; resize: vertical; }
 .activity-detail-gone { color: var(--muted); font-size: .78rem; margin: 0; }
 
 .terminal-view { display: flex; flex: 1 1 auto; flex-direction: column; min-height: 0; position: relative; }
+/* While the agent is working a hairline of light sweeps the pane's top edge:
+   output is flowing even when the visible rows happen to be still. */
+.terminal-view.live::before {
+  animation: terminal-stream 2.4s linear infinite;
+  background: linear-gradient(90deg, transparent, var(--primary) 40%, var(--primary) 60%, transparent);
+  background-size: 40% 100%;
+  background-repeat: no-repeat;
+  content: '';
+  height: 2px;
+  left: 0;
+  opacity: .55;
+  pointer-events: none;
+  position: absolute;
+  right: 0;
+  top: 0;
+  z-index: 5;
+}
+@keyframes terminal-stream {
+  from { background-position: -40% 0; }
+  to { background-position: 140% 0; }
+}
 .terminal-view.question-only { overflow: hidden; }
 .terminal-view.question-only .question-form { border-top: 0; flex: 1 1 auto; max-height: none; }
 .term { display: contents; }
@@ -775,7 +858,7 @@ textarea { min-height: 6.5rem; resize: vertical; }
    compute to transparent — no cover at all — on exactly the platform that
    backgrounds this app the most. */
 #unlock-dialog::backdrop { background: var(--background, #0a0a0a); }
-.dialog-content { background: var(--card); border: 1px solid var(--border); border-radius: .9rem; box-shadow: 0 1.5rem 4rem rgb(0 0 0 / .4); left: 50%; max-height: calc(100dvh - 2rem); max-width: 30rem; overflow-y: auto; padding: 1.1rem; position: absolute; top: 50%; transform: translate(-50%, -50%); width: calc(100% - 1.5rem); }
+.dialog-content { background: var(--card); border: 1px solid var(--border); border-radius: .9rem; box-shadow: var(--elev-3); left: 50%; max-height: calc(100dvh - 2rem); max-width: 30rem; overflow-y: auto; padding: 1.1rem; position: absolute; top: 50%; transform: translate(-50%, -50%); width: calc(100% - 1.5rem); }
 .dialog-title { font-size: 1.1rem; font-weight: 700; margin: 0; }
 .dialog-description { color: var(--muted); font-size: .78rem; margin: .35rem 0 1rem; }
 .update-progress { display: flex; flex-direction: column; gap: .85rem; }
@@ -808,7 +891,7 @@ textarea { min-height: 6.5rem; resize: vertical; }
 .update-progress-error p, .update-progress-success { font-size: .72rem; line-height: 1.45; margin: .3rem 0 0; }
 .update-progress-success { color: var(--success); font-weight: 700; text-align: center; }
 .update-progress-actions { grid-template-columns: 1fr; }
-.toast { background: var(--foreground); border: 0; border-radius: .65rem; box-shadow: 0 .8rem 2rem rgb(0 0 0 / .5); color: var(--background); left: 50%; margin: 0; max-width: calc(100% - 2rem); opacity: 0; padding: .75rem 1rem; pointer-events: none; position: fixed; top: calc(4rem + env(safe-area-inset-top)); transform: translate(-50%, -1rem); transition: opacity .15s, transform .15s; z-index: 80; }
+.toast { background: var(--foreground); border: 0; border-radius: .65rem; box-shadow: var(--elev-3); color: var(--background); left: 50%; margin: 0; max-width: calc(100% - 2rem); opacity: 0; padding: .75rem 1rem; pointer-events: none; position: fixed; top: calc(4rem + env(safe-area-inset-top)); transform: translate(-50%, -1rem); transition: opacity .15s, transform .15s; z-index: 80; }
 .toast.visible { opacity: 1; transform: translate(-50%, 0); }
 .toast.error { background: var(--danger); color: #fff; }
 
@@ -816,7 +899,7 @@ textarea { min-height: 6.5rem; resize: vertical; }
 
 
 .workspace-grid { display: grid; gap: .65rem; }
-.workspace-card { background: var(--card); border: 1px solid var(--border); border-radius: .8rem; overflow: hidden; }
+.workspace-card { animation: rise-in var(--dur-med) var(--ease-out) backwards; animation-delay: calc(var(--i, 0) * 35ms); background: var(--card); border: 1px solid var(--border); border-radius: .8rem; box-shadow: var(--elev-1); overflow: hidden; }
 .working-workspace-card { border-color: color-mix(in srgb, var(--warning) 42%, var(--border)); }
 .workspace-card > summary { align-items: center; cursor: pointer; display: flex; gap: .7rem; list-style: none; padding: .8rem; }
 .workspace-card > summary::-webkit-details-marker { display: none; }
