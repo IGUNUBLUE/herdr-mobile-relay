@@ -123,8 +123,13 @@ maps cleanly onto F-Droid's build variants.
 
 - `tauri.conf.json` pins `identifier` `com.github.igunublue.herdr-mobile-relay`
   — the Android application id; changing it later creates a different app.
-- CSP allows `https:`/`wss:` connect-src: the app dials user-configured
-  relay hosts, which cannot be enumerated ahead of time.
+- CSP allows `https:`/`wss:`/`http:`/`ws:` connect-src: the app dials
+  user-configured relay hosts, which cannot be enumerated ahead of time.
+  Cleartext is enabled (`usesCleartextTraffic=true`, patched by
+  `make android-init`) so LAN relays can serve plain `ws://` — the E2EE
+  handshake still protects payload confidentiality, but transport metadata
+  is visible on the local network. Prefer `wss://` (Tailscale Serve,
+  gateway) whenever possible.
 - Capabilities (`src-tauri/capabilities/default.json`) grant only
   `core:default`, notification notify/permission, and haptics vibrate —
   nothing else. Audit before adding plugins.

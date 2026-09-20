@@ -5,6 +5,26 @@ project follows [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.23.1] - 2026-09-20
+
+### Fixed
+
+- **Android shell could not reach `ws://`/`http://` relays** — two
+  independent blocks: the generated Android project defaulted to
+  `usesCleartextTraffic=false`, and the CSP `connect-src` omitted `ws:` and
+  `http:`. `make android-init` now patches the generated Gradle config and
+  the CSP admits cleartext socket/http origins. Verified end-to-end on an
+  Android 15 emulator: cleartext WebSocket → E2EE bootstrap pairing → live
+  agent inventory.
+- **Native notifications and haptics never fired** — the frontend assumed
+  plugins were exposed as `window.__TAURI__.notification`/`.haptics`; under
+  `withGlobalTauri` they are only reachable through
+  `window.__TAURI__.core.invoke()` with `plugin:<name>|<command>` ids.
+  `native.ts` now calls the real IPC commands (`is_permission_granted`,
+  `request_permission`, `notify` with `{ options: { title, body } }`,
+  `vibrate` with `{ duration }`). Verified on-device: permission dialog,
+  notification in the shade, and haptic pulse.
+
 ## [0.23.0] - 2026-09-20
 
 ### Added
