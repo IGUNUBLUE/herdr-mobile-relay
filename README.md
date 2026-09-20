@@ -4,70 +4,40 @@
 
 Control [Herdr](https://herdr.dev) agents from your phone. Each Linux or macOS
 computer runs its own relay; the phone connects to them and merges every agent
-into one installable web app.
-
-**Current version:** [`0.23.0`](https://github.com/IGUNUBLUE/herdr-mobile-relay/releases/tag/v0.23.0) · [Changelog](CHANGELOG.md) · [Android APK](https://github.com/IGUNUBLUE/herdr-mobile-relay/releases/latest) (sideload, no Play Store)
+into one app — installable PWA or native Android APK.
 
 > [!NOTE]
-> **About this fork.** Tracks [`0cv/herdr-mobile-relay`](https://github.com/0cv/herdr-mobile-relay)
-> and adds a zero-third-party **Tailscale Serve** transport (Linux —
-> [docs/tailscale.md](docs/tailscale.md)) plus a mobile UX pass: live status
-> motion, haptics, pull-to-refresh, skeleton loaders, and per-integration
-> logos (Claude Code, Codex, Devin, OpenCode, Pi, Oh My Pi, Kimi, Qoder,
-> Hermes). Install it with `herdr plugin install IGUNUBLUE/herdr-mobile-relay`.
+> **This fork** tracks [`0cv/herdr-mobile-relay`](https://github.com/0cv/herdr-mobile-relay)
+> and adds a zero-third-party **Tailscale Serve** transport
+> ([docs/tailscale.md](docs/tailscale.md)), a **native Android app** (Tauri 2,
+> no Play Store), and a mobile UX pass: live status motion, haptics,
+> pull-to-refresh, skeleton loaders, and per-integration logos.
 
+## Download the Android app
 
-> [!IMPORTANT]
-> Native Windows is not supported. WSL2 may work but is not tested.
+Get **`herdr-mobile-*-arm64.apk`** from
+[**Releases → latest**](https://github.com/IGUNUBLUE/herdr-mobile-relay/releases/latest)
+— sideload it, or add this repo to [Obtainium](https://obtainium.imranr.dev/)
+for automatic updates. Other ABIs (`arm`, `x86`, `x86_64`, `universal`) ship in
+the same release; verify against `apk-checksums.txt`.
 
-> [!WARNING]
-> 0.20.0 replaces the shared relay key with per-device credentials and a new
-> encrypted transport. It cannot be installed through the phone updater:
-> [upgrade the relay manually and pair every phone again](docs/updates.md#upgrading-from-v0191).
+In the app: **Settings → paste a setup link** from `make tailscale-setup` (or
+any of the transports below). Native notifications and haptics included.
 
 ## Get started in two minutes
 
-Requirements: Herdr 0.7.5 or newer, Git, and `curl`. Herdr 0.9.0 is
-recommended for the complete live JSON inventory and workspace-management
-surface; the relay does not treat that recommendation as a new minimum.
-
-The relay reports the installed Herdr client version separately from the
-running local server version and protocol. A server upgrade can enable or
-disable individual actions without changing the relay release.
+Requirements: Herdr 0.7.5+ (0.9.0 recommended), Git, `curl`. Linux or macOS —
+native Windows is not supported (WSL2 untested).
 
 ```bash
 herdr plugin install IGUNUBLUE/herdr-mobile-relay
 ```
 
-The setup menu opens automatically after installation.
+The setup menu opens automatically. Pick a transport — **Tailscale Serve**
+(tailnet-only, zero third parties) or **Community WebRTC Gateway** (no account
+needed) are the recommended paths — and scan the QR with your phone.
 
-To reopen the main setup menu later:
-
-```bash
-herdr plugin pane open \
-  --plugin herdr-mobile-relay.events \
-  --entrypoint setup \
-  --placement zoomed \
-  --focus
-```
-
-Start with **Community WebRTC Gateway**. It is the recommended path: as fast
-to set up as the temporary tunnel, with stable relay connectivity and no
-Cloudflare account, domain, `cloudflared`, or tunnel configuration. If prompted,
-choose the installed Herdr app that should host the phone UI. The relay starts
-and prints a QR code.
-
-**Temporary Cloudflare Tunnel** is the fastest getting-started option for a
-one-computer trial. It installs any missing user-level tools with confirmation,
-starts the relay and bundled app, and prints a QR code.
-
-Scan the QR with your phone. Keep the pane open; Ctrl-C stops the relay.
-
-Neither quick-start path needs `sudo` or a Python, Node.js, or Go toolchain.
-Treat the QR and its setup link as secrets: they carry the relay key.
-
-[QUICKSTART.md](QUICKSTART.md) has pairing detail and troubleshooting for both
-paths.
+[QUICKSTART.md](QUICKSTART.md) has pairing detail and troubleshooting.
 
 ## What you get
 
@@ -76,61 +46,34 @@ paths.
 | <img src="images/home.jpeg" alt="Agents grouped by workspace and worktree across computers" width="260"> | <img src="images/terminal.jpeg" alt="Mobile terminal with Copy, Speak, attachments, and terminal keys" width="260"> | <img src="images/devices-qr.jpeg" alt="One-use device invitation shown as a QR code" width="260"> |
 
 - Monitor and control agents across several computers, grouped by status and
-  Herdr workspace, with agents that need input pinned on top.
-- Answer approvals and structured plan questions from Codex, Claude Code,
-  Hermes, Qoder, OpenCode, Oh My Pi, and Pi.
+  workspace, with agents that need input pinned on top.
+- Answer approvals and plan questions from Codex, Claude Code, Devin, Hermes,
+  Qoder, OpenCode, Oh My Pi, and Pi.
 - Send prompts, terminal keys, and slash commands; attach screenshots, photos,
   and documents in cancellable batches.
-- Read and search each agent's native conversation, including Hermes, OpenCode
-  and Oh My OpenCode plans; inspect workspace files, images, and Git diffs
-  read-only.
+- Read and search each agent's native conversation; inspect workspace files,
+  images, and Git diffs read-only.
 - Manage workspaces and Git worktrees; start, rename, clear, and stop agents.
 - Have the relay read responses aloud, even with the screen off.
 - Pair every phone as its own named device — controller or read-only reader —
-  each with its own notification rules, and revoke any of them.
-
-**New in 0.20.0:** named controller and reader devices with QR pairing,
-relay-synthesized speech in five languages, per-device notification categories
-with settle delay, cooldown, and snooze, multi-file attachments, and OpenCode /
-Oh My OpenCode conversations.
+  and revoke any of them.
 
 **[Full feature tour →](docs/mobile-app.md)**
 
-## Mobile onboarding
-
-https://github.com/user-attachments/assets/e52c4fd0-ef77-4852-bb43-078a7154eae8
-
-The walkthrough follows setup from scanning the QR through the agent list,
-terminal controls, and notification settings.
-
 ## Choosing how your phone connects
-
-The setup menu exposes each complete connection path directly:
 
 | Choice | Needs | Best for |
 | --- | --- | --- |
-| Community gateway | no account, domain, or tunnel configuration; an installed app origin | the recommended stable, no-configuration relay path |
-| Cloudflare tunnel | nothing for a temporary URL; a Cloudflare account and domain for a permanent hostname | the fastest one-computer trial or a permanent background service |
-| Your own gateway | a small VPS | dedicated bandwidth and control of the transport logs |
-| Tailscale Serve | Tailscale on the computer (Linux) and the phone, HTTPS certificates enabled on the tailnet | zero-third-party transport inside your tailnet |
+| Tailscale Serve | Tailscale on computer + phone, HTTPS certs on the tailnet | zero-third-party, tailnet-only |
+| Community gateway | an installed app origin | stable, no-configuration relay |
+| Cloudflare tunnel | nothing (temporary) or account + domain (permanent) | fastest trial, permanent service |
+| Your own gateway | a small VPS | dedicated bandwidth and logs |
 
-All four are end-to-end encrypted. On either gateway the phone and the computer
-then negotiate a direct peer-to-peer connection, leaving the gateway with the
-fallback; Cloudflare tunnel traffic stays on Cloudflare, and Tailscale traffic
-never leaves the tailnet.
+All four are end-to-end encrypted; gateways can upgrade to direct WebRTC.
 
 - **[Transports explained →](docs/transports.md)**
 - **[Tailscale Serve →](docs/tailscale.md)**
-- **[Permanent Cloudflare tunnel →](docs/cloudflare-tunnel.md)**
-- **[Run your own gateway →](docs/gateway-self-hosting.md)**
-
-## Agents with a non-default config directory
-
-The relay runs as a background service and does not see a pane's
-`CLAUDE_CONFIG_DIR`, `PI_CODING_AGENT_DIR`, or similar. If an agent's
-conversation shows as unavailable or a profile's slash commands are missing,
-point the relay at that profile with `HERDR_*_CONFIG_DIRS`:
-**[Agent directories →](docs/agent-directories.md)**
+- **[Android app build/sign →](docs/android-tauri.md)**
 
 ## Documentation
 
@@ -138,27 +81,21 @@ point the relay at that profile with `HERDR_*_CONFIG_DIRS`:
 | --- | --- |
 | [QUICKSTART.md](QUICKSTART.md) | The fast path, start to paired phone |
 | [docs/mobile-app.md](docs/mobile-app.md) | Every feature: agent list, terminal, devices, speech, notifications |
-| [docs/transports.md](docs/transports.md) | Cloudflare, community gateway, own gateway, Tailscale, direct WebRTC |
-| [docs/tailscale.md](docs/tailscale.md) | Tailscale Serve transport: tailnet-only access, requirements, service |
-| [docs/cloudflare-tunnel.md](docs/cloudflare-tunnel.md) | The stable tunnel wizard, DNS, and teardown |
-| [docs/gateway-self-hosting.md](docs/gateway-self-hosting.md) | Deploying and operating a gateway |
-| [docs/agent-directories.md](docs/agent-directories.md) | Agents that use a non-default config or profile directory |
-| [docs/slash-command-discovery.md](docs/slash-command-discovery.md) | Bounded slash-command discovery and incomplete-catalog guidance |
-| [docs/updates.md](docs/updates.md) | Verified releases, phone-driven upgrades, upgrading from 0.19.1 |
+| [docs/android-tauri.md](docs/android-tauri.md) | Native Android shell: toolchain, signing, F-Droid path |
+| [docs/transports.md](docs/transports.md) | Cloudflare, gateways, Tailscale, direct WebRTC |
+| [docs/tailscale.md](docs/tailscale.md) | Tailscale Serve: requirements, setup, service |
 | [docs/security.md](docs/security.md) | What is encrypted, device pairing, what an intermediary sees |
-| [docs/development.md](docs/development.md) | Building, testing, and contributing |
+| [docs/development.md](docs/development.md) | Building, testing, contributing |
+| [CHANGELOG.md](CHANGELOG.md) | Release history |
 
 ## Security in one paragraph
 
 Prompts, terminal output, uploads, and push details are encrypted end to end
-between the phone and the relay. Whatever carries the traffic — a Cloudflare
-tunnel or a gateway — observes connection metadata only, never plaintext; on the
-direct path no application data reaches it at all, though a gateway still
-answers address discovery. Paired credentials distinguish controller and
-reader devices, mutations default to controller-only, attachment references
-stay bound to the terminal and agent session that created them, and the app can
-require device verification before it reconnects.
-[Details →](docs/security.md)
+between the phone and the relay. Whatever carries the traffic — tunnel or
+gateway — sees connection metadata only, never plaintext. Paired credentials
+distinguish controller and reader devices, mutations default to
+controller-only, and the app can require device verification before it
+reconnects. [Details →](docs/security.md)
 
 ## License
 
