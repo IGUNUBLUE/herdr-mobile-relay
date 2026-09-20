@@ -16,6 +16,7 @@
     tabName,
   } from '$lib/agents';
   import { homeLayout } from '$lib/preferences';
+  import { haptic } from '$lib/haptics';
   import { relayStore } from '$lib/store';
   import type { Agent, RelayConfig, RelayConnectionView, RelayWorkspace } from '$lib/types';
   import { homeRelativePath, informativePath, workspaceGroupTrees, workspaceGroups, workspaceIdentity, workspaceProvenance, workspaceStateTone, type WorkspaceGroup, type WorkspaceGroupTree, type WorkspaceTab } from '$lib/workspaces';
@@ -57,6 +58,10 @@
     ['blocked', 'Needs input', 'danger'],
   ] as const;
   let relativeNow = $state(Date.now());
+  let listElement = $state<HTMLElement>(null!);
+  let pullDistance = $state(0);
+  let pullArmed = $state(false);
+  let pullRefreshing = $state(false);
   let movingTab = $state('');
   interface TabSlot {
     id: string;
@@ -397,6 +402,7 @@
   }
 
   async function respond(agent: Agent, index: number, total: number, option: string) {
+    haptic(approvalButtonTone(option, index, total) === 'deny' ? [10, 40, 10] : 15);
     await relayStore.respond(agent, index, total, option);
   }
 
@@ -436,9 +442,57 @@
     return relativeTimestamp(agentLastActiveAt(agent));
   }
 
+  // Working agents get a second-grain counter for the first stretch so the
+  // card visibly ticks while output flows; older ages stay minute-grain.
+  function liveAge(agent: Agent): string {
+    const seconds = Math.max(0, Math.floor((relativeNow - agentLastActiveAt(agent)) / 1_000));
+    if (seconds < 90) return `${seconds}s`;
+    return relativeAge(agent);
+  }
+
+  const PULL_THRESHOLD = 72;
+
   onMount(() => {
-    const timer = setInterval(() => { relativeNow = Date.now(); }, 60_000);
-    return () => clearInterval(timer);
+    const timer = setInterval(() => { relativeNow = Date.now(); }, 1_000);
+    let pullStartY = -1;
+    const touchStart = (event: TouchEvent) => {
+      pullStartY = window.scrollY <= 0 && !pullRefreshing ? event.touches[0].clientY : -1;
+    };
+    const touchMove = (event: TouchEvent) => {
+      if (pullStartY < 0) return;
+      const delta = event.touches[0].clientY - pullStartY;
+      if (delta <= 0 || window.scrollY > 0) {
+        pullDistance = 0;
+        pullArmed = false;
+        return;
+      }
+      if (delta > 8) event.preventDefault();
+      pullDistance = Math.min(delta * 0.45, 110);
+      pullArmed = pullDistance >= PULL_THRESHOLD;
+    };
+    const touchEnd = () => {
+      pullStartY = -1;
+      if (pullArmed && !pullRefreshing) {
+        pullRefreshing = true;
+        relayStore.requestInventoryRefresh();
+        haptic(10);
+        setTimeout(() => { pullRefreshing = false; pullDistance = 0; }, 900);
+      } else {
+        pullDistance = 0;
+      }
+      pullArmed = false;
+    };
+    listElement.addEventListener('touchstart', touchStart, { passive: true });
+    listElement.addEventListener('touchmove', touchMove, { passive: false });
+    listElement.addEventListener('touchend', touchEnd);
+    listElement.addEventListener('touchcancel', touchEnd);
+    return () => {
+      clearInterval(timer);
+      listElement.removeEventListener('touchstart', touchStart);
+      listElement.removeEventListener('touchmove', touchMove);
+      listElement.removeEventListener('touchend', touchEnd);
+      listElement.removeEventListener('touchcancel', touchEnd);
+    };
   });
 </script>
 
@@ -464,7 +518,7 @@
       {@const blocked = group === 'blocked'}
       {@const needsInspection = group === 'attention'}
       {@const meta = agentMeta(agent, compact)}
-      {@const age = relativeAge(agent)}
+      {@const age = group === 'working' ? liveAge(agent) : relativeAge(agent)}
       {@const agentPath = compact ? relayPath(agent.relay_id, String(agent.cwd || '')) : ''}
       {@const inventoryReady = !connections.has(agent.relay_id) || connections.get(agent.relay_id)?.inventory.state === 'ready'}
       <article class:blocked class:compact-agent-card={compact} class:stale={!inventoryReady} class="agent-card" style:--i={index}>
@@ -642,7 +696,12 @@
   </div>
 {/snippet}
 
-<main class="agent-list" aria-label="Agents">
+<main class="agent-list" aria-label="Agents" bind:this={listElement}>
+  {#if pullDistance > 0 || pullRefreshing}
+    <div class="pull-indicator" class:refreshing={pullRefreshing} style={`height:${pullRefreshing ? 40 : pullDistance}px`} aria-hidden="true">
+      <span class="pull-cue" class:armed={pullArmed}></span>
+    </div>
+  {/if}
   {#each unavailableRelays as relay (relay.id)}
     {@const inventory = connections.get(relay.id)?.inventory}
     <section class="inventory-warning" role="status" aria-label={`${relay.label} agent inventory unavailable`}>
@@ -664,7 +723,18 @@
       </ol>
     </div>
   {:else if !agents.length && startingRelays.length}
-    <div class="empty-state" role="status">Loading agents…</div>
+    <div class="agent-grid" role="status" aria-label="Loading agents">
+      <span class="sr-only">Loading agents…</span>
+      {#each [0, 1, 2] as i (i)}
+        <div class="agent-card skeleton-card" style:--i={i} aria-hidden="true">
+          <span class="skeleton skeleton-dot"></span>
+          <span class="skeleton-lines">
+            <span class="skeleton skeleton-line skeleton-title"></span>
+            <span class="skeleton skeleton-line"></span>
+          </span>
+        </div>
+      {/each}
+    </div>
   {:else if !agents.length && readyRelays.length}
     <div class="empty-state" role="status">No chat agents are running.</div>
   {:else if !agents.length && deferredRelays.length === relays.length}
