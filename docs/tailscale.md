@@ -37,6 +37,10 @@ From a checkout or the plugin setup menu (**t. Tailscale Serve**):
 make tailscale-setup          # configure serve, verify HTTPS, print the QR
 ```
 
+The link printer needs a relay binary: the installed plugin release is found
+automatically, a source checkout passes its own build via
+`HERDR_RELAY_BIN=bin/herdr-mobile-relay make tailscale-setup`.
+
 That is the whole flow:
 
 1. Reads this node's MagicDNS name from `tailscale status`.
