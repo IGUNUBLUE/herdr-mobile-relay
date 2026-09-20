@@ -5,6 +5,26 @@ project follows [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.25.0] - 2026-09-20
+
+### Changed
+
+- **Renamed to Lerdr**: the app, package, and repository are now `Lerdr` /
+  `lerdr` (`github.com/IGUNUBLUE/lerdr`), with a new indigo-violet beacon
+  icon. Compatibility contracts are unchanged — the `herdr-mobile-relay`
+  plugin id, binary, service, `HERDR_*` environment variables, and
+  `herdr_*` storage keys keep working. The manifest-name probe accepts both
+  `Lerdr` and `Herdr Mobile Relay` so old and new installs interoperate.
+  **Android**: the new application id (`com.github.igunublue.lerdr`) means
+  the update installs as a new app alongside the old one rather than
+  replacing it — pair again or uninstall the old one.
+- **Material 3 Expressive theme**: the app now derives a full M3 color
+  scheme from each theme's accent color (m3-svelte livetheme), toasts use
+  the M3 Snackbar, and loading uses the M3 indicator.
+- **Settings redesign**: grouped preference sections with list rows —
+  Connection, Agents, Appearance, Terminal, Speech, Security, Status, About
+  — matching Android settings conventions. All behavior unchanged.
+
 ## [0.24.0] - 2026-09-20
 
 ### Added
