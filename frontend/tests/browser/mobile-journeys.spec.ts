@@ -1154,7 +1154,7 @@ test('rechecks Herdr terminal compatibility and wraps actual failures on mobile'
   await expect(page.getByText(/Could not check|Server upgrade needed|Server feature unavailable/)).toHaveCount(0);
 
   await server(page, 0, {
-    type: 'lerdr_status',
+    type: 'herdr_status',
     status: {
       server_version: '0.9.0',
       generation: 2,
@@ -1171,7 +1171,7 @@ test('rechecks Herdr terminal compatibility and wraps actual failures on mobile'
   expect(await warning.evaluate((element) => element.scrollWidth <= element.clientWidth)).toBe(true);
 
   await server(page, 0, {
-    type: 'lerdr_status',
+    type: 'herdr_status',
     status: {
       server_version: '0.9.0',
       generation: 3,

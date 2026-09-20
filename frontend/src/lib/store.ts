@@ -1332,7 +1332,7 @@ class RelayStore {
       }
       return;
     }
-    if (message.type === 'lerdr_status' && connection) {
+    if (message.type === 'herdr_status' && connection) {
       const status = normalizeHerdrStatus(message.status);
       if (status.generation <= connection.herdrStatus.generation) return;
       connection.herdrStatus = status;

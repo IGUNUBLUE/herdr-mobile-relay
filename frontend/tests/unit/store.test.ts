@@ -250,7 +250,7 @@ describe('relay command store', () => {
     });
     const relayId = get(relayStore.relayConfigs)[0].id;
     socket.message({
-      type: 'lerdr_status',
+      type: 'herdr_status',
       status: {
         generation: 3,
         server_version: 'old',
@@ -263,7 +263,7 @@ describe('relay command store', () => {
     expect(relayStore.connection(relayId)?.herdrStatus.server_version).toBe('0.8.0');
     expect(relayStore.connection(relayId)?.capabilities).toContain('pane_realtime_delta');
     socket.message({
-      type: 'lerdr_status',
+      type: 'herdr_status',
       status: {
         generation: 5,
         server_version: '0.9.0',

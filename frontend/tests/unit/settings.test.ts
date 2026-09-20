@@ -167,7 +167,7 @@ describe('settings relay status', () => {
     // A real read failure must appear without remounting Settings, and a later
     // successful observation must remove it rather than leave a stale warning.
     socket.server({
-      type: 'lerdr_status',
+      type: 'herdr_status',
       status: {
         server_version: '0.9.0',
         server_protocol_known: false,
@@ -179,7 +179,7 @@ describe('settings relay status', () => {
     });
     expect(await screen.findByText('Terminal reads: Could not check')).toBeInTheDocument();
     socket.server({
-      type: 'lerdr_status',
+      type: 'herdr_status',
       status: {
         server_version: '0.9.0',
         server_protocol_known: false,
