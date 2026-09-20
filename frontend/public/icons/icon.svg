@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-labelledby="title desc">
   <title id="title">Lerdr</title>
-  <desc id="desc">An indigo-violet rounded square with a white beacon mark: a lowercase l antenna with an alert dot and signal arcs.</desc>
+  <desc id="desc">An indigo-violet rounded square with a white iguana mascot in profile.</desc>
   <defs>
     <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
       <stop offset="0" stop-color="#6366f1"/>
@@ -8,8 +8,28 @@
     </linearGradient>
   </defs>
   <rect width="512" height="512" rx="118" fill="url(#bg)"/>
-  <path d="M339.5 122.2A185 185 0 0 1 339.5 357.8" fill="none" stroke="#ffffff" stroke-opacity="0.5" stroke-width="38" stroke-linecap="round"/>
-  <path d="M275.4 175.7A110 110 0 0 1 275.4 304.3" fill="none" stroke="#ffffff" stroke-opacity="0.85" stroke-width="38" stroke-linecap="round"/>
-  <rect x="150" y="128" width="76" height="180" rx="38" fill="#ffffff"/>
-  <circle cx="188" cy="394" r="42" fill="#ffffff"/>
+  <g fill="#ffffff">
+    <!-- tail: thick at the body, tapering into the curl -->
+    <path d="M352 316 C 400 320 436 306 448 276 C 456 256 450 236 432 230 C 422 227 414 232 413 241 C 412 250 419 255 424 261 C 430 268 430 276 425 284 C 414 300 388 312 348 306 Z"/>
+    <!-- hind leg -->
+    <rect x="300" y="332" width="34" height="58" rx="16" transform="rotate(8 317 360)"/>
+    <!-- front leg -->
+    <rect x="196" y="332" width="32" height="56" rx="15" transform="rotate(-6 212 360)"/>
+    <!-- body -->
+    <ellipse cx="272" cy="300" rx="105" ry="72"/>
+    <!-- neck -->
+    <rect x="128" y="206" width="140" height="80" rx="40" transform="rotate(-16 198 246)"/>
+    <!-- head + snout -->
+    <rect x="92" y="196" width="110" height="68" rx="32" transform="rotate(-16 147 230)"/>
+    <!-- dorsal crest: spikes planted on neck and back -->
+    <path d="M170 214 L186 152 L204 210 Z"/>
+    <path d="M212 206 L228 140 L246 202 Z"/>
+    <path d="M254 206 L270 132 L288 206 Z"/>
+    <path d="M296 214 L310 140 L326 216 Z"/>
+    <path d="M336 232 L348 160 L362 234 Z"/>
+    <!-- dewlap under jaw -->
+    <path d="M132 262 C 138 294 158 312 184 314 C 172 296 162 278 158 262 Z"/>
+    <!-- eye -->
+    <circle cx="140" cy="222" r="11" fill="#4c1d95"/>
+  </g>
 </svg>

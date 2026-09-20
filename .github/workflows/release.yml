@@ -163,6 +163,8 @@ jobs:
           echo "NDK_HOME=$ANDROID_HOME/ndk/$NDK_VERSION" >> "$GITHUB_ENV"
       - name: Initialize Android project
         run: make android-init
+      - name: Apply product icons
+        run: make icons
       - name: Build universal release APK
         run: make android-apk
       - name: Align and sign APK

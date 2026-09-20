@@ -7,7 +7,7 @@
       <stop offset="1" stop-color="#a855f7"/>
     </linearGradient>
   </defs>
-  <rect width="512" height="512" rx="118" fill="url(#bg)"/>
+  <rect width="512" height="512" fill="url(#bg)"/>
   <g fill="#ffffff">
     <!-- tail: thick at the body, tapering into the curl -->
     <path d="M352 316 C 400 320 436 306 448 276 C 456 256 450 236 432 230 C 422 227 414 232 413 241 C 412 250 419 255 424 261 C 430 268 430 276 425 284 C 414 300 388 312 348 306 Z"/>

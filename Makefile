@@ -98,6 +98,23 @@ android-apk-split:
 android-dev:
 	cargo tauri android dev
 
+# Regenerate app icons from the SVG sources in src-tauri/icons-src/. The
+# tauri icon step rewrites src-tauri/icons/ and, when the Android project
+# exists, its launcher mipmaps — android-init always scaffolds stock icons,
+# so release.yml runs this after it. Web PNGs are committed; re-rendering
+# them needs rsvg-convert, which CI runners lack (and don't need).
+icons:
+	cd src-tauri && cargo tauri icon icons-src/manifest.json
+	@if command -v rsvg-convert >/dev/null 2>&1; then \
+		rsvg-convert -w 512 -h 512 src-tauri/icons-src/icon.svg -o frontend/public/icons/icon-512.png; \
+		rsvg-convert -w 192 -h 192 src-tauri/icons-src/icon.svg -o frontend/public/icons/icon-192.png; \
+		rsvg-convert -w 512 -h 512 src-tauri/icons-src/icon-maskable.svg -o frontend/public/icons/icon-maskable-512.png; \
+		rsvg-convert -w 180 -h 180 src-tauri/icons-src/app-icon.svg -o frontend/public/icons/apple-touch-icon.png; \
+		rsvg-convert -w 96 -h 96 src-tauri/icons-src/badge.svg -o frontend/public/icons/notification-badge.png; \
+	else \
+		echo "rsvg-convert not found; web icon PNGs unchanged (committed)"; \
+	fi
+
 # Regenerate the Android project, then permit cleartext WS/HTTP in release
 # builds too: relays are user-configured and can be plain ws:// on a LAN —
 # the same thing the browser PWA allows. E2EE still encrypts the payload;
