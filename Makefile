@@ -88,15 +88,15 @@ tailscale-service-install:
 # Native Android shell (Tauri). Needs the toolchain from docs/android-tauri.md:
 # JDK 17+, Android SDK + NDK r28+, rustup Android targets, and cargo-tauri.
 android-apk:
-	cd src-tauri && cargo tauri android build --apk
+	cargo tauri android build --apk
 	@echo "APKs under src-tauri/gen/android/app/build/outputs/apk/"
 
 android-apk-split:
-	cd src-tauri && cargo tauri android build --apk --split-per-abi
+	cargo tauri android build --apk --split-per-abi
 	@echo "Per-ABI APKs under src-tauri/gen/android/app/build/outputs/apk/"
 
 android-dev:
-	cd src-tauri && cargo tauri android dev
+	cargo tauri android dev
 
 # Regenerate the Android project, then permit cleartext WS/HTTP in release
 # builds too: relays are user-configured and can be plain ws:// on a LAN —

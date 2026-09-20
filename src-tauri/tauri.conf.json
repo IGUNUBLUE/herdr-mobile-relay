@@ -6,8 +6,8 @@
   "build": {
     "devUrl": "http://localhost:5173",
     "frontendDist": "../frontend/dist",
-    "beforeDevCommand": "bun run --cwd ../frontend dev",
-    "beforeBuildCommand": "bun run --cwd ../frontend build"
+    "beforeDevCommand": { "script": "bun run dev", "cwd": "../frontend" },
+    "beforeBuildCommand": { "script": "bun run build", "cwd": "../frontend" }
   },
   "app": {
     "withGlobalTauri": true,
