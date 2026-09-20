@@ -72,6 +72,12 @@ relay_binary() {
     else
         configured="$(relay_env RELAY_BIN)"
         binary="${configured:-$(relay_release_root)/current/lerdr}"
+        # systemd ExecStart and chdir'd callers need an absolute path; a
+        # repo-relative override like bin/lerdr is legal input here.
+        case "$binary" in
+            /*) ;;
+            *) binary="$(cd "$(dirname "$binary")" && pwd -P)/$(basename "$binary")" ;;
+        esac
     fi
     if [ ! -x "$binary" ]; then
         echo "✗ Verified relay release is unavailable: $binary" >&2
