@@ -63,7 +63,7 @@ export default async function setup() {
   const runtime = await mkdtemp(join(tmpdir(), 'herdr-attention-browser-'));
   const cache = join(runtime, 'go-cache');
   const fakeBin = join(runtime, 'fake-herdr');
-  const relayBin = join(runtime, 'herdr-mobile-relay');
+  const relayBin = join(runtime, 'lerdr');
   const scenarioPath = join(runtime, 'scenario.json');
   const operationsPath = join(runtime, 'operations.jsonl');
   const webRoot = join(runtime, 'web');
@@ -376,7 +376,7 @@ export default async function setup() {
   };
 
   build(fakeBin, './cmd/fake-herdr', cache);
-  build(relayBin, './cmd/herdr-mobile-relay', cache);
+  build(relayBin, './cmd/lerdr', cache);
 
   const [port, pluginPort] = await Promise.all([freePort(), freePort()]);
   let output = '';
