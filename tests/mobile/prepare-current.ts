@@ -45,7 +45,7 @@ async function buildVariant(sourceRoot: string, destination: string, variant: st
 async function main(): Promise<void> {
   const output = await prepareOutput(repositoryPath(required('--output')), [join(repositoryRoot, 'frontend'), join(repositoryRoot, 'herdr-plugin.toml')]);
   await mkdir(join(output, 'bundles'), { recursive: true, mode: 0o700 });
-  const temporary = await mkdtemp(join('/tmp', 'herdr-mobile-current-'));
+  const temporary = await mkdtemp(join('/tmp', 'lerdr-current-'));
   try {
     const baselineRoot = join(output, 'bundles', 'current-code-baseline');
     const candidateRoot = join(output, 'bundles', 'current-code-target');

@@ -52,7 +52,7 @@ install_cloudflared() {
             ;;
     esac
 
-    CLOUDFLARED_TEMP_DIR="$(mktemp -d "${TMPDIR:-/tmp}/herdr-cloudflared.XXXXXX")"
+    CLOUDFLARED_TEMP_DIR="$(mktemp -d "${TMPDIR:-/tmp}/lerdr-cloudflared.XXXXXX")"
     echo "Installing cloudflared from Cloudflare's official release..."
     curl --fail --location --silent --show-error \
         "https://github.com/cloudflare/cloudflared/releases/latest/download/$asset" \
@@ -120,11 +120,11 @@ if [ "${#missing_tools[@]}" -ne 0 ] && [ "$INSTALL_MISSING" -eq 1 ]; then
         echo "curl is required to install: ${missing_tools[*]}"
         exit 1
     fi
-    answer="${HERDR_SETUP_YES:-}"
+    answer="${LERDR_SETUP_YES:-${HERDR_SETUP_YES:-}}"
     if [ "$answer" != "1" ]; then
         if [ ! -t 0 ]; then
             echo "Missing required tools: ${missing_tools[*]}"
-            echo "Run this command in an interactive terminal, or set HERDR_SETUP_YES=1."
+            echo "Run this command in an interactive terminal, or set LERDR_SETUP_YES=1."
             exit 1
         fi
         printf 'Install these missing tools for your user account: %s? [Y/n] ' "${missing_tools[*]}"
@@ -168,7 +168,7 @@ fi
 speech_missing="$("$SCRIPT_DIR/speech-voices.sh" --missing)"
 if [ -n "$speech_missing" ]; then
     if [ "$INSTALL_MISSING" -eq 1 ]; then
-        answer="${HERDR_SETUP_YES:-}"
+        answer="${LERDR_SETUP_YES:-${HERDR_SETUP_YES:-}}"
         if [ "$answer" != "1" ] && [ -t 0 ]; then
             printf 'Download the English voice that reads responses aloud (about 82–90 MB with the engine, cached across updates)? [Y/n] '
             read -r answer

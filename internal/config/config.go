@@ -13,7 +13,7 @@ import (
 	"strings"
 )
 
-// Accepted HERDR_GATEWAY_SELECTION values.
+// Accepted LERDR_GATEWAY_SELECTION values.
 const (
 	// GatewaySelectionOrdered registers with the first healthy entry in
 	// configured order: an explicit list is a priority, not a preference.
@@ -65,31 +65,31 @@ type Config struct {
 
 func Load() (*Config, error) {
 	cfg := &Config{
-		Host:         envOr("HERDR_RELAY_HOST", "127.0.0.1"),
-		Port:         envIntOr("HERDR_RELAY_PORT", 8375),
-		PluginPort:   envIntOr("HERDR_RELAY_PLUGIN_PORT", 8376),
-		Token:        os.Getenv("HERDR_RELAY_TOKEN"),
-		InstanceID:   os.Getenv("HERDR_RELAY_INSTANCE_ID"),
-		WebRoot:      os.Getenv("HERDR_WEB_ROOT"),
+		Host:         relayEnvOr("RELAY_HOST", "127.0.0.1"),
+		Port:         relayEnvIntOr("RELAY_PORT", 8375),
+		PluginPort:   relayEnvIntOr("RELAY_PLUGIN_PORT", 8376),
+		Token:        relayEnv("RELAY_TOKEN"),
+		InstanceID:   relayEnv("RELAY_INSTANCE_ID"),
+		WebRoot:      relayEnv("WEB_ROOT"),
 		HerdrBin:     os.Getenv("HERDR_BIN"),
 		SocketPath:   os.Getenv("HERDR_SOCKET_PATH"),
-		PollInterval: envFloatOr("HERDR_RELAY_POLL_INTERVAL", 2.0),
-		LogFormat:    envOr("HERDR_RELAY_LOG_FORMAT", "text"),
-		ServiceName:  envOr("HERDR_RELAY_SERVICE_NAME", defaultServiceName()),
+		PollInterval: relayEnvFloatOr("RELAY_POLL_INTERVAL", 2.0),
+		LogFormat:    relayEnvOr("RELAY_LOG_FORMAT", "text"),
+		ServiceName:  relayEnvOr("RELAY_SERVICE_NAME", defaultServiceName()),
 
-		WebRTCUDPPort:       envIntOr("HERDR_WEBRTC_UDP_PORT", 0),
-		ForceRelayTransport: envBoolOr("HERDR_TRANSPORT_FORCE_RELAY", false),
-		PortMappingEnabled:  envBoolOr("HERDR_REACHABILITY_PORT_MAPPING", true),
-		RearmBootstrap:      envBoolOr("HERDR_RELAY_REARM_BOOTSTRAP", false),
+		WebRTCUDPPort:       relayEnvIntOr("WEBRTC_UDP_PORT", 0),
+		ForceRelayTransport: relayEnvBoolOr("TRANSPORT_FORCE_RELAY", false),
+		PortMappingEnabled:  relayEnvBoolOr("REACHABILITY_PORT_MAPPING", true),
+		RearmBootstrap:      relayEnvBoolOr("RELAY_REARM_BOOTSTRAP", false),
 	}
 
-	logLevel, err := parseLogLevel(os.Getenv("HERDR_RELAY_LOG_LEVEL"))
+	logLevel, err := parseLogLevel(relayEnv("RELAY_LOG_LEVEL"))
 	if err != nil {
 		return nil, err
 	}
 	cfg.LogLevel = logLevel
 
-	if origins := os.Getenv("HERDR_ALLOWED_ORIGINS"); origins != "" {
+	if origins := relayEnv("ALLOWED_ORIGINS"); origins != "" {
 		for _, o := range strings.Split(origins, ",") {
 			if trimmed := strings.TrimSpace(o); trimmed != "" {
 				cfg.AllowedOrigins = append(cfg.AllowedOrigins, trimmed)
@@ -97,24 +97,27 @@ func Load() (*Config, error) {
 		}
 	}
 
-	// HERDR_GATEWAY_URL is an ordered candidate list. The relay probes the
-	// entries concurrently; HERDR_GATEWAY_SELECTION decides what the order
+	// LERDR_GATEWAY_URL is an ordered candidate list. The relay probes the
+	// entries concurrently; LERDR_GATEWAY_SELECTION decides what the order
 	// means. A single value is one entry and behaves exactly as it always did.
-	cfg.GatewayURLs = parseGatewayURLs(os.Getenv("HERDR_GATEWAY_URL"))
+	cfg.GatewayURLs = parseGatewayURLs(relayEnv("GATEWAY_URL"))
 	if len(cfg.GatewayURLs) > 0 {
 		cfg.GatewayURL = cfg.GatewayURLs[0]
 	}
-	cfg.GatewaySelection = parseGatewaySelection(os.Getenv("HERDR_GATEWAY_SELECTION"))
+	cfg.GatewaySelection = parseGatewaySelection(relayEnv("GATEWAY_SELECTION"))
 
 	cfg.ConfigHome = envOr("XDG_CONFIG_HOME", filepath.Join(homeDir(), ".config"))
 	cacheHome := envOr("XDG_CACHE_HOME", filepath.Join(homeDir(), ".cache"))
 	cfg.DataHome = envOr("XDG_DATA_HOME", filepath.Join(homeDir(), ".local", "share"))
-	cfg.ReleaseRoot = os.Getenv("HERDR_RELEASE_ROOT")
+	cfg.ReleaseRoot = relayEnv("RELEASE_ROOT")
 	if cfg.ReleaseRoot == "" {
 		cfg.ReleaseRoot = installedReleaseRoot()
 	}
 	if cfg.ReleaseRoot == "" {
-		cfg.ReleaseRoot = filepath.Join(cfg.DataHome, "herdr-mobile-relay")
+		cfg.ReleaseRoot = adoptLegacyDir(
+			filepath.Join(cfg.DataHome, "lerdr"),
+			filepath.Join(cfg.DataHome, "herdr-mobile-relay"),
+		)
 	}
 
 	if cfg.SocketPath == "" {
@@ -122,7 +125,10 @@ func Load() (*Config, error) {
 	}
 
 	cfg.RuntimeDir = resolveRuntimeDir(cfg.ConfigHome)
-	cfg.CacheDir = filepath.Join(cacheHome, "herdr-mobile-relay")
+	cfg.CacheDir = adoptLegacyDir(
+		filepath.Join(cacheHome, "lerdr"),
+		filepath.Join(cacheHome, "herdr-mobile-relay"),
+	)
 
 	if cfg.WebRoot == "" {
 		cfg.WebRoot = defaultWebRoot()
@@ -166,13 +172,16 @@ func (c *Config) validate() error {
 }
 
 func resolveRuntimeDir(configHome string) string {
-	if env := os.Getenv("HERDR_RELAY_ENV"); env != "" {
+	if env := relayEnv("RELAY_ENV"); env != "" {
 		return filepath.Dir(env)
 	}
 	if dir := os.Getenv("HERDR_PLUGIN_CONFIG_DIR"); dir != "" {
 		return dir
 	}
-	return filepath.Join(configHome, "herdr-mobile-relay")
+	return adoptLegacyDir(
+		filepath.Join(configHome, "lerdr"),
+		filepath.Join(configHome, "herdr-mobile-relay"),
+	)
 }
 
 func defaultWebRoot() string {
@@ -213,9 +222,22 @@ func installedReleaseRoot() string {
 
 func defaultServiceName() string {
 	if runtime.GOOS == "darwin" {
-		return "com.herdr-mobile-relay.service"
+		return "com.lerdr.service"
 	}
-	return "herdr-mobile-relay.service"
+	return "lerdr.service"
+}
+
+// adoptLegacyDir returns legacy when the renamed directory does not exist yet
+// but a pre-rename install left one behind. The installer migrates the data;
+// this only keeps an unmigrated install reachable until then.
+func adoptLegacyDir(dir, legacy string) string {
+	if _, err := os.Stat(dir); err == nil {
+		return dir
+	}
+	if _, err := os.Stat(legacy); err == nil {
+		return legacy
+	}
+	return dir
 }
 
 func findHerdrBin() string {
@@ -291,8 +313,53 @@ func parseLogLevel(raw string) (slog.Level, error) {
 	case "error":
 		return slog.LevelError, nil
 	default:
-		return 0, fmt.Errorf("invalid HERDR_RELAY_LOG_LEVEL %q: want debug, info, warn, or error", raw)
+		return 0, fmt.Errorf("invalid LERDR_RELAY_LOG_LEVEL %q: want debug, info, warn, or error", raw)
 	}
+}
+
+// relayEnv reads a relay configuration variable: LERDR_<key> first, then the
+// HERDR_<key> spelling a pre-rename service file or operator shell may still
+// set. Variables the host process itself injects (HERDR_BIN, HERDR_SOCKET_PATH,
+// HERDR_PLUGIN_CONFIG_DIR) are read directly, not through here.
+func relayEnv(key string) string {
+	if v := os.Getenv("LERDR_" + key); v != "" {
+		return v
+	}
+	return os.Getenv("HERDR_" + key)
+}
+
+func relayEnvOr(key, fallback string) string {
+	if v := relayEnv(key); v != "" {
+		return v
+	}
+	return fallback
+}
+
+func relayEnvIntOr(key string, fallback int) int {
+	if v := relayEnv(key); v != "" {
+		if n, err := strconv.Atoi(v); err == nil {
+			return n
+		}
+	}
+	return fallback
+}
+
+func relayEnvBoolOr(key string, fallback bool) bool {
+	if v := relayEnv(key); v != "" {
+		if b, err := strconv.ParseBool(v); err == nil {
+			return b
+		}
+	}
+	return fallback
+}
+
+func relayEnvFloatOr(key string, fallback float64) float64 {
+	if v := relayEnv(key); v != "" {
+		if f, err := strconv.ParseFloat(v, 64); err == nil {
+			return f
+		}
+	}
+	return fallback
 }
 
 func envOr(key, fallback string) string {

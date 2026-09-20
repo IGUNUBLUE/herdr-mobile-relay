@@ -1,8 +1,8 @@
 #!/bin/bash
 # Guided chooser for how the phone reaches this computer. Every option ends by
-# writing (or clearing) the HERDR_GATEWAY_URL candidate list in the relay
+# writing (or clearing) the LERDR_GATEWAY_URL candidate list in the relay
 # environment, which is the single switch the rest of the tooling reads, plus
-# the HERDR_GATEWAY_SELECTION policy that decides how that list is read.
+# the LERDR_GATEWAY_SELECTION policy that decides how that list is read.
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
@@ -161,7 +161,7 @@ choose_own_gateway() {
 case "$MODE" in
     temporary)
         set_gateway_url "$ENV_FILE" ""
-        unset HERDR_GATEWAY_URL HERDR_GATEWAY_SELECTION
+        unset LERDR_GATEWAY_URL LERDR_GATEWAY_SELECTION HERDR_GATEWAY_URL HERDR_GATEWAY_SELECTION
         echo "✓ Temporary Cloudflare tunnel selected."
         if installed_relay_service_active; then
             echo "  A background relay is already installed, so Quick Start will"

@@ -34,7 +34,7 @@ func TestPrepareTargetReleaseDownloadsVerifiesAndChecksCompatibility(t *testing.
 	writeWorkerTestRelease(t, targetRoot, "1.2.4", nextTestRevision)
 	archive := releaseArchive(t, targetRoot)
 	checksum := sha256.Sum256(archive)
-	archiveName := "herdr-mobile-relay_1.2.4_" + strings.ReplaceAll(currentTargetForTest(), "/", "_") + ".tar.gz"
+	archiveName := "lerdr_1.2.4_" + strings.ReplaceAll(currentTargetForTest(), "/", "_") + ".tar.gz"
 
 	server := httptest.NewServer(http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
 		switch request.URL.Path {

@@ -20,7 +20,10 @@ if [ ! -f "$ENV_FILE" ]; then
 fi
 
 NEW_TOKEN="$(generate_token)"
+# Both spellings get the same token so a rollback to a pre-rename binary keeps
+# working.
 set_env_value_atomic "$ENV_FILE" HERDR_RELAY_TOKEN "$NEW_TOKEN"
+set_env_value_atomic "$ENV_FILE" LERDR_RELAY_TOKEN "$NEW_TOKEN"
 
 echo "✓ Wrote a new relay token to $ENV_FILE"
 echo "  Phones configured with the old token stop working once the relay restarts."
@@ -31,17 +34,23 @@ echo ""
 RESTARTED=""
 case "$(uname -s)" in
     Darwin)
-        SERVICE="gui/$(id -u)/com.herdr-mobile-relay.service"
-        if launchctl print "$SERVICE" >/dev/null 2>&1; then
-            launchctl kickstart -k "$SERVICE"
-            RESTARTED=1
-        fi
+        for label in com.lerdr.service com.herdr-mobile-relay.service; do
+            SERVICE="gui/$(id -u)/$label"
+            if launchctl print "$SERVICE" >/dev/null 2>&1; then
+                launchctl kickstart -k "$SERVICE"
+                RESTARTED=1
+                break
+            fi
+        done
         ;;
     Linux)
-        if systemctl --user cat herdr-mobile-relay.service >/dev/null 2>&1; then
-            systemctl --user restart herdr-mobile-relay.service
-            RESTARTED=1
-        fi
+        for unit in lerdr.service herdr-mobile-relay.service; do
+            if systemctl --user cat "$unit" >/dev/null 2>&1; then
+                systemctl --user restart "$unit"
+                RESTARTED=1
+                break
+            fi
+        done
         ;;
 esac
 if [ -n "$RESTARTED" ]; then

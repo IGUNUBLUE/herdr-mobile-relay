@@ -168,15 +168,15 @@ func buildNATBinaries(t *testing.T) natBinaries {
 	dir := t.TempDir()
 
 	bins := natBinaries{
-		gateway:  filepath.Join(dir, "herdr-gateway"),
-		relay:    filepath.Join(dir, "herdr-mobile-relay"),
+		gateway:  filepath.Join(dir, "lerdr-gateway"),
+		relay:    filepath.Join(dir, "lerdr"),
 		herdr:    filepath.Join(dir, "fake-herdr"),
 		scenario: filepath.Join(dir, "scenario.json"),
 		webRoot:  filepath.Join(dir, "web"),
 	}
 	for out, pkg := range map[string]string{
-		bins.gateway: "./cmd/herdr-gateway",
-		bins.relay:   "./cmd/herdr-mobile-relay",
+		bins.gateway: "./cmd/lerdr-gateway",
+		bins.relay:   "./cmd/lerdr",
 		bins.herdr:   "./cmd/fake-herdr",
 	} {
 		build := exec.Command("go", "build", "-o", out, pkg)

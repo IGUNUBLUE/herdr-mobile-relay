@@ -33,7 +33,7 @@ func TestSoapBody(t *testing.T) {
 		`<NewInternalPort>41234</NewInternalPort>` +
 		`<NewInternalClient>192.168.1.34</NewInternalClient>` +
 		`<NewEnabled>1</NewEnabled>` +
-		`<NewPortMappingDescription>herdr-mobile-relay</NewPortMappingDescription>` +
+		`<NewPortMappingDescription>lerdr</NewPortMappingDescription>` +
 		`<NewLeaseDuration>3600</NewLeaseDuration>` +
 		`</u:AddPortMapping>` +
 		`</s:Body></s:Envelope>`

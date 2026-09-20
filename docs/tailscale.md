@@ -39,7 +39,7 @@ make tailscale-setup          # configure serve, verify HTTPS, print the QR
 
 The link printer needs a relay binary: the installed plugin release is found
 automatically, a source checkout passes its own build via
-`HERDR_RELAY_BIN=bin/herdr-mobile-relay make tailscale-setup`.
+`LERDR_RELAY_BIN=bin/lerdr make tailscale-setup`.
 
 That is the whole flow:
 
@@ -60,14 +60,14 @@ Add to Home Screen.
 make tailscale-service-install
 ```
 
-Installs `herdr-mobile-relay.service` as a systemd user unit running only the
+Installs `lerdr.service` as a systemd user unit running only the
 relay — there is no tunnel process to supervise, because `tailscaled` owns the
 tailnet listener and persists the serve configuration across reboots. Pairings
 survive restarts too: the hostname is stable, so the one-use bootstrap does not
 need re-arming after each launch.
 
 Working from a source build rather than the installed release? Point the
-launcher at your binary: `HERDR_RELAY_BIN=./bin/herdr-mobile-relay make tailscale-service-install`.
+launcher at your binary: `LERDR_RELAY_BIN=./bin/lerdr make tailscale-service-install`.
 
 `tailscale serve` is configured once and stays in tailscaled's state; the unit
 does not touch it. Re-run `make tailscale-setup` after a reinstall if the serve

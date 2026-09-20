@@ -11,7 +11,11 @@ import (
 	"strings"
 )
 
-const Owner = "herdr-mobile-relay-stable-setup-v1"
+const Owner = "lerdr-stable-setup-v1"
+
+// legacyOwner is the ownership marker written by pre-rename installs. State
+// files carrying it are adopted and rewritten under the new marker.
+const legacyOwner = "herdr-mobile-relay-stable-setup-v1"
 
 var UUIDPattern = regexp.MustCompile(`(?i)^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$`)
 
@@ -200,9 +204,10 @@ func ReadState(filename string) (map[string]any, error) {
 		return nil, err
 	}
 	state, ok := value.(map[string]any)
-	if !ok || state["owner"] != Owner {
+	if !ok || (state["owner"] != Owner && state["owner"] != legacyOwner) {
 		return nil, fmt.Errorf("state file is not owned by Lerdr: %s", filename)
 	}
+	state["owner"] = Owner
 	return state, nil
 }
 

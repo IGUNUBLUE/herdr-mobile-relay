@@ -106,7 +106,7 @@ jobs:
           version="${GITHUB_REF_NAME#v}"
           target="${{ matrix.target }}"
           scripts/check-installed-release.sh \
-            "dist/release/herdr-mobile-relay_${version}_${{ matrix.target }}.tar.gz" \
+            "dist/release/lerdr_${version}_${{ matrix.target }}.tar.gz" \
             dist/release/checksums.txt "$version" "$GITHUB_SHA" \
             "${target%_*}/${target#*_}"
 
@@ -162,7 +162,7 @@ jobs:
           fi
           assets=(
             dist/release/checksums.txt
-            dist/release/herdr-mobile-relay_*.tar.gz
+            dist/release/lerdr_*.tar.gz
           )
           if prerelease="$(
             gh release view "$GITHUB_REF_NAME" \

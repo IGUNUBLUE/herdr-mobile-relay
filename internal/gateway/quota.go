@@ -228,7 +228,7 @@ func (q *quotaStore) save(now time.Time) error {
 // crash mid-write cannot truncate the counters.
 func writeFileAtomic(path string, data []byte) error {
 	dir := filepath.Dir(path)
-	temp, err := os.CreateTemp(dir, ".herdr-gateway-state-*")
+	temp, err := os.CreateTemp(dir, ".lerdr-gateway-state-*")
 	if err != nil {
 		return fmt.Errorf("gateway: create temp state in %s: %w", dir, err)
 	}

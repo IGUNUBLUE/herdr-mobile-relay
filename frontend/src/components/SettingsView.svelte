@@ -128,7 +128,7 @@
       .join(' · ');
   }
 
-  const APP_DEPLOY_SETUP_COMMAND = 'herdr plugin action invoke configure-app-deploy --plugin herdr-mobile-relay.events';
+  const APP_DEPLOY_SETUP_COMMAND = 'herdr plugin action invoke configure-app-deploy --plugin lerdr.events';
 
 
   type SafeUpdateAction =
@@ -739,7 +739,7 @@
             {/if}
             {#if connection?.pairingDeferred}
               <small class="warning" role="status">
-                Waiting for the Home Screen app: add Herdr to the Home Screen and open it there to pair this computer.
+                Waiting for the Home Screen app: add Lerdr to the Home Screen and open it there to pair this computer.
               </small>
             {/if}
             {#if connectionStatus === 'connected' && connection?.inventory.state !== 'ready'}

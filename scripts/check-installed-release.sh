@@ -37,7 +37,7 @@ HOST_TARGET="$HOST_OS/$HOST_ARCH"
     exit 1
 }
 ARCHIVE_NAME=${ARCHIVE##*/}
-EXPECTED_NAME="herdr-mobile-relay_${EXPECTED_VERSION}_${HOST_OS}_${HOST_ARCH}.tar.gz"
+EXPECTED_NAME="lerdr_${EXPECTED_VERSION}_${HOST_OS}_${HOST_ARCH}.tar.gz"
 [ "$ARCHIVE_NAME" = "$EXPECTED_NAME" ] || {
     echo "release archive $ARCHIVE_NAME does not match candidate $EXPECTED_NAME" >&2
     exit 1
@@ -77,7 +77,7 @@ fi
     exit 1
 }
 
-WORK_DIR=$(mktemp -d "${TMPDIR:-/tmp}/herdr-installed-check.XXXXXX")
+WORK_DIR=$(mktemp -d "${TMPDIR:-/tmp}/lerdr-installed-check.XXXXXX")
 RELAY_PID=
 cleanup() {
     if [ -n "$RELAY_PID" ] && kill -0 "$RELAY_PID" 2>/dev/null; then
@@ -99,7 +99,7 @@ mkdir -p "$RELEASE_DIR" "$CONFIG_HOME" "$CACHE_HOME" "$DATA_HOME"
 RELEASE_DIR=$(CDPATH='' cd "$RELEASE_DIR" && pwd -P)
 tar -xzf "$ARCHIVE" -C "$RELEASE_DIR"
 
-RELAY="$RELEASE_DIR/herdr-mobile-relay"
+RELAY="$RELEASE_DIR/lerdr"
 [ -x "$RELAY" ] || {
     echo "release does not contain an executable relay" >&2
     exit 1
@@ -116,15 +116,17 @@ XDG_CONFIG_HOME="$CONFIG_HOME" \
 XDG_CACHE_HOME="$CACHE_HOME" \
 XDG_DATA_HOME="$DATA_HOME" \
 HERDR_RELAY_PORT="$PORT" \
+LERDR_RELAY_PLUGIN_PORT="$PLUGIN_PORT" \
 HERDR_RELAY_PLUGIN_PORT="$PLUGIN_PORT" \
 HERDR_RELAY_HOST=127.0.0.1 \
 HERDR_RELAY_TOKEN= \
 HERDR_BIN=/bin/false \
+LERDR_WEB_ROOT="$RELEASE_DIR/web" \
 HERDR_WEB_ROOT="$RELEASE_DIR/web" \
 "$RELAY" serve >"$WORK_DIR/relay.log" 2>&1 &
 RELAY_PID=$!
 
-SUPPORT_STATE="$CONFIG_HOME/herdr-mobile-relay/support-state.json"
+SUPPORT_STATE="$CONFIG_HOME/lerdr/support-state.json"
 attempt=0
 while [ ! -s "$SUPPORT_STATE" ]; do
     attempt=$((attempt + 1))

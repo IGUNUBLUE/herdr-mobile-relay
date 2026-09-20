@@ -311,7 +311,7 @@ export function androidEnvironmentTests(harness: Harness): Test[] {
       await state(fixture, { enabled: 0 });
       if (change === 'ownership') await writeFile(join(fixture.root, 'ownership'), 'android:emulator-5556\n');
       if (change === 'sdk') await writeFile(join(fixture.root, 'sdk/system-images/android-35/google_apis/x86_64/source.properties'), 'Pkg.Revision=\n');
-      if (change === 'avd') await writeFile(join(fixture.root, 'avd/herdr-mobile-ci-fixture.avd/config.ini'), 'image.sysdir.1=wrong\nimage.sysdir.1=also-wrong\n');
+      if (change === 'avd') await writeFile(join(fixture.root, 'avd/lerdr-ci-fixture.avd/config.ini'), 'image.sysdir.1=wrong\nimage.sysdir.1=also-wrong\n');
       assert.equal(prepare(fixture).passed, false);
       assert.equal(existsSync(fixture.log) && (await readFile(fixture.log, 'utf8')).includes('disable-user'), false);
     }

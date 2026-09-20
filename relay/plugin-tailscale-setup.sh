@@ -8,7 +8,7 @@ SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 
 SERVICE_ENV="$(installed_service_env_file)"
 if [ -n "$SERVICE_ENV" ]; then
-    export HERDR_RELAY_ENV="$SERVICE_ENV"
+    export LERDR_RELAY_ENV="$SERVICE_ENV"
 fi
 
 if ! "$SCRIPT_DIR/tailscale-serve.sh" start; then

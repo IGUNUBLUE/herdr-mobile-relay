@@ -48,7 +48,7 @@ TUNNEL_HOST="${TUNNEL_HOST#https://}"
 TUNNEL_HOST="${TUNNEL_HOST#wss://}"
 TUNNEL_HOST="${TUNNEL_HOST%%/*}"
 if [ -z "$TUNNEL_HOST" ]; then
-    CONFIG="${CLOUDFLARED_CONFIG:-$HOME/.cloudflared/config-herdr-mobile-relay.yml}"
+    CONFIG="${CLOUDFLARED_CONFIG:-$(cloudflared_config_default)}"
     if [ ! -r "$CONFIG" ]; then
         echo "✗ Cannot determine this relay's hostname: $CONFIG is missing."
         echo "  Follow the README's Stable Hostnames section first, or pass the"

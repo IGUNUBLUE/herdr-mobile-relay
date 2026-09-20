@@ -56,9 +56,9 @@ func run(args []string) (int, error) {
 			return 0, nil
 		}
 		if len(args) != 0 {
-			return 2, errors.New("usage: herdr-mobile-relay version [--json]")
+			return 2, errors.New("usage: lerdr version [--json]")
 		}
-		fmt.Printf("herdr-mobile-relay %s (%s)\n", version, revision)
+		fmt.Printf("lerdr %s (%s)\n", version, revision)
 		return 0, nil
 	case "event-hook":
 		if len(args) != 0 {
@@ -67,7 +67,7 @@ func run(args []string) (int, error) {
 		return status(eventhook.Run())
 	case "update-worker":
 		if len(args) != 1 {
-			return 2, errors.New("usage: herdr-mobile-relay update-worker JOB.json")
+			return 2, errors.New("usage: lerdr update-worker JOB.json")
 		}
 		err := relayupdate.Run(context.Background(), args[0])
 		if errors.Is(err, relayupdate.ErrConcurrent) {
@@ -85,12 +85,12 @@ func run(args []string) (int, error) {
 			return 2, err
 		}
 		if verifyFlags.NArg() != 0 || *origin == "" {
-			return 2, errors.New("usage: herdr-mobile-relay verify-public --origin ORIGIN [--web-root DIRECTORY] [--version VERSION] [--revision REVISION]")
+			return 2, errors.New("usage: lerdr verify-public --origin ORIGIN [--web-root DIRECTORY] [--version VERSION] [--revision REVISION]")
 		}
 		return status(appdeploy.VerifyPublic(context.Background(), *webRoot, *origin, *version, *revision))
 	case "app-deploy-worker":
 		if len(args) != 1 {
-			return 2, errors.New("usage: herdr-mobile-relay app-deploy-worker JOB.json")
+			return 2, errors.New("usage: lerdr app-deploy-worker JOB.json")
 		}
 		return status(appdeploy.Run(context.Background(), args[0]))
 	case "app-deploy-configured":
@@ -104,7 +104,7 @@ func run(args []string) (int, error) {
 		return status(appdeploy.RunConfigured(context.Background(), cfg.RuntimeDir, cfg.WebRoot, version, revision))
 	case "pages-projects":
 		if len(args) < 1 || len(args) > 3 {
-			return 2, errors.New("usage: herdr-mobile-relay pages-projects {list|names|matching ORIGIN|validate NAME ORIGIN}")
+			return 2, errors.New("usage: lerdr pages-projects {list|names|matching ORIGIN|validate NAME ORIGIN}")
 		}
 		projects, err := appdeploy.ParseProjects(os.Stdin)
 		if err != nil {
@@ -194,7 +194,7 @@ func run(args []string) (int, error) {
 			return 2, errors.New("--allow-cross-target cannot be combined with --version or --revision candidate checks")
 		}
 		if verifyFlags.NArg() > 1 {
-			return 2, errors.New("usage: herdr-mobile-relay verify-release [--target os/arch] [--version VERSION] [--revision REVISION] [--allow-cross-target] [DIRECTORY]")
+			return 2, errors.New("usage: lerdr verify-release [--target os/arch] [--version VERSION] [--revision REVISION] [--allow-cross-target] [DIRECTORY]")
 		}
 		root := ""
 		if verifyFlags.NArg() == 1 {
@@ -218,7 +218,7 @@ func run(args []string) (int, error) {
 		return 0, nil
 	case "release-manifest":
 		if len(args) != 4 {
-			return 2, errors.New("usage: herdr-mobile-relay release-manifest DIRECTORY VERSION REVISION os/arch")
+			return 2, errors.New("usage: lerdr release-manifest DIRECTORY VERSION REVISION os/arch")
 		}
 		manifest, err := release.Build(args[0], args[1], args[2], args[3])
 		if err != nil {
@@ -229,7 +229,7 @@ func run(args []string) (int, error) {
 		return 0, nil
 	case "activate-release":
 		if len(args) != 2 {
-			return 2, errors.New("usage: herdr-mobile-relay activate-release RELEASE_ROOT RELEASE_DIRECTORY")
+			return 2, errors.New("usage: lerdr activate-release RELEASE_ROOT RELEASE_DIRECTORY")
 		}
 		if _, err := release.Verify(args[1], release.CurrentTarget()); err != nil {
 			return 1, fmt.Errorf("refusing to activate invalid release: %w", err)
@@ -237,17 +237,17 @@ func run(args []string) (int, error) {
 		return status(relayupdate.Activate(args[0], args[1]))
 	case "seal-release":
 		if len(args) != 1 {
-			return 2, errors.New("usage: herdr-mobile-relay seal-release RELEASE_DIRECTORY")
+			return 2, errors.New("usage: lerdr seal-release RELEASE_DIRECTORY")
 		}
 		return status(release.Seal(args[0]))
 	case "prune-releases":
 		if len(args) < 2 || len(args) > 3 {
-			return 2, errors.New("usage: herdr-mobile-relay prune-releases RELEASE_ROOT CURRENT_RELEASE [PREVIOUS_RELEASE]")
+			return 2, errors.New("usage: lerdr prune-releases RELEASE_ROOT CURRENT_RELEASE [PREVIOUS_RELEASE]")
 		}
 		return status(relayupdate.PruneOldReleases(args[0], args[1:]...))
 	case "setup-fragment":
 		if len(args) < 2 || len(args) > 3 {
-			return 2, errors.New("usage: herdr-mobile-relay setup-fragment TOKEN LABEL [RELAY]")
+			return 2, errors.New("usage: lerdr setup-fragment TOKEN LABEL [RELAY]")
 		}
 		relay := ""
 		if len(args) == 3 {
@@ -263,7 +263,7 @@ func run(args []string) (int, error) {
 			return 2, err
 		}
 		if normalizeFlags.NArg() != 1 {
-			return 2, errors.New("usage: herdr-mobile-relay normalize-origin [--allow-loopback-http] ORIGIN")
+			return 2, errors.New("usage: lerdr normalize-origin [--allow-loopback-http] ORIGIN")
 		}
 		origin, err := setuphelper.NormalizeOrigin(normalizeFlags.Arg(0), *allowLoopback)
 		if err != nil {
@@ -279,7 +279,7 @@ func run(args []string) (int, error) {
 			return 2, err
 		}
 		if qrFlags.NArg() != 1 || *columns < 1 {
-			return 2, errors.New("usage: herdr-mobile-relay qr [--columns N] VALUE")
+			return 2, errors.New("usage: lerdr qr [--columns N] VALUE")
 		}
 		rendered, err := setuphelper.TerminalQR(qrFlags.Arg(0), *columns)
 		if err != nil {

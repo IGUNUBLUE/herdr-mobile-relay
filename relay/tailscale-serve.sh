@@ -21,7 +21,7 @@ export PATH="/opt/homebrew/bin:/usr/local/bin:/home/linuxbrew/.linuxbrew/bin:$HO
 . "$SCRIPT_DIR/common.sh"
 
 ENV_FILE="$(relay_env_file "$SCRIPT_DIR")"
-PORT="${HERDR_RELAY_PORT:-8375}"
+PORT="${LERDR_RELAY_PORT:-${HERDR_RELAY_PORT:-8375}}"
 COMMAND="${1:-start}"
 
 if [ "$(uname -s)" != "Linux" ]; then
@@ -100,20 +100,20 @@ wait_for_https() {
 }
 
 # setup-link.sh needs the verified release; a source checkout can satisfy the
-# same requirement by pointing HERDR_RELAY_BIN at its own build. Surface that
+# same requirement by pointing LERDR_RELAY_BIN at its own build. Surface that
 # as a hint instead of letting the generic release error stand alone.
 require_relay_binary() {
     if relay_binary >/dev/null 2>&1; then
         return 0
     fi
-    local repo_bin="$SCRIPT_DIR/../bin/herdr-mobile-relay"
+    local repo_bin="$SCRIPT_DIR/../bin/lerdr"
     echo "✗ Verified relay release is unavailable." >&2
     if [ -x "$repo_bin" ]; then
         echo "  This checkout has a built binary; point the launcher at it:" >&2
-        echo "  HERDR_RELAY_BIN=bin/herdr-mobile-relay make tailscale-setup" >&2
+        echo "  LERDR_RELAY_BIN=bin/lerdr make tailscale-setup" >&2
     else
         echo "  Install the plugin release, or build one:" >&2
-        echo "  go build -o bin/herdr-mobile-relay ./cmd/herdr-mobile-relay" >&2
+        echo "  go build -o bin/lerdr ./cmd/lerdr" >&2
     fi
     return 1
 }
@@ -121,7 +121,7 @@ require_relay_binary() {
 print_setup_link() {
     local fqdn="$1"
 
-    HERDR_PHONE_APP_URL="https://$fqdn" "$SCRIPT_DIR/setup-link.sh" "$fqdn"
+    LERDR_PHONE_APP_URL="https://$fqdn" "$SCRIPT_DIR/setup-link.sh" "$fqdn"
 }
 
 case "$COMMAND" in

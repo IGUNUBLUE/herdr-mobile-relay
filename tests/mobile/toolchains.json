@@ -12,7 +12,7 @@
   },
   "android": {
     "runner": "ubuntu-24.04",
-    "avd": "herdr-mobile-ci",
+    "avd": "lerdr-ci",
     "deviceProfile": "pixel_7",
     "api": 35,
     "systemImage": "system-images;android-35;google_apis;x86_64",

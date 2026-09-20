@@ -51,17 +51,17 @@ type Manager struct {
 
 func NewManager(runtimeDir, webRoot, version, revision string) *Manager {
 	recoverAppDeployState(runtimeDir, true)
-	originValue := strings.TrimSpace(os.Getenv("HERDR_APP_DEPLOY_ORIGIN"))
-	projectValue := strings.TrimSpace(os.Getenv("HERDR_CLOUDFLARE_PAGES_PROJECT"))
+	originValue := strings.TrimSpace(deployEnv("APP_DEPLOY_ORIGIN"))
+	projectValue := strings.TrimSpace(deployEnv("CLOUDFLARE_PAGES_PROJECT"))
 	manager := &Manager{
 		runtimeDir: runtimeDir,
 		webRoot:    webRoot,
 		version:    version,
 		revision:   revision,
 		project:    strings.ToLower(projectValue),
-		branch:     strings.TrimSpace(os.Getenv("HERDR_CLOUDFLARE_PAGES_BRANCH")),
-		npxPath:    strings.TrimSpace(os.Getenv("HERDR_APP_DEPLOY_NPX")),
-		nodeDir:    strings.TrimSpace(os.Getenv("HERDR_APP_DEPLOY_NODE_DIR")),
+		branch:     strings.TrimSpace(deployEnv("CLOUDFLARE_PAGES_BRANCH")),
+		npxPath:    strings.TrimSpace(deployEnv("APP_DEPLOY_NPX")),
+		nodeDir:    strings.TrimSpace(deployEnv("APP_DEPLOY_NODE_DIR")),
 		required:   originValue != "" || projectValue != "",
 	}
 	manifest, manifestErr := release.Load(filepath.Dir(webRoot))
@@ -269,8 +269,18 @@ type workerLaunch struct {
 }
 
 var workerEnvironmentKeys = [...]string{
+	"LERDR_RELAY_ENV",
 	"HERDR_RELAY_ENV",
 	"HERDR_PLUGIN_CONFIG_DIR",
+}
+
+// deployEnv reads a relay operator setting, preferring the LERDR_ spelling and
+// accepting the legacy HERDR_ spelling.
+func deployEnv(key string) string {
+	if value := os.Getenv("LERDR_" + key); value != "" {
+		return value
+	}
+	return os.Getenv("HERDR_" + key)
 }
 
 func appDeployWorkerLaunch(
@@ -309,7 +319,7 @@ func (m *Manager) launchWorker(ctx context.Context, jobPath string) error {
 	if err != nil {
 		return err
 	}
-	label := fmt.Sprintf("herdr-mobile-relay-app-deploy-%d", time.Now().Unix())
+	label := fmt.Sprintf("lerdr-app-deploy-%d", time.Now().Unix())
 	launch := appDeployWorkerLaunch(runtime.GOOS, label, executable, jobPath, os.LookupEnv)
 	command := exec.CommandContext(ctx, launch.application, launch.args...)
 	output, err := command.CombinedOutput()

@@ -217,7 +217,7 @@ describe('relay command store', () => {
     setPaneAgentView(pane, 'conversation');
     const nativeRemove = localStorage.removeItem.bind(localStorage);
     const remove = vi.spyOn(localStorage, 'removeItem').mockImplementation((key) => {
-      if (key === 'herdr_pane_agent_view_overrides') throw new Error('read only');
+      if (key === 'lerdr_pane_agent_view_overrides') throw new Error('read only');
       nativeRemove(key);
     });
     const toast = vi.spyOn(relayStore, 'showToast');
@@ -523,7 +523,7 @@ describe('relay command store', () => {
         },
       },
     };
-    localStorage.setItem('herdr_device_auth_v1', JSON.stringify(credential));
+    localStorage.setItem('lerdr_device_auth_v1', JSON.stringify(credential));
 
     // Safari tabs keep the setup fragment so an installed copy can reuse it, so
     // a reload or a back step re-imports it. Restoring the spent invitation
@@ -570,7 +570,7 @@ describe('relay command store', () => {
     const relayId = makeRelayId('Renewed', relayUrl);
     const store = new BrowserDeviceCredentialStore(localStorage);
     const issuedAt = Date.now();
-    const storeCredential = () => localStorage.setItem('herdr_device_auth_v1', JSON.stringify({
+    const storeCredential = () => localStorage.setItem('lerdr_device_auth_v1', JSON.stringify({
       version: 1,
       relays: {
         [relayId]: {
@@ -642,14 +642,14 @@ describe('relay command store', () => {
 
     // An invitation-paired entry keeps no relay key, so the entry itself has to
     // remember that this relay speaks the encrypted handshake.
-    const stored = JSON.parse(localStorage.getItem('herdr_relays')!) as RelayConfig[];
+    const stored = JSON.parse(localStorage.getItem('lerdr_relays')!) as RelayConfig[];
     expect(stored.find((relay) => relay.id === relayId)).toMatchObject({ token: '', paired: true });
     expect(dials).toBe(1);
 
     report('connected', { path: 'websocket' });
     deliver({ type: 'push_config', protocol: 3, host: 'forgotten', capabilities: [], agent_profiles: [] });
     // Pairing turned the invitation into a credential.
-    localStorage.setItem('herdr_device_auth_v1', JSON.stringify({
+    localStorage.setItem('lerdr_device_auth_v1', JSON.stringify({
       version: 1,
       relays: {
         [relayId]: {
@@ -1141,7 +1141,7 @@ describe('relay command store', () => {
     const relay = { label: 'Fedora', url: 'wss://fedora.example', token: '' };
     const relayId = makeRelayId(relay.label, relay.url);
     relayStore.addRelay(relay);
-    localStorage.setItem('herdr_device_auth_v1', JSON.stringify({
+    localStorage.setItem('lerdr_device_auth_v1', JSON.stringify({
       version: 1,
       relays: {
         [relayId]: {
@@ -1189,7 +1189,7 @@ describe('relay command store', () => {
     const relay = { label: 'Fedora', url: 'wss://fedora.example', token: '' };
     const relayId = makeRelayId(relay.label, relay.url);
     relayStore.addRelay(relay);
-    localStorage.setItem('herdr_device_auth_v1', JSON.stringify({
+    localStorage.setItem('lerdr_device_auth_v1', JSON.stringify({
       version: 1,
       relays: {
         [relayId]: {
@@ -2216,7 +2216,7 @@ describe('relay command store', () => {
     });
     // The legacy URL survives so the hybrid path can fall back to it.
     expect(stored.url).toBe('wss://fedora.example');
-    expect(JSON.parse(localStorage.getItem('herdr_relays')!)).toContainEqual(
+    expect(JSON.parse(localStorage.getItem('lerdr_relays')!)).toContainEqual(
       expect.objectContaining({
         transport: 'hybrid',
         gatewayUrl: 'wss://gw.example',

@@ -38,8 +38,8 @@ setup and want to know what every screen and control is for.
   media playback that keeps reading with the screen off, and response text never
   reaches a third-party speech server. On hosts with a published Piper runtime,
   setup downloads the neural engine and English voice into
-  `$XDG_CACHE_HOME/herdr-mobile-relay/speech` when `XDG_CACHE_HOME` is set, or
-  `~/.cache/herdr-mobile-relay/speech` otherwise. Relay updates never touch the
+  `$XDG_CACHE_HOME/lerdr/speech` when `XDG_CACHE_HOME` is set, or
+  `~/.cache/lerdr/speech` otherwise. Relay updates never touch the
   cache. Reading aloud switches itself on the first time a relay reports a
   voice; after that the setting decides. Every other
   language is downloaded on demand, from Settings on the phone or with

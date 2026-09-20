@@ -16,7 +16,7 @@ a Cloudflare account with a domain added to it.
 Add a domain to Cloudflare, then run:
 
 ```bash
-herdr plugin action invoke install-service --plugin herdr-mobile-relay.events
+herdr plugin action invoke install-service --plugin lerdr.events
 ```
 
 The wizard ends by printing the private phone QR. Run it once per computer with
@@ -47,20 +47,20 @@ successfully after silently appending its old zone. A prior affected run names
 the stray record to delete, then resumes with the same tunnel once the correct
 zone is authorized.
 
-If `CLOUDFLARED_CONFIG` or `~/.cloudflared/config-herdr-mobile-relay.yml`
+If `CLOUDFLARED_CONFIG` or `~/.cloudflared/config-lerdr.yml`
 already exists, the wizard displays its tunnel, hostname, and public DNS status
 before asking whether to reuse it. It does not adopt the config unattended;
-`HERDR_STABLE_REUSE_CONFIG=1` is the explicit opt-in for automation.
+`LERDR_STABLE_REUSE_CONFIG=1` is the explicit opt-in for automation.
 
 ## Useful actions
 
 ```bash
-herdr plugin action invoke setup-link --plugin herdr-mobile-relay.events
-herdr plugin action invoke change-hostname --plugin herdr-mobile-relay.events
-herdr plugin action invoke status --plugin herdr-mobile-relay.events
-herdr plugin action invoke configure-app-deploy --plugin herdr-mobile-relay.events
-herdr plugin action invoke stable-teardown --plugin herdr-mobile-relay.events
-herdr plugin action invoke uninstall --plugin herdr-mobile-relay.events
+herdr plugin action invoke setup-link --plugin lerdr.events
+herdr plugin action invoke change-hostname --plugin lerdr.events
+herdr plugin action invoke status --plugin lerdr.events
+herdr plugin action invoke configure-app-deploy --plugin lerdr.events
+herdr plugin action invoke stable-teardown --plugin lerdr.events
+herdr plugin action invoke uninstall --plugin lerdr.events
 ```
 
 `setup-link` reprints the private phone QR and setup link. `status` reports the
@@ -93,7 +93,7 @@ still the configured relay and is removed. The state ownership marker, service
 environment match, and Herdr tunnel-name namespace protect unrelated resources.
 If an older teardown cleared state after preserving every resource, the action
 can recover the teardown identity from the retained config. Recovery needs a
-config whose `tunnel:` entry is a `herdr-mobile-relay-*` name, a loopback relay
+config whose `tunnel:` entry is a `lerdr-*` name, a loopback relay
 origin on the configured port, a hostname, and credentials matching that tunnel;
 otherwise it refuses without deleting anything.
 
@@ -109,17 +109,17 @@ prints the manual command when it is not.
 ## Relay logging
 
 The relay defaults to the `info` log level, so routine inventory diagnostics at
-`debug` are hidden. Put `HERDR_RELAY_LOG_LEVEL=debug` in the generated runtime
+`debug` are hidden. Put `LERDR_RELAY_LOG_LEVEL=debug` in the generated runtime
 environment file to diagnose a service, then restore `info` when finished.
-That file is the one named by `HERDR_RELAY_ENV` (normally managed by the
+That file is the one named by `LERDR_RELAY_ENV` (normally managed by the
 installer); an export in a terminal does not change an already-running service.
 A custom `ExecStart=... serve` unit must set the variable through its own
 `Environment=` or `EnvironmentFile=` arrangement rather than relying on the
 plugin wrapper. For an installed unit, restart it after changing the file:
 `systemctl --user restart <your-unit>`.
 
-The installed unit is normally `herdr-mobile-relay.service`; substitute your
-own name, such as `herdr-mobile-relay-ts.service`:
+The installed unit is normally `lerdr.service`; substitute your
+own name, such as `lerdr-ts.service`:
 
 ```bash
 journalctl --user -u <your-unit> -p warning --since '1 hour ago' --no-pager
@@ -158,7 +158,7 @@ appear at their existing cadence during an outage.
 ## Troubleshooting
 
 - **No setup menu:** invoke the `setup` action:
-  `herdr plugin action invoke setup --plugin herdr-mobile-relay.events`.
+  `herdr plugin action invoke setup --plugin lerdr.events`.
 - **Stable setup stops:** keep its state and rerun the exact command printed.
 - **Need the stable QR:** invoke the `setup-link` action.
 - **Wrong zone appended to the hostname:** delete the stray record the wizard

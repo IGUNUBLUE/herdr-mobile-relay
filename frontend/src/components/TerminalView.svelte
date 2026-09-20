@@ -2066,6 +2066,7 @@
       <p class:error={keyFeedbackError} class="key-feedback" role="status" aria-live="polite">{keyControlStatus}</p>
     {/if}
     <div class="term-keys question-term-keys" aria-label="Terminal fallback keys" aria-busy={keySending}>
+      <div class="term-keys-row">
       <Button variant="secondary" size="sm" onclick={() => sendTerminalKey('Escape', 'Cancelled prompt')}>Esc</Button>
       <Button variant="secondary" size="sm" aria-label="Tab" title="Send Tab" onclick={sendTab}>{@render tabIcon()}</Button>
       <span class="spacer"></span>
@@ -2073,15 +2074,16 @@
         <Button variant="secondary" size="sm" aria-label="Function keys" aria-expanded={fkeysOpen} onclick={() => { fkeysOpen = !fkeysOpen; arrowsOpen = false; }}>
           F keys
         </Button>
-        {@render fkeyPopup()}
       </div>
       <div class="arrow-menu">
         <Button variant="secondary" size="sm" aria-label="Arrow keys" aria-expanded={arrowsOpen} onclick={() => { arrowsOpen = !arrowsOpen; fkeysOpen = false; }}>
           {@render arrowIcon()}
         </Button>
-        {@render arrowPopup()}
       </div>
       <Button variant="secondary" size="sm" aria-label="Enter" onclick={() => sendTerminalKey('Enter')}>Enter</Button>
+      </div>
+      {@render fkeyPopup()}
+      {@render arrowPopup()}
     </div>
   {/if}
   <div class:hidden={questionMode} class="terminal-view term">
@@ -2295,25 +2297,48 @@
         {/if}
       </section>
     {/if}
+    {#if visibleTerminalMenu}
+      <section class="generic-menu-actions" aria-label={`Terminal menu: ${visibleTerminalMenu.title}`} aria-busy={keySending}>
+        <header>
+          <strong>{visibleTerminalMenu.title}</strong>
+          <span>Detected from terminal key hints</span>
+          <button type="button" aria-label="Dismiss detected menu actions" onclick={() => { dismissedMenuSignature = visibleTerminalMenu.signature; }}>×</button>
+        </header>
+        <div>
+          {#each visibleTerminalMenu.actions as action (action.keys.join('+'))}
+            <Button
+              variant={action.cancel ? 'secondary' : 'default'}
+              size="sm"
+              disabled={readOnly || keySending}
+              onclick={() => { void sendKeys(action.keys, action.label); }}
+            ><kbd>{menuKeyLabel(action.keys)}</kbd>{action.label}</Button>
+          {/each}
+        </div>
+      </section>
+    {/if}
+    {#if attachmentSnapshot?.items.length}
+      <AttachmentProgress snapshot={attachmentSnapshot} oncancel={cancelAttachmentUpload} onrestart={restartAttachmentUpload} />
+    {/if}
+    {#if uploadStatus}<p class:error={uploadError} class="upload-status" role="status">{uploadStatus}</p>{/if}
+    {#if draftPersistenceWarning}<p class="upload-status error" role="status">{draftPersistenceWarning}</p>{/if}
+    {#if paneSizeLeaseError}<p class="upload-status error" role="alert">{paneSizeLeaseError}</p>{/if}
     <div class="term-input">
       <!-- Images get their own input: a mixed accept list makes Android offer
            the generic file picker instead of the photo picker, hiding
            screenshots behind a Files detour. -->
-      <div class="attach-stack">
-      <Button variant="ghost" size="icon" disabled={inputLocked || uploadingAttachment} aria-label="Attach photos" onclick={() => imageInput.click()}>
-        <svg class="button-symbol" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
-          <rect x="3" y="4" width="18" height="16" rx="2"></rect>
-          <circle cx="8.5" cy="9" r="1.5"></circle>
-          <path d="m4 17 4.5-4.5 3.5 3.5 2.5-2.5L20 19"></path>
-        </svg>
-      </Button>
-      <Button variant="ghost" size="icon" disabled={inputLocked || uploadingAttachment} aria-label="Attach files" onclick={() => fileInput.click()}>
-        <svg class="button-symbol" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
-          <path d="m21.44 11.05-9.19 9.19a6 6 0 0 1-8.49-8.49l8.57-8.57A4 4 0 1 1 18 8.84l-8.59 8.57a2 2 0 0 1-2.83-2.83l8.49-8.48"></path>
-        </svg>
-      </Button>
-      </div>
       <div class:awaiting-approval={approvalMode && !composerFocused} class:has-text={Boolean(composer)} class="composer-field">
+        <Button variant="ghost" size="icon" disabled={inputLocked || uploadingAttachment} aria-label="Attach photos" onclick={() => imageInput.click()}>
+          <svg class="button-symbol" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
+            <rect x="3" y="4" width="18" height="16" rx="2"></rect>
+            <circle cx="8.5" cy="9" r="1.5"></circle>
+            <path d="m4 17 4.5-4.5 3.5 3.5 2.5-2.5L20 19"></path>
+          </svg>
+        </Button>
+        <Button variant="ghost" size="icon" disabled={inputLocked || uploadingAttachment} aria-label="Attach files" onclick={() => fileInput.click()}>
+          <svg class="button-symbol" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
+            <path d="m21.44 11.05-9.19 9.19a6 6 0 0 1-8.49-8.49l8.57-8.57A4 4 0 1 1 18 8.84l-8.59 8.57a2 2 0 0 1-2.83-2.83l8.49-8.48"></path>
+          </svg>
+        </Button>
         <textarea
           bind:this={composerElement}
           bind:value={composer}
@@ -2344,36 +2369,10 @@
         ></textarea>
         {#if composer}<button class="input-clear" aria-label="Clear prompt text" onclick={clearComposer}>×</button>{/if}
       </div>
-      <Button size="icon" disabled={!composer.replace(/[\r\n]+$/g, '') || composerLocked || sendingPrompt || uploadingAttachment} aria-label={sendingPrompt ? 'Submitting input' : sendConfirmed ? 'Input sent' : inspectionMode ? 'Submit terminal text' : 'Send prompt'} onclick={sendPrompt}>{sendingPrompt ? '…' : sendConfirmed ? '✓' : '➤'}</Button>
+      <Button class="send-button" size="icon" disabled={!composer.replace(/[\r\n]+$/g, '') || composerLocked || sendingPrompt || uploadingAttachment} aria-label={sendingPrompt ? 'Submitting input' : sendConfirmed ? 'Input sent' : inspectionMode ? 'Submit terminal text' : 'Send prompt'} onclick={sendPrompt}>{sendingPrompt ? '…' : sendConfirmed ? '✓' : '➤'}</Button>
       <input bind:this={imageInput} type="file" accept="image/*" multiple hidden onchange={(event) => { void filesSelected(event.currentTarget.files || []); event.currentTarget.value = ''; }} />
       <input bind:this={fileInput} type="file" accept="image/png,image/jpeg,image/gif,image/webp,text/plain,text/markdown,text/csv,application/json,application/pdf,.docx,.xlsx,.pptx,.odt,.ods,.odp" multiple hidden onchange={(event) => { void filesSelected(event.currentTarget.files || []); event.currentTarget.value = ''; }} />
     </div>
-    {#if attachmentSnapshot?.items.length}
-      <AttachmentProgress snapshot={attachmentSnapshot} oncancel={cancelAttachmentUpload} onrestart={restartAttachmentUpload} />
-    {/if}
-    {#if uploadStatus}<p class:error={uploadError} class="upload-status" role="status">{uploadStatus}</p>{/if}
-    {#if draftPersistenceWarning}<p class="upload-status error" role="status">{draftPersistenceWarning}</p>{/if}
-    {#if paneSizeLeaseError}<p class="upload-status error" role="alert">{paneSizeLeaseError}</p>{/if}
-
-    {#if visibleTerminalMenu}
-      <section class="generic-menu-actions" aria-label={`Terminal menu: ${visibleTerminalMenu.title}`} aria-busy={keySending}>
-        <header>
-          <strong>{visibleTerminalMenu.title}</strong>
-          <span>Detected from terminal key hints</span>
-          <button type="button" aria-label="Dismiss detected menu actions" onclick={() => { dismissedMenuSignature = visibleTerminalMenu.signature; }}>×</button>
-        </header>
-        <div>
-          {#each visibleTerminalMenu.actions as action (action.keys.join('+'))}
-            <Button
-              variant={action.cancel ? 'secondary' : 'default'}
-              size="sm"
-              disabled={readOnly || keySending}
-              onclick={() => { void sendKeys(action.keys, action.label); }}
-            ><kbd>{menuKeyLabel(action.keys)}</kbd>{action.label}</Button>
-          {/each}
-        </div>
-      </section>
-    {/if}
 
     {#if approvalMode && !readOnly && !responding.has(agent.pane_id)}
       <div class="quick-actions" aria-label="Approval choices">
@@ -2393,6 +2392,7 @@
       <p class:error={keyFeedbackError} class="key-feedback" role="status" aria-live="polite">{keyControlStatus}</p>
     {/if}
     <div class="term-keys" aria-busy={keySending}>
+      <div class="term-keys-row">
       <Button variant="secondary" size="sm" disabled={readOnly || keySending} onpointerdown={(event) => event.preventDefault()} onclick={() => sendTerminalKey('Escape', 'Cancelled prompt')}>Esc</Button>
       <Button variant="secondary" size="sm" disabled={readOnly || keySending} aria-label="Tab" title="Send Tab" onpointerdown={(event) => event.preventDefault()} onclick={sendTab}>{@render tabIcon()}</Button>
       <div class="modifier-menu">
@@ -2454,7 +2454,6 @@
           onpointerdown={(event) => event.preventDefault()}
           onclick={() => { fkeysOpen = !fkeysOpen; arrowsOpen = false; }}
         >F keys</Button>
-        {@render fkeyPopup()}
       </div>
       <div class="arrow-menu">
         <Button
@@ -2468,9 +2467,11 @@
         >
           {@render arrowIcon()}
         </Button>
-        {@render arrowPopup()}
       </div>
       <Button variant="secondary" size="sm" disabled={readOnly || keySending} aria-label="Enter" onpointerdown={(event) => event.preventDefault()} onclick={() => sendTerminalKey('Enter')}>Enter</Button>
+      </div>
+      {@render fkeyPopup()}
+      {@render arrowPopup()}
     </div>
   </div>
 </div>

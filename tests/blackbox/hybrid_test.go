@@ -45,9 +45,9 @@ func setupHybridEnv(t *testing.T) *hybridEnv {
 	tmpDir := t.TempDir()
 
 	binaries := map[string]string{
-		"fake-herdr":         "./cmd/fake-herdr",
-		"herdr-mobile-relay": "./cmd/herdr-mobile-relay",
-		"herdr-gateway":      "./cmd/herdr-gateway",
+		"fake-herdr":    "./cmd/fake-herdr",
+		"lerdr":         "./cmd/lerdr",
+		"lerdr-gateway": "./cmd/lerdr-gateway",
 	}
 	paths := make(map[string]string, len(binaries))
 	for name, pkg := range binaries {
@@ -66,7 +66,7 @@ func setupHybridEnv(t *testing.T) *hybridEnv {
 		gatewayWS:   fmt.Sprintf("ws://127.0.0.1:%d", gatewayPort),
 	}
 
-	gateway := exec.Command(paths["herdr-gateway"])
+	gateway := exec.Command(paths["lerdr-gateway"])
 	gateway.Env = append(os.Environ(),
 		fmt.Sprintf("HERDR_GATEWAY_ADDR=127.0.0.1:%d", gatewayPort),
 		// The binary defaults address discovery to :3478. A test must never bind a
@@ -101,7 +101,7 @@ func setupHybridEnv(t *testing.T) *hybridEnv {
 	env.relayHTTP = fmt.Sprintf("http://127.0.0.1:%d", relayPort)
 	socketPath := filepath.Join(tmpDir, "herdr.sock")
 	socketListener := startInventorySocket(t, socketPath, scenario)
-	relay := exec.Command(paths["herdr-mobile-relay"])
+	relay := exec.Command(paths["lerdr"])
 	relay.Env = append(os.Environ(),
 		fmt.Sprintf("HERDR_RELAY_PORT=%d", relayPort),
 		fmt.Sprintf("HERDR_RELAY_PLUGIN_PORT=%d", freePort(t)),

@@ -47,11 +47,11 @@ func TestManagerRejectsPhoneOverrides(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(root, release.ManifestName), manifest, 0o644); err != nil {
 		t.Fatal(err)
 	}
-	t.Setenv("HERDR_APP_DEPLOY_ORIGIN", "https://app.example.test")
-	t.Setenv("HERDR_CLOUDFLARE_PAGES_PROJECT", "relay-app")
-	t.Setenv("HERDR_CLOUDFLARE_PAGES_BRANCH", "main")
-	t.Setenv("HERDR_APP_DEPLOY_NPX", npx)
-	t.Setenv("HERDR_APP_DEPLOY_NODE_DIR", nodeDir)
+	t.Setenv("LERDR_APP_DEPLOY_ORIGIN", "https://app.example.test")
+	t.Setenv("LERDR_CLOUDFLARE_PAGES_PROJECT", "relay-app")
+	t.Setenv("LERDR_CLOUDFLARE_PAGES_BRANCH", "main")
+	t.Setenv("LERDR_APP_DEPLOY_NPX", npx)
+	t.Setenv("LERDR_APP_DEPLOY_NODE_DIR", nodeDir)
 	manager := NewManager(root, webRoot, "1.2.3", "abc")
 	manager.launch = func(context.Context, string) error { return nil }
 	if !manager.State().Configured {
@@ -73,16 +73,18 @@ func TestManagerRejectsPhoneOverrides(t *testing.T) {
 
 func TestAppDeployWorkerLaunchForwardsRelayEnvironmentPaths(t *testing.T) {
 	values := map[string]string{
-		"HERDR_RELAY_ENV":         "/home/cv/.config/herdr-mobile-relay/relay.env",
-		"HERDR_PLUGIN_CONFIG_DIR": "/home/cv/.config/herdr-mobile-relay",
+		"LERDR_RELAY_ENV":         "/home/cv/.config/lerdr/relay.env",
+		"HERDR_RELAY_ENV":         "/home/cv/.config/lerdr/relay.env",
+		"HERDR_PLUGIN_CONFIG_DIR": "/home/cv/.config/lerdr",
 	}
 	lookup := func(key string) (string, bool) {
 		value, found := values[key]
 		return value, found
 	}
 	assignments := []string{
-		"HERDR_RELAY_ENV=/home/cv/.config/herdr-mobile-relay/relay.env",
-		"HERDR_PLUGIN_CONFIG_DIR=/home/cv/.config/herdr-mobile-relay",
+		"LERDR_RELAY_ENV=/home/cv/.config/lerdr/relay.env",
+		"HERDR_RELAY_ENV=/home/cv/.config/lerdr/relay.env",
+		"HERDR_PLUGIN_CONFIG_DIR=/home/cv/.config/lerdr",
 	}
 
 	linux := appDeployWorkerLaunch("linux", "app-deploy", "/opt/relay", "/tmp/job.json", lookup)

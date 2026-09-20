@@ -23,11 +23,15 @@ for agent_bin in "$HOME"/.[!.]*/bin; do
     [ -d "$agent_bin" ] && PATH="$PATH:$agent_bin"
 done
 export PATH
-export HERDR_RELAY_HOST="${HERDR_RELAY_HOST:-127.0.0.1}"
-export HERDR_RELAY_PORT="${HERDR_RELAY_PORT:-8375}"
+# Both spellings go to the relay process: LERDR_ is canonical, HERDR_ keeps a
+# rolled-back pre-rename binary working off the same env file.
+export LERDR_RELAY_HOST="${LERDR_RELAY_HOST:-${HERDR_RELAY_HOST:-127.0.0.1}}"
+export HERDR_RELAY_HOST="$LERDR_RELAY_HOST"
+export LERDR_RELAY_PORT="${LERDR_RELAY_PORT:-${HERDR_RELAY_PORT:-8375}}"
+export HERDR_RELAY_PORT="$LERDR_RELAY_PORT"
 
 CLOUDFLARED_BIN="${CLOUDFLARED_BIN:-$(command -v cloudflared || true)}"
-CLOUDFLARED_CONFIG="${CLOUDFLARED_CONFIG:-$HOME/.cloudflared/config-herdr-mobile-relay.yml}"
+CLOUDFLARED_CONFIG="${CLOUDFLARED_CONFIG:-$(cloudflared_config_default)}"
 
 RELAY_BIN="$(relay_binary)"
 
@@ -75,7 +79,7 @@ stop_child() {
     wait "$pid" 2>/dev/null || true
 }
 
-echo "Starting herdr relay on $HERDR_RELAY_HOST:$HERDR_RELAY_PORT"
+echo "Starting lerdr relay on $LERDR_RELAY_HOST:$LERDR_RELAY_PORT"
 "$RELAY_BIN" serve &
 RELAY_PID=$!
 
@@ -86,7 +90,7 @@ TUNNEL_PID=$!
 while true; do
     if ! kill -0 "$RELAY_PID" 2>/dev/null; then
         wait "$RELAY_PID" || status=$?
-        echo "herdr relay exited with status ${status:-0}"
+        echo "lerdr relay exited with status ${status:-0}"
         exit "${status:-1}"
     fi
 

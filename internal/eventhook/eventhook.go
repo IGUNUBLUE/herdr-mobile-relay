@@ -44,6 +44,16 @@ type Payload struct {
 	Host        string `json:"host"`
 }
 
+// relayEnv reads a relay setting, preferring the LERDR_ spelling and accepting
+// the legacy HERDR_ spelling. The returned key names whichever variable
+// supplied the value so errors point at the right name.
+func relayEnv(key string) (string, string) {
+	if value := os.Getenv("LERDR_" + key); value != "" {
+		return "LERDR_" + key, value
+	}
+	return "HERDR_" + key, os.Getenv("HERDR_" + key)
+}
+
 func Run() error {
 	loadEnvironment()
 	raw := os.Getenv("HERDR_PLUGIN_EVENT_JSON")
@@ -55,10 +65,10 @@ func Run() error {
 		return fmt.Errorf("parse HERDR_PLUGIN_EVENT_JSON: %w", err)
 	}
 	port := 8376
-	if value := os.Getenv("HERDR_RELAY_PLUGIN_PORT"); value != "" {
+	if key, value := relayEnv("RELAY_PLUGIN_PORT"); value != "" {
 		parsed, err := strconv.Atoi(value)
 		if err != nil || parsed < 1 || parsed > 65535 {
-			return fmt.Errorf("invalid HERDR_RELAY_PLUGIN_PORT %q", value)
+			return fmt.Errorf("invalid %s %q", key, value)
 		}
 		port = parsed
 	}
@@ -122,7 +132,7 @@ func Build(data EventData) (Payload, error) {
 }
 
 func loadEnvironment() {
-	filename := os.Getenv("HERDR_RELAY_ENV")
+	_, filename := relayEnv("RELAY_ENV")
 	if filename == "" {
 		if directory := os.Getenv("HERDR_PLUGIN_CONFIG_DIR"); directory != "" {
 			filename = filepath.Join(directory, "relay.env")

@@ -49,8 +49,8 @@ func setupEnvWithScenario(t *testing.T, scenario string) *TestEnv {
 	}
 
 	// Build relay
-	relayBin := filepath.Join(tmpDir, "herdr-mobile-relay")
-	buildRelay := exec.Command("go", "build", "-o", relayBin, "./cmd/herdr-mobile-relay")
+	relayBin := filepath.Join(tmpDir, "lerdr")
+	buildRelay := exec.Command("go", "build", "-o", relayBin, "./cmd/lerdr")
 	buildRelay.Dir = repoRoot(t)
 	if out, err := buildRelay.CombinedOutput(); err != nil {
 		t.Fatalf("build relay: %v\n%s", err, out)

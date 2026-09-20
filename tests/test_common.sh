@@ -2,7 +2,7 @@
 set -euo pipefail
 
 REPO_DIR="$(cd "$(dirname "$0")/.." && pwd)"
-WORK_DIR="$(mktemp -d "${TMPDIR:-/tmp}/herdr-common-test.XXXXXX")"
+WORK_DIR="$(mktemp -d "${TMPDIR:-/tmp}/lerdr-common-test.XXXXXX")"
 trap 'rm -rf "$WORK_DIR"' EXIT
 
 # shellcheck source=../relay/common.sh
@@ -21,41 +21,41 @@ if require_user_service_context >/dev/null 2>&1; then
 fi
 unset -f id
 
-DEV_RELAY_BIN="$WORK_DIR/dev/herdr-mobile-relay"
+DEV_RELAY_BIN="$WORK_DIR/dev/lerdr"
 mkdir -p "$(dirname "$DEV_RELAY_BIN")"
 printf '#!/bin/sh\nexit 0\n' > "$DEV_RELAY_BIN"
 chmod 700 "$DEV_RELAY_BIN"
-test "$(HERDR_RELAY_BIN="$DEV_RELAY_BIN" relay_binary)" = "$DEV_RELAY_BIN"
+test "$(LERDR_RELAY_BIN="$DEV_RELAY_BIN" relay_binary)" = "$DEV_RELAY_BIN"
 
 PACKAGED_RELEASE="$WORK_DIR/releases/0.0.0-test"
 mkdir -p "$PACKAGED_RELEASE/relay"
 cp "$REPO_DIR/relay/common.sh" "$PACKAGED_RELEASE/relay/common.sh"
 printf '{}\n' > "$PACKAGED_RELEASE/release-manifest.json"
-printf '#!/bin/sh\nexit 0\n' > "$PACKAGED_RELEASE/herdr-mobile-relay"
-chmod 700 "$PACKAGED_RELEASE/herdr-mobile-relay"
+printf '#!/bin/sh\nexit 0\n' > "$PACKAGED_RELEASE/lerdr"
+chmod 700 "$PACKAGED_RELEASE/lerdr"
 PACKAGED_BINARY="$(
-    HERDR_RELAY_BIN="$DEV_RELAY_BIN" \
+    LERDR_RELAY_BIN="$DEV_RELAY_BIN" \
         bash -c '. "$1"; relay_binary' _ "$PACKAGED_RELEASE/relay/common.sh"
 )"
 PACKAGED_RELEASE_REAL="$(cd "$PACKAGED_RELEASE" && pwd -P)"
-test "$PACKAGED_BINARY" = "$PACKAGED_RELEASE_REAL/herdr-mobile-relay"
+test "$PACKAGED_BINARY" = "$PACKAGED_RELEASE_REAL/lerdr"
 
 # A plugin checkout installs the release of the repository it was cloned from,
 # in whichever URL form git recorded, and nothing else may pass for one.
 CHECKOUT="$WORK_DIR/checkout"
 git init -q "$CHECKOUT"
 for REMOTE_URL in \
-    "git@github.com:0cv/herdr-mobile-relay-dev.git" \
-    "https://github.com/0cv/herdr-mobile-relay-dev.git" \
-    "https://github.com/0cv/herdr-mobile-relay-dev" \
-    "ssh://git@github.com/0cv/herdr-mobile-relay-dev.git"; do
+    "git@github.com:0cv/lerdr-dev.git" \
+    "https://github.com/0cv/lerdr-dev.git" \
+    "https://github.com/0cv/lerdr-dev" \
+    "ssh://git@github.com/0cv/lerdr-dev.git"; do
     git -C "$CHECKOUT" remote remove origin 2>/dev/null || true
     git -C "$CHECKOUT" remote add origin "$REMOTE_URL"
-    test "$(release_repository "$CHECKOUT")" = "0cv/herdr-mobile-relay-dev"
+    test "$(release_repository "$CHECKOUT")" = "0cv/lerdr-dev"
 done
 for REJECTED_URL in \
-    "https://gitlab.com/0cv/herdr-mobile-relay-dev.git" \
-    "https://github.com/0cv/herdr-mobile-relay-dev/extra" \
+    "https://gitlab.com/0cv/lerdr-dev.git" \
+    "https://github.com/0cv/lerdr-dev/extra" \
     "https://github.com/0cv"; do
     git -C "$CHECKOUT" remote remove origin
     git -C "$CHECKOUT" remote add origin "$REJECTED_URL"
@@ -117,7 +117,7 @@ test "$(HOME="$NODE_HOME" NVM_DIR="$NODE_HOME/.nvm" PATH="$NODE_TOOL_PATH" node_
 NODE_ENV_FILE="$WORK_DIR/config/node.env"
 mkdir -p "$(dirname "$NODE_ENV_FILE")"
 fake_node_dir "$NODE_HOME/recorded/bin"
-printf "HERDR_APP_DEPLOY_NODE_DIR='%s'\n" "$NODE_HOME/recorded/bin" > "$NODE_ENV_FILE"
+printf "LERDR_APP_DEPLOY_NODE_DIR='%s'\n" "$NODE_HOME/recorded/bin" > "$NODE_ENV_FILE"
 test "$(HOME="$NODE_HOME" NVM_DIR="$NODE_HOME/.nvm" PATH="$NODE_TOOL_PATH" node_bin_dir "$NODE_ENV_FILE")" = \
     "$NODE_HOME/recorded/bin"
 
@@ -132,14 +132,14 @@ test "$(HOME="$NODE_HOME" NVM_DIR="$NODE_HOME/.nvm" PATH="$NODE_TOOL_PATH" node_
 mkdir -p "$NODE_HOME/half/bin"
 printf '#!/bin/sh\nexit 0\n' > "$NODE_HOME/half/bin/node"
 chmod 700 "$NODE_HOME/half/bin/node"
-printf "HERDR_APP_DEPLOY_NODE_DIR='%s'\n" "$NODE_HOME/half/bin" > "$NODE_ENV_FILE"
+printf "LERDR_APP_DEPLOY_NODE_DIR='%s'\n" "$NODE_HOME/half/bin" > "$NODE_ENV_FILE"
 test "$(HOME="$NODE_HOME" NVM_DIR="$NODE_HOME/.nvm" PATH="$NODE_TOOL_PATH" node_bin_dir "$NODE_ENV_FILE")" = \
     "$NODE_HOME/.nvm/current/bin"
 
 # Wrangler's floor is enforced here rather than discovered halfway through an
 # npx download: a recorded node that is too old loses to a usable one.
 fake_node_dir "$NODE_HOME/legacy/bin" 20.19.0
-printf "HERDR_APP_DEPLOY_NODE_DIR='%s'\n" "$NODE_HOME/legacy/bin" > "$NODE_ENV_FILE"
+printf "LERDR_APP_DEPLOY_NODE_DIR='%s'\n" "$NODE_HOME/legacy/bin" > "$NODE_ENV_FILE"
 test "$(HOME="$NODE_HOME" NVM_DIR="$NODE_HOME/.nvm" PATH="$NODE_TOOL_PATH" node_bin_dir "$NODE_ENV_FILE")" = \
     "$NODE_HOME/.nvm/current/bin"
 
@@ -147,7 +147,7 @@ test "$(HOME="$NODE_HOME" NVM_DIR="$NODE_HOME/.nvm" PATH="$NODE_TOOL_PATH" node_
 fake_node_dir "$NODE_HOME/silent/bin"
 printf '#!/bin/sh\nexit 0\n' > "$NODE_HOME/silent/bin/node"
 chmod 700 "$NODE_HOME/silent/bin/node"
-printf "HERDR_APP_DEPLOY_NODE_DIR='%s'\n" "$NODE_HOME/silent/bin" > "$NODE_ENV_FILE"
+printf "LERDR_APP_DEPLOY_NODE_DIR='%s'\n" "$NODE_HOME/silent/bin" > "$NODE_ENV_FILE"
 test "$(HOME="$NODE_HOME" NVM_DIR="$NODE_HOME/.nvm" PATH="$NODE_TOOL_PATH" node_bin_dir "$NODE_ENV_FILE")" = \
     "$NODE_HOME/.nvm/current/bin"
 
@@ -308,9 +308,9 @@ export DEPLOY_ATTACHED DEPLOY_ATTACH_LOG
 run_configure_app_deploy() {
     printf '%b' "$1" | HOME="$DEPLOY_HOME" \
         PATH="$DEPLOY_BIN:$PATH" \
-        HERDR_RELAY_BIN="$DEPLOY_BIN/relay-stub" \
-        HERDR_APP_DEPLOY_NODE_DIR="$DEPLOY_BIN" \
-        HERDR_RELAY_ENV="$DEPLOY_ENV" \
+        LERDR_RELAY_BIN="$DEPLOY_BIN/relay-stub" \
+        LERDR_APP_DEPLOY_NODE_DIR="$DEPLOY_BIN" \
+        LERDR_RELAY_ENV="$DEPLOY_ENV" \
         bash "$REPO_DIR/relay/configure-app-deploy.sh" 2>&1
 }
 
@@ -323,7 +323,7 @@ case "$DEPLOY_OUTPUT" in
         exit 1
         ;;
 esac
-if grep -q 'HERDR_CLOUDFLARE_PAGES_PROJECT' "$DEPLOY_ENV"; then
+if grep -qE '^(HERDR|LERDR)_CLOUDFLARE_PAGES_PROJECT' "$DEPLOY_ENV"; then
     echo "a cancelled app deploy configuration still wrote to relay.env" >&2
     exit 1
 fi
@@ -349,7 +349,7 @@ case "$DEPLOY_OUTPUT" in
         exit 1
         ;;
 esac
-if grep -q 'HERDR_CLOUDFLARE_PAGES_PROJECT' "$DEPLOY_ENV"; then
+if grep -qE '^(HERDR|LERDR)_CLOUDFLARE_PAGES_PROJECT' "$DEPLOY_ENV"; then
     echo "escaping the project question still wrote to relay.env" >&2
     exit 1
 fi
@@ -358,8 +358,8 @@ fi
 printf '#!/bin/sh\nexit 0\n' > "$DEPLOY_BIN/systemctl"
 chmod 700 "$DEPLOY_BIN/systemctl"
 run_configure_app_deploy 'app.example.test\nherdr-0cv\n' >/dev/null 2>&1 || true
-test "$(env_file_value "$DEPLOY_ENV" HERDR_APP_DEPLOY_ORIGIN)" = "https://app.example.test"
-test "$(env_file_value "$DEPLOY_ENV" HERDR_CLOUDFLARE_PAGES_PROJECT)" = "herdr-0cv"
+test "$(env_file_setting "$DEPLOY_ENV" APP_DEPLOY_ORIGIN)" = "https://app.example.test"
+test "$(env_file_setting "$DEPLOY_ENV" CLOUDFLARE_PAGES_PROJECT)" = "herdr-0cv"
 test "$(cat "$(dirname "$DEPLOY_ENV")/phone-app-origin-configured")" = "https://app.example.test"
 printf 'https://relay.example.test\n' > "$(dirname "$DEPLOY_ENV")/phone-app-origin"
 DEPLOY_REOPEN_OUTPUT="$(
@@ -375,7 +375,7 @@ printf "HERDR_RELAY_TOKEN='deploy-token'\n" > "$DEPLOY_ENV"
 rm -f "$DEPLOY_ATTACHED" "$DEPLOY_ATTACH_LOG"
 CLOUDFLARE_API_TOKEN=test-token \
     CLOUDFLARE_ACCOUNT_ID=0123456789abcdef0123456789abcdef \
-    HERDR_APP_DEPLOY_ATTACH_DOMAIN=true \
+    LERDR_APP_DEPLOY_ATTACH_DOMAIN=true \
     run_configure_app_deploy 'new.example.test\nherdr-0cv\n' >/dev/null 2>&1 || true
 test "$(cat "$DEPLOY_ATTACHED" 2>/dev/null)" = "new.example.test" ||
     { echo "the domain was never sent to Cloudflare" >&2; exit 1; }
@@ -387,13 +387,13 @@ case "$(cat "$DEPLOY_ATTACH_LOG" 2>/dev/null)" in
         exit 1
         ;;
 esac
-test "$(env_file_value "$DEPLOY_ENV" HERDR_APP_DEPLOY_ORIGIN)" = "https://new.example.test"
+test "$(env_file_setting "$DEPLOY_ENV" APP_DEPLOY_ORIGIN)" = "https://new.example.test"
 
 # Without a token it must not pretend: it says what to set, and changes nothing.
 printf "HERDR_RELAY_TOKEN='deploy-token'\n" > "$DEPLOY_ENV"
 rm -f "$DEPLOY_ATTACHED" "$DEPLOY_ATTACH_LOG"
 DEPLOY_OUTPUT="$(
-    HERDR_APP_DEPLOY_ATTACH_DOMAIN=true \
+    LERDR_APP_DEPLOY_ATTACH_DOMAIN=true \
         run_configure_app_deploy 'other.example.test\nq\n' || true
 )"
 case "$DEPLOY_OUTPUT" in
@@ -417,7 +417,7 @@ if grep -q '^GH_TOKEN=' "$ENV_FILE"; then
     echo "relay.env exposed GH_TOKEN" >&2
     exit 1
 fi
-TOKEN_FILE="$(env_file_value "$ENV_FILE" HERDR_GITHUB_TOKEN_FILE)"
+TOKEN_FILE="$(env_file_setting "$ENV_FILE" GITHUB_TOKEN_FILE)"
 test "$TOKEN_FILE" = "$WORK_DIR/config/github-token"
 test "$(cat "$TOKEN_FILE")" = "$GH_TOKEN"
 if stat -c '%a' "$TOKEN_FILE" >/dev/null 2>&1; then
@@ -435,36 +435,36 @@ printf '%s\n' "$*" >> "$PLIST_LOG"
 EOF
 chmod 700 "$FAKE_PLIST_BUDDY"
 export PLIST_LOG
-HERDR_PLIST_BUDDY="$FAKE_PLIST_BUDDY"
-export HERDR_PLIST_BUDDY
+LERDR_PLIST_BUDDY="$FAKE_PLIST_BUDDY"
+export LERDR_PLIST_BUDDY
 cat > "$WORK_DIR/service.plist" <<EOF
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
     <key>Label</key>
-    <string>com.herdr-mobile-relay.service</string>
+    <string>com.lerdr.service</string>
     <key>ProgramArguments</key>
     <array>
-        <string>$WORK_DIR/releases/current/relay/herdr-mobile-relay-service.sh</string>
+        <string>$WORK_DIR/releases/current/relay/lerdr-service.sh</string>
     </array>
     <key>WorkingDirectory</key>
     <string>$WORK_DIR/releases/current</string>
     <key>EnvironmentVariables</key>
     <dict>
-        <key>HERDR_RELAY_ENV</key>
+        <key>LERDR_RELAY_ENV</key>
         <string>$WORK_DIR/config/relay.env</string>
     </dict>
 </dict>
 </plist>
 EOF
 update_launchd_release_paths "$WORK_DIR/service.plist" \
-    "$WORK_DIR/releases/current/relay/herdr-mobile-relay-service.sh" \
+    "$WORK_DIR/releases/current/relay/lerdr-service.sh" \
     "$WORK_DIR/releases/current" \
     "$WORK_DIR/config/relay.env"
-grep -F "Set :ProgramArguments:0 $WORK_DIR/releases/current/relay/herdr-mobile-relay-service.sh" "$PLIST_LOG" >/dev/null
+grep -F "Set :ProgramArguments:0 $WORK_DIR/releases/current/relay/lerdr-service.sh" "$PLIST_LOG" >/dev/null
 grep -F "Set :WorkingDirectory $WORK_DIR/releases/current" "$PLIST_LOG" >/dev/null
-grep -F "Set :EnvironmentVariables:HERDR_RELAY_ENV $WORK_DIR/config/relay.env" "$PLIST_LOG" >/dev/null
+grep -F "Set :EnvironmentVariables:LERDR_RELAY_ENV $WORK_DIR/config/relay.env" "$PLIST_LOG" >/dev/null
 
 FAKE_LAUNCHCTL_DIR="$WORK_DIR/launchctl-bin"
 LAUNCHCTL_LOG="$WORK_DIR/launchctl.log"
@@ -501,31 +501,31 @@ if command -v plutil >/dev/null 2>&1; then
     INVALID_PLIST="$WORK_DIR/invalid.plist"
     printf '%s\n' '<plist><dict><key>broken</dict></plist>' > "$INVALID_PLIST"
     if PATH="$FAKE_LAUNCHCTL_DIR:$PATH" reload_launchd_service_definition \
-        "$INVALID_PLIST" "com.herdr-mobile-relay.service"; then
+        "$INVALID_PLIST" "com.lerdr.service"; then
         echo "invalid plist was accepted" >&2
         exit 1
     fi
     test ! -s "$LAUNCHCTL_LOG"
 fi
 PATH="$FAKE_LAUNCHCTL_DIR:$PATH" reload_launchd_service_definition \
-    "$WORK_DIR/service.plist" "com.herdr-mobile-relay.service"
+    "$WORK_DIR/service.plist" "com.lerdr.service"
 LAUNCHD_DOMAIN="gui/$(id -u)"
 sed -n '1p' "$LAUNCHCTL_LOG" |
-    grep -Fx "print $LAUNCHD_DOMAIN/com.herdr-mobile-relay.service" >/dev/null
+    grep -Fx "print $LAUNCHD_DOMAIN/com.lerdr.service" >/dev/null
 sed -n '2p' "$LAUNCHCTL_LOG" |
     grep -Fx "bootout $LAUNCHD_DOMAIN $WORK_DIR/service.plist" >/dev/null
 sed -n '3p' "$LAUNCHCTL_LOG" |
-    grep -Fx "print $LAUNCHD_DOMAIN/com.herdr-mobile-relay.service" >/dev/null
+    grep -Fx "print $LAUNCHD_DOMAIN/com.lerdr.service" >/dev/null
 sed -n '4p' "$LAUNCHCTL_LOG" |
     grep -Fx "sleep 1" >/dev/null
 sed -n '5p' "$LAUNCHCTL_LOG" |
-    grep -Fx "print $LAUNCHD_DOMAIN/com.herdr-mobile-relay.service" >/dev/null
+    grep -Fx "print $LAUNCHD_DOMAIN/com.lerdr.service" >/dev/null
 sed -n '6p' "$LAUNCHCTL_LOG" |
     grep -Fx "bootstrap $LAUNCHD_DOMAIN $WORK_DIR/service.plist" >/dev/null
 sed -n '7p' "$LAUNCHCTL_LOG" |
-    grep -Fx "enable $LAUNCHD_DOMAIN/com.herdr-mobile-relay.service" >/dev/null
+    grep -Fx "enable $LAUNCHD_DOMAIN/com.lerdr.service" >/dev/null
 sed -n '8p' "$LAUNCHCTL_LOG" |
-    grep -Fx "kickstart -k $LAUNCHD_DOMAIN/com.herdr-mobile-relay.service" >/dev/null
+    grep -Fx "kickstart -k $LAUNCHD_DOMAIN/com.lerdr.service" >/dev/null
 test "$(wc -l < "$LAUNCHCTL_LOG" | tr -d ' ')" = "8"
 
 HEALTH='{"status":"ok","release_version":"0.9.0","revision":"abc123","bundle_hash":"web456"}'
@@ -567,11 +567,11 @@ test -z "$(gateway_registration_state '{"status":"ok"}')"
 # The setup fragment carries only gateways=<ordered list> for a
 # gateway-configured relay and relay=<wss url> otherwise. Both keep the token
 # inside the fragment.
-FRAGMENT_BIN="$WORK_DIR/fragment/herdr-mobile-relay"
+FRAGMENT_BIN="$WORK_DIR/fragment/lerdr"
 mkdir -p "$(dirname "$FRAGMENT_BIN")"
 cat > "$FRAGMENT_BIN" <<'EOF'
 #!/bin/sh
-# Stands in for `herdr-mobile-relay setup-fragment TOKEN LABEL [RELAY]`:
+# Stands in for `lerdr setup-fragment TOKEN LABEL [RELAY]`:
 # alphabetically sorted keys with percent-encoded values.
 test "$1" = "setup-fragment" || exit 2
 encoded="$(printf '%s' "$4" | sed -e 's|:|%3A|g' -e 's|/|%2F|g')"
@@ -584,10 +584,10 @@ EOF
 chmod 700 "$FRAGMENT_BIN"
 
 GATEWAY_ENV="$WORK_DIR/config/gateway.env"
-printf "HERDR_GATEWAY_URL='wss://gw.example.test/'\n" > "$GATEWAY_ENV"
+printf "LERDR_GATEWAY_URL='wss://gw.example.test/'\n" > "$GATEWAY_ENV"
 GATEWAY_FRAGMENT="$(
-    unset HERDR_GATEWAY_URL
-    HERDR_RELAY_BIN="$FRAGMENT_BIN" HERDR_RELAY_ENV="$GATEWAY_ENV" \
+    unset LERDR_GATEWAY_URL
+    LERDR_RELAY_BIN="$FRAGMENT_BIN" LERDR_RELAY_ENV="$GATEWAY_ENV" \
         build_transport_setup_fragment relay-secret-token workstation "wss://relay.example.test"
 )"
 case "$GATEWAY_FRAGMENT" in
@@ -612,8 +612,8 @@ case "$GATEWAY_FRAGMENT" in
 esac
 
 TUNNEL_FRAGMENT="$(
-    unset HERDR_GATEWAY_URL
-    HERDR_RELAY_BIN="$FRAGMENT_BIN" HERDR_RELAY_ENV="$WORK_DIR/config/relay.env" \
+    unset LERDR_GATEWAY_URL
+    LERDR_RELAY_BIN="$FRAGMENT_BIN" LERDR_RELAY_ENV="$WORK_DIR/config/relay.env" \
         build_transport_setup_fragment relay-secret-token workstation "wss://relay.example.test"
 )"
 test "$TUNNEL_FRAGMENT" = "label=workstation&relay=wss%3A%2F%2Frelay.example.test&setup=relay-secret-token"
@@ -622,8 +622,8 @@ test "$TUNNEL_FRAGMENT" = "label=workstation&relay=wss%3A%2F%2Frelay.example.tes
 # gateways= carries even a single entry: the phone then needs no re-scan when a
 # second gateway is added later.
 ENV_GATEWAY_FRAGMENT="$(
-    HERDR_GATEWAY_URL="wss://other.example.test" \
-        HERDR_RELAY_BIN="$FRAGMENT_BIN" HERDR_RELAY_ENV="$GATEWAY_ENV" \
+    LERDR_GATEWAY_URL="wss://other.example.test" \
+        LERDR_RELAY_BIN="$FRAGMENT_BIN" LERDR_RELAY_ENV="$GATEWAY_ENV" \
         build_transport_setup_fragment relay-secret-token workstation ""
 )"
 test "$ENV_GATEWAY_FRAGMENT" = "label=workstation&setup=relay-secret-token&gateways=wss%3A%2F%2Fother.example.test"
@@ -631,28 +631,28 @@ test "$ENV_GATEWAY_FRAGMENT" = "label=workstation&setup=relay-secret-token&gatew
 # An ordered candidate list is encoded in full, in order, so a phone fails over
 # to the second gateway on its own.
 LIST_GATEWAY_FRAGMENT="$(
-    HERDR_GATEWAY_URL="wss://a.example.test, wss://b.example.test/" \
-        HERDR_RELAY_BIN="$FRAGMENT_BIN" HERDR_RELAY_ENV="$GATEWAY_ENV" \
+    LERDR_GATEWAY_URL="wss://a.example.test, wss://b.example.test/" \
+        LERDR_RELAY_BIN="$FRAGMENT_BIN" LERDR_RELAY_ENV="$GATEWAY_ENV" \
         build_transport_setup_fragment relay-secret-token workstation ""
 )"
 test "$LIST_GATEWAY_FRAGMENT" = "label=workstation&setup=relay-secret-token&gateways=wss%3A%2F%2Fa.example.test,wss%3A%2F%2Fb.example.test"
 
-test "$(HERDR_GATEWAY_URL="wss://gw.example.test/" gateway_url "$WORK_DIR/config/relay.env")" = "wss://gw.example.test"
-test -z "$(unset HERDR_GATEWAY_URL; gateway_url "$WORK_DIR/config/relay.env")"
+test "$(LERDR_GATEWAY_URL="wss://gw.example.test/" gateway_url "$WORK_DIR/config/relay.env")" = "wss://gw.example.test"
+test -z "$(unset LERDR_GATEWAY_URL; gateway_url "$WORK_DIR/config/relay.env")"
 
 # A list is parsed in order, with blank entries and trailing slashes dropped, and
 # gateway_url stays the first entry used by setup and service scripts.
-test "$(HERDR_GATEWAY_URL=" wss://a.example.test ,, wss://b.example.test/ ," gateway_urls "$GATEWAY_ENV")" = "wss://a.example.test,wss://b.example.test"
-test "$(HERDR_GATEWAY_URL="wss://a.example.test,wss://b.example.test" gateway_url "$GATEWAY_ENV")" = "wss://a.example.test"
-test -z "$(unset HERDR_GATEWAY_URL; gateway_urls "$WORK_DIR/config/relay.env")"
+test "$(LERDR_GATEWAY_URL=" wss://a.example.test ,, wss://b.example.test/ ," gateway_urls "$GATEWAY_ENV")" = "wss://a.example.test,wss://b.example.test"
+test "$(LERDR_GATEWAY_URL="wss://a.example.test,wss://b.example.test" gateway_url "$GATEWAY_ENV")" = "wss://a.example.test"
+test -z "$(unset LERDR_GATEWAY_URL; gateway_urls "$WORK_DIR/config/relay.env")"
 
 # The gateway URL normalizer delegates to the compiled origin normalizer, so it
 # is stubbed the same way the fragment helper is above.
-NORMALIZE_BIN="$WORK_DIR/normalize/herdr-mobile-relay"
+NORMALIZE_BIN="$WORK_DIR/normalize/lerdr"
 mkdir -p "$(dirname "$NORMALIZE_BIN")"
 cat > "$NORMALIZE_BIN" <<'EOF'
 #!/bin/sh
-# Stands in for `herdr-mobile-relay normalize-origin --allow-loopback-http URL`:
+# Stands in for `lerdr normalize-origin --allow-loopback-http URL`:
 # a bare host defaults to HTTPS, plain HTTP is loopback-only, and credentials,
 # paths, queries, and fragments are rejected.
 test "$1" = "normalize-origin" || exit 2
@@ -681,7 +681,7 @@ esac
 printf '%s://%s\n' "$scheme" "$host"
 EOF
 chmod 700 "$NORMALIZE_BIN"
-export HERDR_RELAY_BIN="$NORMALIZE_BIN"
+export LERDR_RELAY_BIN="$NORMALIZE_BIN"
 
 test "$(normalize_gateway_url gw.example.com)" = "wss://gw.example.com"
 test "$(normalize_gateway_url https://gw.example.com)" = "wss://gw.example.com"
@@ -701,7 +701,7 @@ for REJECTED in "gw.example.com/x" "user:pw@gw.example.com" ""; do
         exit 1
     fi
 done
-unset HERDR_RELAY_BIN
+unset LERDR_RELAY_BIN
 
 test "$(gateway_http_base wss://gw.example.test)" = "https://gw.example.test"
 test "$(gateway_http_base ws://127.0.0.1:8443)" = "http://127.0.0.1:8443"
@@ -710,16 +710,16 @@ test "$(gateway_http_base ws://127.0.0.1:8443)" = "http://127.0.0.1:8443"
 # relay to the Cloudflare tunnel path.
 CHOICE_ENV="$WORK_DIR/config/choice.env"
 set_gateway_url "$CHOICE_ENV" "wss://gw.example.test"
-test "$(env_file_value "$CHOICE_ENV" HERDR_GATEWAY_URL)" = "wss://gw.example.test"
-test "$(unset HERDR_GATEWAY_URL; gateway_url "$CHOICE_ENV")" = "wss://gw.example.test"
+test "$(env_file_setting "$CHOICE_ENV" GATEWAY_URL)" = "wss://gw.example.test"
+test "$(unset LERDR_GATEWAY_URL; gateway_url "$CHOICE_ENV")" = "wss://gw.example.test"
 
 # The selection policy is a second, independent switch with exactly two legal
 # values. Anything else is refused without touching the file, because writing a
 # policy nobody understands would silently change which gateway carries traffic.
 set_gateway_selection "$CHOICE_ENV" ordered
-test "$(env_file_value "$CHOICE_ENV" HERDR_GATEWAY_SELECTION)" = "ordered"
+test "$(env_file_setting "$CHOICE_ENV" GATEWAY_SELECTION)" = "ordered"
 set_gateway_selection "$CHOICE_ENV" latency
-test "$(env_file_value "$CHOICE_ENV" HERDR_GATEWAY_SELECTION)" = "latency"
+test "$(env_file_setting "$CHOICE_ENV" GATEWAY_SELECTION)" = "latency"
 SELECTION_ENV_BEFORE="$(cat "$CHOICE_ENV")"
 for REJECTED_SELECTION in "fastest" "Ordered" "ordered latency" ""; do
     if set_gateway_selection "$CHOICE_ENV" "$REJECTED_SELECTION"; then
@@ -732,35 +732,35 @@ done
 # Leaving the gateway path drops the policy along with the list, so a later
 # choice cannot inherit a stale one.
 set_gateway_url "$CHOICE_ENV" ""
-if grep -qE '^HERDR_GATEWAY_(URL|SELECTION)=' "$CHOICE_ENV"; then
+if grep -qE '^(HERDR|LERDR)_GATEWAY_(URL|SELECTION)=' "$CHOICE_ENV"; then
     echo "clearing the gateway URL left a gateway key behind" >&2
     exit 1
 fi
-test -z "$(unset HERDR_GATEWAY_URL; gateway_url "$CHOICE_ENV")"
+test -z "$(unset LERDR_GATEWAY_URL; gateway_url "$CHOICE_ENV")"
 
 # The community gateway is published, so an install that configures nothing gets
 # the shared one; an operator overrides it, and an explicitly empty value is the
 # documented way to say "this build runs no community gateway".
-test "$(unset HERDR_COMMUNITY_GATEWAY_URL; community_gateway_url)" = \
+test "$(unset LERDR_COMMUNITY_GATEWAY_URL; community_gateway_url)" = \
     "wss://gw1.herdr-mobile.dev,wss://gw2.herdr-mobile.dev"
-test "$(HERDR_COMMUNITY_GATEWAY_URL="wss://community.example.test" community_gateway_url)" = "wss://community.example.test"
-test "$(HERDR_COMMUNITY_GATEWAY_URL="wss://a.example.test,wss://b.example.test" community_gateway_url)" = \
+test "$(LERDR_COMMUNITY_GATEWAY_URL="wss://community.example.test" community_gateway_url)" = "wss://community.example.test"
+test "$(LERDR_COMMUNITY_GATEWAY_URL="wss://a.example.test,wss://b.example.test" community_gateway_url)" = \
     "wss://a.example.test,wss://b.example.test"
 
 # An own gateway always reaches an explicit final candidate-list choice. The
 # default keeps the operator entry first, appends every community fallback, and
 # removes duplicates without reordering.
 test "$(
-    HERDR_RELAY_BIN="$NORMALIZE_BIN" \
-        HERDR_COMMUNITY_GATEWAY_URL="wss://gw-a.example.test,wss://gw-b.example.test" \
+    LERDR_RELAY_BIN="$NORMALIZE_BIN" \
+        LERDR_COMMUNITY_GATEWAY_URL="wss://gw-a.example.test,wss://gw-b.example.test" \
         gateway_subscription_defaults "wss://own.example.test,wss://gw-a.example.test"
 )" = "wss://own.example.test,wss://gw-a.example.test,wss://gw-b.example.test"
 test "$(
-    HERDR_RELAY_BIN="$NORMALIZE_BIN" \
-        HERDR_GATEWAY_SUBSCRIPTIONS="wss://own.example.test,wss://backup.example.test" \
+    LERDR_RELAY_BIN="$NORMALIZE_BIN" \
+        LERDR_GATEWAY_SUBSCRIPTIONS="wss://own.example.test,wss://backup.example.test" \
         prompt_gateway_subscriptions "wss://unused.example.test"
 )" = "wss://own.example.test,wss://backup.example.test"
-test -z "$(HERDR_COMMUNITY_GATEWAY_URL="" community_gateway_url)"
+test -z "$(LERDR_COMMUNITY_GATEWAY_URL="" community_gateway_url)"
 
 # The selection rule is a decision about which gateway carries traffic, so an
 # unrecognized or empty answer keeps the default the list was built with rather
@@ -776,8 +776,8 @@ test "$(gateway_selection_choice ordered nonsense)" = "ordered"
 # before running an action, so honouring it here would let an old own-gateway
 # `ordered` silently follow them into a freshly chosen community list.
 test "$(prompt_gateway_selection ordered < /dev/null)" = "ordered"
-test "$(HERDR_GATEWAY_SELECTION=ordered prompt_gateway_selection latency < /dev/null)" = "latency"
-test "$(HERDR_GATEWAY_SELECTION=latency prompt_gateway_selection ordered < /dev/null)" = "ordered"
+test "$(LERDR_GATEWAY_SELECTION=ordered prompt_gateway_selection latency < /dev/null)" = "latency"
+test "$(LERDR_GATEWAY_SELECTION=latency prompt_gateway_selection ordered < /dev/null)" = "ordered"
 # The status line phrases the rule instead of printing the variable.
 test "$(gateway_selection_label latency)" = "closest wins"
 test "$(gateway_selection_label ordered)" = "first listed wins"
@@ -824,8 +824,8 @@ CHOOSER_TRANSPORT_MARKER="$WORK_DIR/chooser-transport"
 export CHOOSER_TRANSPORT_MARKER
 cat > "$CHOOSER_SCRIPT_DIR/plugin-quick-start.sh" <<'EOF'
 #!/bin/sh
-if [ "${HERDR_GATEWAY_URL+x}" = x ]; then
-    printf 'gateway=%s\n' "$HERDR_GATEWAY_URL" > "$CHOOSER_TRANSPORT_MARKER"
+if [ "${LERDR_GATEWAY_URL+x}" = x ]; then
+    printf 'gateway=%s\n' "$LERDR_GATEWAY_URL" > "$CHOOSER_TRANSPORT_MARKER"
 else
     printf 'unset\n' > "$CHOOSER_TRANSPORT_MARKER"
 fi
@@ -839,18 +839,18 @@ export CHOOSER_START_MARKER
 # would silently pin the pool to whichever entry happens to be listed first.
 CHOOSER_OUTPUT="$(
     PATH="$CHOOSER_BIN_DIR:$PATH" \
-        HERDR_RELAY_BIN="$NORMALIZE_BIN" \
-        HERDR_RELAY_ENV="$CHOOSER_ENV" \
-        HERDR_GATEWAY_SELECTION="ordered" \
-        HERDR_COMMUNITY_GATEWAY_URL="gw-a.example.test,https://gw-b.example.test" \
+        LERDR_RELAY_BIN="$NORMALIZE_BIN" \
+        LERDR_RELAY_ENV="$CHOOSER_ENV" \
+        LERDR_GATEWAY_SELECTION="ordered" \
+        LERDR_COMMUNITY_GATEWAY_URL="gw-a.example.test,https://gw-b.example.test" \
         bash "$CHOOSER_SCRIPT_DIR/plugin-choose-transport.sh" community
 )"
 test -f "$CHOOSER_START_MARKER"
-test "$(env_file_value "$CHOOSER_ENV" HERDR_GATEWAY_URL)" = \
+test "$(env_file_setting "$CHOOSER_ENV" GATEWAY_URL)" = \
     "wss://gw-a.example.test,wss://gw-b.example.test"
 # The published candidates are interchangeable, so this is the one option that
 # asks for latency ranking.
-test "$(env_file_value "$CHOOSER_ENV" HERDR_GATEWAY_SELECTION)" = "latency"
+test "$(env_file_setting "$CHOOSER_ENV" GATEWAY_SELECTION)" = "latency"
 case "$CHOOSER_OUTPUT" in
     *"gw-b.example.test.. unavailable"*"Saved 2 gateway candidates."*) ;;
     *)
@@ -866,15 +866,15 @@ rm -f "$CHOOSER_START_MARKER"
 OWN_OUTPUT="$(
     printf 'b\nown.example.test\n\n' |
         PATH="$CHOOSER_BIN_DIR:$PATH" \
-        HERDR_RELAY_BIN="$NORMALIZE_BIN" \
-        HERDR_RELAY_ENV="$CHOOSER_ENV" \
-        HERDR_COMMUNITY_GATEWAY_URL="gw-a.example.test,https://gw-b.example.test" \
+        LERDR_RELAY_BIN="$NORMALIZE_BIN" \
+        LERDR_RELAY_ENV="$CHOOSER_ENV" \
+        LERDR_COMMUNITY_GATEWAY_URL="gw-a.example.test,https://gw-b.example.test" \
         bash "$CHOOSER_SCRIPT_DIR/plugin-choose-transport.sh" own
 )"
 test -f "$CHOOSER_START_MARKER"
-test "$(env_file_value "$CHOOSER_ENV" HERDR_GATEWAY_URL)" = \
+test "$(env_file_setting "$CHOOSER_ENV" GATEWAY_URL)" = \
     "wss://own.example.test,wss://gw-a.example.test,wss://gw-b.example.test"
-test "$(env_file_value "$CHOOSER_ENV" HERDR_GATEWAY_SELECTION)" = "ordered"
+test "$(env_file_setting "$CHOOSER_ENV" GATEWAY_SELECTION)" = "ordered"
 case "$OWN_OUTPUT" in
     *"Saved 3 gateway candidates."*"first healthy one in that order."*) ;;
     *) echo "own gateway chooser did not save the explicit fallback list" >&2; exit 1 ;;
@@ -885,14 +885,14 @@ esac
 # switches to Cloudflare while the QR still sends the phone to the old gateway.
 TEMPORARY_OUTPUT="$(
     PATH="$CHOOSER_BIN_DIR:$PATH" \
-        HERDR_RELAY_BIN="$NORMALIZE_BIN" \
-        HERDR_RELAY_ENV="$CHOOSER_ENV" \
-        HERDR_GATEWAY_URL="wss://stale.example.test" \
-        HERDR_GATEWAY_SELECTION="latency" \
+        LERDR_RELAY_BIN="$NORMALIZE_BIN" \
+        LERDR_RELAY_ENV="$CHOOSER_ENV" \
+        LERDR_GATEWAY_URL="wss://stale.example.test" \
+        LERDR_GATEWAY_SELECTION="latency" \
         bash "$CHOOSER_SCRIPT_DIR/plugin-choose-transport.sh" temporary
 )"
 test "$(cat "$CHOOSER_TRANSPORT_MARKER")" = "unset"
-if grep -qE '^HERDR_GATEWAY_(URL|SELECTION)=' "$CHOOSER_ENV"; then
+if grep -qE '^(HERDR|LERDR)_GATEWAY_(URL|SELECTION)=' "$CHOOSER_ENV"; then
     echo "temporary tunnel selection left the gateway configured" >&2
     exit 1
 fi
@@ -921,10 +921,10 @@ EOF
 cat > "$START_BIN_DIR/systemctl" <<'EOF'
 #!/bin/sh
 case "$*" in
-    "--user is-active --quiet herdr-mobile-relay.service")
+    "--user is-active --quiet lerdr.service"|"--user cat lerdr.service")
         exit 0
         ;;
-    "--user restart herdr-mobile-relay.service")
+    "--user restart lerdr.service")
         printf 'restarted\n' > "$START_SERVICE_LOG"
         ;;
     *)
@@ -959,8 +959,8 @@ export START_SERVICE_LOG START_RELAY_LOG
 START_OUTPUT="$(
     HOME="$START_HOME" \
         PATH="$START_BIN_DIR:$PATH" \
-        HERDR_RELAY_BIN="$START_BIN_DIR/relay-bin" \
-        HERDR_RELAY_ENV="$START_ENV" \
+        LERDR_RELAY_BIN="$START_BIN_DIR/relay-bin" \
+        LERDR_RELAY_ENV="$START_ENV" \
         bash "$START_SCRIPT_DIR/start.sh"
 )"
 test -f "$START_SERVICE_LOG"
@@ -980,27 +980,27 @@ cp "$REPO_DIR/relay/common.sh" "$REPO_DIR/relay/plugin-install-service.sh" \
     "$STABLE_SWITCH_DIR/"
 cat > "$STABLE_SWITCH_DIR/stable-setup.sh" <<'EOF'
 #!/bin/bash
-if grep -qE '^HERDR_GATEWAY_(URL|SELECTION)=' "$HERDR_RELAY_ENV" ||
-    [ -n "${HERDR_GATEWAY_URL:-}" ]; then
+if grep -qE '^(HERDR|LERDR)_GATEWAY_(URL|SELECTION)=' "$LERDR_RELAY_ENV" ||
+    [ -n "${LERDR_GATEWAY_URL:-}" ]; then
     echo "stable setup still inherited the gateway" >&2
     exit 1
 fi
-if [ "${HERDR_STABLE_SETUP_WRAPPED:-}" != 1 ]; then
+if [ "${LERDR_STABLE_SETUP_WRAPPED:-}" != 1 ]; then
     echo "🐑 Lerdr stable tunnel setup"
 fi
 printf 'called\n' > "$STABLE_SWITCH_MARKER"
 EOF
 chmod 700 "$STABLE_SWITCH_DIR/stable-setup.sh"
-printf "HERDR_GATEWAY_URL='wss://gw.example.test'\nHERDR_GATEWAY_SELECTION='latency'\n" \
+printf "LERDR_GATEWAY_URL='wss://gw.example.test'\nHERDR_GATEWAY_SELECTION='latency'\n" \
     > "$STABLE_SWITCH_ENV"
 export STABLE_SWITCH_MARKER
 STABLE_SWITCH_OUTPUT="$(
-    HERDR_RELAY_ENV="$STABLE_SWITCH_ENV" HERDR_GATEWAY_URL="wss://inherited.example.test" \
+    LERDR_RELAY_ENV="$STABLE_SWITCH_ENV" LERDR_GATEWAY_URL="wss://inherited.example.test" \
         bash "$STABLE_SWITCH_DIR/plugin-install-service.sh" 2>&1
 )"
 [ -f "$STABLE_SWITCH_MARKER" ] ||
     { echo "the stable tunnel action did not run stable setup" >&2; exit 1; }
-if grep -qE '^HERDR_GATEWAY_(URL|SELECTION)=' "$STABLE_SWITCH_ENV"; then
+if grep -qE '^(HERDR|LERDR)_GATEWAY_(URL|SELECTION)=' "$STABLE_SWITCH_ENV"; then
     echo "the direct stable tunnel action left the gateway configured" >&2
     exit 1
 fi
@@ -1020,7 +1020,7 @@ MENU_ENV="$WORK_DIR/config/menu.env"
 MENU_ROOT="$WORK_DIR/menu-release"
 mkdir -p "$MENU_BIN_DIR" "$MENU_ROOT/current"
 printf '{\n  "version": "9.9.9"\n}\n' > "$MENU_ROOT/current/release-manifest.json"
-printf "HERDR_GATEWAY_URL='wss://gw-a.example.test,wss://gw-b.example.test'\nHERDR_APP_DEPLOY_ORIGIN='https://app.example.test'\n" > "$MENU_ENV"
+printf "LERDR_GATEWAY_URL='wss://gw-a.example.test,wss://gw-b.example.test'\nHERDR_APP_DEPLOY_ORIGIN='https://app.example.test'\n" > "$MENU_ENV"
 printf "HERDR_GATEWAY_DEPLOY_HOST='gw-owned.example.test'\n" \
     > "$WORK_DIR/config/gateway-deploy"
 printf 'https://relay.example.test\n' > "$WORK_DIR/config/phone-app-origin"
@@ -1040,9 +1040,9 @@ chmod 700 "$MENU_BIN_DIR/curl"
 MENU_OUTPUT="$(
     printf '9\nq\n' |
         PATH="$MENU_BIN_DIR:$PATH" \
-        HERDR_RELAY_BIN="$NORMALIZE_BIN" \
-        HERDR_RELEASE_ROOT="$MENU_ROOT" \
-        HERDR_RELAY_ENV="$MENU_ENV" \
+        LERDR_RELAY_BIN="$NORMALIZE_BIN" \
+        LERDR_RELEASE_ROOT="$MENU_ROOT" \
+        LERDR_RELAY_ENV="$MENU_ENV" \
         bash "$REPO_DIR/relay/plugin-setup-menu.sh"
 )"
 case "$MENU_OUTPUT" in
@@ -1066,7 +1066,7 @@ case "$MENU_OUTPUT" in
     *) echo "setup menu did not report the stale phone app" >&2; exit 1 ;;
 esac
 case "$MENU_OUTPUT" in
-    *"Own gateway: gw-owned.example.test runs 9.9.8; plugin offers 9.9.10 - run herdr plugin install 0cv/herdr-mobile-relay, then redeploy with 3"*) ;;
+    *"Own gateway: gw-owned.example.test runs 9.9.8; plugin offers 9.9.10 - run herdr plugin install IGUNUBLUE/lerdr, then redeploy with 3"*) ;;
     *) echo "setup menu did not report how to update the stale self-hosted gateway" >&2; exit 1 ;;
 esac
 case "$MENU_OUTPUT" in
@@ -1097,16 +1097,16 @@ REFRESH_MENU_MARKER="$WORK_DIR/refresh-menu-state"
 mkdir -p "$REFRESH_MENU_DIR"
 cp "$REPO_DIR/relay/common.sh" "$REPO_DIR/relay/plugin-setup-menu.sh" \
     "$REFRESH_MENU_DIR/"
-printf "HERDR_GATEWAY_URL='wss://stale.example.test'\nHERDR_GATEWAY_SELECTION='latency'\n" \
+printf "LERDR_GATEWAY_URL='wss://stale.example.test'\nHERDR_GATEWAY_SELECTION='latency'\n" \
     > "$REFRESH_MENU_ENV"
 cat > "$REFRESH_MENU_DIR/plugin-choose-transport.sh" <<'EOF'
 #!/bin/sh
-: > "$HERDR_RELAY_ENV"
+: > "$LERDR_RELAY_ENV"
 EOF
 cat > "$REFRESH_MENU_DIR/plugin-status.sh" <<'EOF'
 #!/bin/sh
-if [ "${HERDR_GATEWAY_URL+x}" = x ]; then
-    printf 'stale=%s\n' "$HERDR_GATEWAY_URL" > "$REFRESH_MENU_MARKER"
+if [ "${LERDR_GATEWAY_URL+x}" = x ]; then
+    printf 'stale=%s\n' "$LERDR_GATEWAY_URL" > "$REFRESH_MENU_MARKER"
 else
     printf 'unset\n' > "$REFRESH_MENU_MARKER"
 fi
@@ -1115,7 +1115,7 @@ chmod 700 "$REFRESH_MENU_DIR/plugin-choose-transport.sh" \
     "$REFRESH_MENU_DIR/plugin-status.sh"
 export REFRESH_MENU_MARKER
 printf '1\n9\nq\n' |
-    HERDR_RELAY_BIN="$NORMALIZE_BIN" HERDR_RELAY_ENV="$REFRESH_MENU_ENV" \
+    LERDR_RELAY_BIN="$NORMALIZE_BIN" LERDR_RELAY_ENV="$REFRESH_MENU_ENV" \
     bash "$REFRESH_MENU_DIR/plugin-setup-menu.sh" >/dev/null
 test "$(cat "$REFRESH_MENU_MARKER")" = "unset"
 
@@ -1134,7 +1134,7 @@ cp "$REPO_DIR/relay/common.sh" "$REPO_DIR/relay/plugin-setup-menu.sh" \
 mkfifo "$STALE_MENU_FIFO"
 exec 7<> "$STALE_MENU_FIFO"
 (
-    HERDR_RELAY_BIN="$NORMALIZE_BIN" HERDR_RELAY_ENV="$MENU_ENV" \
+    LERDR_RELAY_BIN="$NORMALIZE_BIN" LERDR_RELAY_ENV="$MENU_ENV" \
         bash "$STALE_MENU_DIR/plugin-setup-menu.sh" <&7 \
         > "$STALE_MENU_OUTPUT" 2>&1
 ) &
@@ -1248,9 +1248,9 @@ MOVE_OUTPUT="$(
     printf 'relay-fedora.new.test\n' |
         HOME="$MOVE_HOME" \
         PATH="$MOVE_BIN:$PATH" \
-        HERDR_RELAY_BIN="$MOVE_BIN/relay-stub" \
-        HERDR_RELAY_ENV="$MOVE_ENV" \
-        HERDR_STABLE_STATE_FILE="$MOVE_STATE" \
+        LERDR_RELAY_BIN="$MOVE_BIN/relay-stub" \
+        LERDR_RELAY_ENV="$MOVE_ENV" \
+        LERDR_STABLE_STATE_FILE="$MOVE_STATE" \
         bash "$REPO_DIR/relay/change-hostname.sh" 2>&1 || true
 )"
 grep -Fq 'tunnel route dns herdr-mobile-relay-fedora relay-fedora.new.test' "$MOVE_ROUTE_LOG" ||
@@ -1264,15 +1264,15 @@ grep -Fq 'tunnel: herdr-mobile-relay-fedora' "$MOVE_CONFIG" ||
     { echo "the move rewrote more than the hostname" >&2; exit 1; }
 test "$(cat "$MOVE_STATE_RECORD" 2>/dev/null)" = "relay-fedora.new.test" ||
     { echo "the recorded hostname was not updated" >&2; exit 1; }
-[ -f "$MOVE_CONFIG.herdr-previous" ] ||
+[ -f "$MOVE_CONFIG.lerdr-previous" ] ||
     { echo "the previous config was not kept" >&2; exit 1; }
 
 # A gateway relay has no hostname to move, and saying so beats editing a config
 # that is not in use.
 printf "HERDR_RELAY_TOKEN='move-token'\n" > "$MOVE_ENV"
 MOVE_OUTPUT="$(
-    HOME="$MOVE_HOME" PATH="$MOVE_BIN:$PATH" HERDR_RELAY_BIN="$MOVE_BIN/relay-stub" \
-        HERDR_RELAY_ENV="$MOVE_ENV" bash "$REPO_DIR/relay/change-hostname.sh" 2>&1 || true
+    HOME="$MOVE_HOME" PATH="$MOVE_BIN:$PATH" LERDR_RELAY_BIN="$MOVE_BIN/relay-stub" \
+        LERDR_RELAY_ENV="$MOVE_ENV" bash "$REPO_DIR/relay/change-hostname.sh" 2>&1 || true
 )"
 case "$MOVE_OUTPUT" in
     *"does not run a Cloudflare tunnel"*) ;;
@@ -1296,7 +1296,7 @@ chmod 700 "$MOVE_BIN/cloudflared"
 MOVE_OUTPUT="$(
     printf 'relay-fedora.new.test\n' |
         HOME="$MOVE_HOME" PATH="$MOVE_BIN:$PATH" \
-        HERDR_RELAY_BIN="$MOVE_BIN/relay-stub" HERDR_RELAY_ENV="$MOVE_ENV" \
+        LERDR_RELAY_BIN="$MOVE_BIN/relay-stub" LERDR_RELAY_ENV="$MOVE_ENV" \
         bash "$REPO_DIR/relay/change-hostname.sh" 2>&1 || true
 )"
 case "$MOVE_OUTPUT" in
@@ -1325,8 +1325,8 @@ chmod 700 "$MOVE_BIN/cloudflared" "$MOVE_BIN/curl"
 MOVE_OUTPUT="$(
     printf 'relay-fedora.unreachable.test\n' |
         HOME="$MOVE_HOME" PATH="$MOVE_BIN:$PATH" \
-        HERDR_RELAY_BIN="$MOVE_BIN/relay-stub" HERDR_RELAY_ENV="$MOVE_ENV" \
-        HERDR_STABLE_DNS_TIMEOUT=0 \
+        LERDR_RELAY_BIN="$MOVE_BIN/relay-stub" LERDR_RELAY_ENV="$MOVE_ENV" \
+        LERDR_STABLE_DNS_TIMEOUT=0 \
         bash "$REPO_DIR/relay/change-hostname.sh" 2>&1 || true
 )"
 case "$MOVE_OUTPUT" in
@@ -1368,8 +1368,8 @@ chmod 700 "$MOVE_BIN/curl" "$MOVE_BIN/cloudflared"
 MOVE_OUTPUT="$(
     printf 'relay-fedora.elsewhere.test\n' |
         HOME="$MOVE_HOME" PATH="$MOVE_BIN:$PATH" \
-        HERDR_RELAY_BIN="$MOVE_BIN/relay-stub" HERDR_RELAY_ENV="$MOVE_ENV" \
-        TUNNEL_ORIGIN_CERT="$MOVE_CERT" HERDR_CHANGE_HOSTNAME_RELOGIN=false \
+        LERDR_RELAY_BIN="$MOVE_BIN/relay-stub" LERDR_RELAY_ENV="$MOVE_ENV" \
+        TUNNEL_ORIGIN_CERT="$MOVE_CERT" LERDR_CHANGE_HOSTNAME_RELOGIN=false \
         bash "$REPO_DIR/relay/change-hostname.sh" 2>&1 || true
 )"
 case "$MOVE_OUTPUT" in

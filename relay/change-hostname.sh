@@ -10,7 +10,7 @@ SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 # shellcheck source=common.sh
 . "$SCRIPT_DIR/common.sh"
 
-ENV_FILE="${HERDR_RELAY_ENV:-}"
+ENV_FILE="${LERDR_RELAY_ENV:-${HERDR_RELAY_ENV:-}}"
 if [ -z "$ENV_FILE" ]; then
     ENV_FILE="$(installed_service_env_file)"
 fi
@@ -63,7 +63,7 @@ echo "record keeps working until you delete it, so phones can move over at their
 echo "own pace."
 echo ""
 
-NEW_HOSTNAME="${HERDR_STABLE_HOSTNAME:-}"
+NEW_HOSTNAME="${LERDR_STABLE_HOSTNAME:-${HERDR_STABLE_HOSTNAME:-}}"
 if [ -z "$NEW_HOSTNAME" ]; then
     while true; do
         if ! read -r -p "New hostname, or q to cancel: " NEW_HOSTNAME; then
@@ -99,7 +99,7 @@ fi
 # lack DNS-over-HTTPS keep the system-resolver behavior.
 PUBLIC_CURL_ARGS=()
 if curl --help all 2>/dev/null | grep -q -- '--doh-url'; then
-    PUBLIC_CURL_ARGS=(--doh-url "${HERDR_DOH_URL:-https://cloudflare-dns.com/dns-query}")
+    PUBLIC_CURL_ARGS=(--doh-url "${LERDR_DOH_URL:-${HERDR_DOH_URL:-https://cloudflare-dns.com/dns-query}}")
 fi
 
 public_curl() {
@@ -124,7 +124,7 @@ if [ -n "$CERT_ZONE" ] && ! hostname_in_zone "$NEW_HOSTNAME" "$CERT_ZONE"; then
     echo "▸ This tunnel's Cloudflare certificate covers $CERT_ZONE, not"
     echo "  $NEW_HOSTNAME. Routing it now would create"
     echo "  $NEW_HOSTNAME.$CERT_ZONE instead, so it has to be signed in first."
-    if [ "${HERDR_CHANGE_HOSTNAME_RELOGIN:-}" = "false" ] || [ ! -t 0 ]; then
+    if [ "${LERDR_CHANGE_HOSTNAME_RELOGIN:-${HERDR_CHANGE_HOSTNAME_RELOGIN:-}}" = "false" ] || [ ! -t 0 ]; then
         echo "✗ Run 'cloudflared tunnel login' and pick the zone that owns" >&2
         echo "  $NEW_HOSTNAME, then run this again. Nothing was changed." >&2
         exit 1
@@ -182,7 +182,7 @@ fi
 # old one. Any HTTP status proves DNS and the tunnel are wired: until the
 # ingress moves the tunnel replies 404, which is exactly the proof needed.
 printf '▸ Waiting for the edge to answer %s' "$NEW_HOSTNAME"
-DNS_DEADLINE=$((SECONDS + ${HERDR_STABLE_DNS_TIMEOUT:-60}))
+DNS_DEADLINE=$((SECONDS + ${LERDR_STABLE_DNS_TIMEOUT:-${HERDR_STABLE_DNS_TIMEOUT:-60}}))
 while ! public_curl -sS --max-time 5 -o /dev/null "https://$NEW_HOSTNAME/healthz" 2>/dev/null; do
     if [ "$SECONDS" -ge "$DNS_DEADLINE" ]; then
         echo ""
@@ -199,7 +199,7 @@ echo " ✓"
 # instead of replacing it: a DNS record still pointing at this tunnel must keep
 # serving already-paired phones until the operator deletes that record.
 # Every failure below restores the exact previous config.
-CONFIG_BACKUP="$CONFIG.herdr-previous"
+CONFIG_BACKUP="$CONFIG.lerdr-previous"
 cp "$CONFIG" "$CONFIG_BACKUP"
 restore_config() {
     cp "$CONFIG_BACKUP" "$CONFIG"
@@ -207,7 +207,7 @@ restore_config() {
     echo "▸ Restored $CURRENT_HOSTNAME; the relay is reachable again." >&2
 }
 
-TEMP_CONFIG="$CONFIG.herdr-new.$$"
+TEMP_CONFIG="$CONFIG.lerdr-new.$$"
 if [ -n "$CURRENT_HOSTNAME" ]; then
     if ! awk -v current="$CURRENT_HOSTNAME" -v replacement="$NEW_HOSTNAME" '
         !moved && /^[[:space:]]*-[[:space:]]*hostname:[[:space:]]*/ {
@@ -246,7 +246,7 @@ echo "  (previous copy: $CONFIG_BACKUP)"
 
 # Whatever the wizard recorded has to agree, or a later teardown would chase the
 # old name and refuse to finish. Assignments are key=value.
-STATE_FILE="${HERDR_STABLE_STATE_FILE:-$(dirname "$ENV_FILE")/stable-setup.json}"
+STATE_FILE="${LERDR_STABLE_STATE_FILE:-${HERDR_STABLE_STATE_FILE:-$(dirname "$ENV_FILE")/stable-setup.json}}"
 if [ -f "$STATE_FILE" ]; then
     if "$(relay_binary)" stable-state update "$STATE_FILE" "hostname=$NEW_HOSTNAME" >/dev/null 2>&1; then
         echo "✓ Recorded the new hostname in $STATE_FILE"
@@ -260,9 +260,9 @@ echo "▸ Restarting the relay service.."
 "$SCRIPT_DIR/service.sh" install >/dev/null
 echo "✓ Restarted."
 
-PORT="${HERDR_RELAY_PORT:-8375}"
-DEADLINE=$((SECONDS + ${HERDR_STABLE_HTTP_TIMEOUT:-90}))
-WORK_DIR="$(mktemp -d "${TMPDIR:-/tmp}/herdr-hostname.XXXXXX")"
+PORT="${LERDR_RELAY_PORT:-${HERDR_RELAY_PORT:-8375}}"
+DEADLINE=$((SECONDS + ${LERDR_STABLE_HTTP_TIMEOUT:-${HERDR_STABLE_HTTP_TIMEOUT:-90}}))
+WORK_DIR="$(mktemp -d "${TMPDIR:-/tmp}/lerdr-hostname.XXXXXX")"
 trap 'rm -rf "$WORK_DIR"' EXIT
 printf '▸ Waiting for https://%s/healthz' "$NEW_HOSTNAME"
 while true; do

@@ -1,6 +1,6 @@
 import type { Agent } from './types';
 
-const DRAFT_PREFIX = 'herdr_prompt_draft_v1:';
+const DRAFT_PREFIX = 'lerdr_prompt_draft_v1:';
 const DRAFT_VERSION = 1;
 const DRAFT_MAX_AGE_MS = 48 * 60 * 60 * 1_000;
 const DRAFT_MAX_BYTES = 64 * 1_024;

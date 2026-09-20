@@ -16,8 +16,8 @@ import (
 )
 
 func TestJournalIntegration(t *testing.T) {
-	if os.Getenv("HERDR_TEST_JOURNAL") != "1" {
-		t.Skip("set HERDR_TEST_JOURNAL=1 to test the user journal")
+	if os.Getenv("LERDR_TEST_JOURNAL") != "1" {
+		t.Skip("set LERDR_TEST_JOURNAL=1 to test the user journal")
 	}
 
 	for _, command := range []string{"systemd-run", "systemctl", "journalctl"} {
@@ -40,8 +40,8 @@ func TestJournalIntegration(t *testing.T) {
 
 	for _, format := range []string{"text", "json"} {
 		t.Run(format, func(t *testing.T) {
-			marker := fmt.Sprintf("herdr-journal-%d-%s", time.Now().UnixNano(), format)
-			unit := "herdr-relay-logtest-" + strings.TrimPrefix(marker, "herdr-journal-")
+			marker := fmt.Sprintf("lerdr-journal-%d-%s", time.Now().UnixNano(), format)
+			unit := "lerdr-relay-logtest-" + strings.TrimPrefix(marker, "lerdr-journal-")
 			entries := runJournalFixture(t, testBinary, unit, marker, format, "debug", false)
 			assertFixtureRecords(t, entries, marker, format, true)
 			warningEntries := journalEntries(t, unit, "-p", "warning")
@@ -66,17 +66,17 @@ func TestJournalIntegration(t *testing.T) {
 }
 
 func TestJournalLoggingFixture(t *testing.T) {
-	if os.Getenv("HERDR_JOURNAL_FIXTURE") != "1" {
+	if os.Getenv("LERDR_JOURNAL_FIXTURE") != "1" {
 		return
 	}
 
 	level := slog.LevelInfo
-	if os.Getenv("HERDR_RELAY_LOG_LEVEL") == "debug" {
+	if os.Getenv("LERDR_RELAY_LOG_LEVEL") == "debug" {
 		level = slog.LevelDebug
 	}
-	marker := os.Getenv("HERDR_JOURNAL_FIXTURE_MARKER")
-	logger := newRelayLogger(os.Stderr, os.Getenv("HERDR_RELAY_LOG_FORMAT"), level, stderrIsJournal(os.Stderr))
-	if os.Getenv("HERDR_JOURNAL_FIXTURE_SERVE_ERROR") == "1" {
+	marker := os.Getenv("LERDR_JOURNAL_FIXTURE_MARKER")
+	logger := newRelayLogger(os.Stderr, os.Getenv("LERDR_RELAY_LOG_FORMAT"), level, stderrIsJournal(os.Stderr))
+	if os.Getenv("LERDR_JOURNAL_FIXTURE_SERVE_ERROR") == "1" {
 		reportError(os.Stderr, []string{"serve"}, fmt.Errorf("%s serve-error", marker))
 		return
 	}
@@ -103,13 +103,13 @@ func runJournalFixture(t *testing.T, testBinary, unit, marker, format, level str
 		"--unit=" + unit,
 		"--property=StandardOutput=journal",
 		"--property=StandardError=journal",
-		"--setenv=HERDR_JOURNAL_FIXTURE=1",
-		"--setenv=HERDR_JOURNAL_FIXTURE_MARKER=" + marker,
-		"--setenv=HERDR_RELAY_LOG_FORMAT=" + format,
-		"--setenv=HERDR_RELAY_LOG_LEVEL=" + level,
+		"--setenv=LERDR_JOURNAL_FIXTURE=1",
+		"--setenv=LERDR_JOURNAL_FIXTURE_MARKER=" + marker,
+		"--setenv=LERDR_RELAY_LOG_FORMAT=" + format,
+		"--setenv=LERDR_RELAY_LOG_LEVEL=" + level,
 	}
 	if serveError {
-		arguments = append(arguments, "--setenv=HERDR_JOURNAL_FIXTURE_SERVE_ERROR=1")
+		arguments = append(arguments, "--setenv=LERDR_JOURNAL_FIXTURE_SERVE_ERROR=1")
 	}
 	arguments = append(arguments, "--", testBinary, "-test.run=^TestJournalLoggingFixture$", "-test.v")
 

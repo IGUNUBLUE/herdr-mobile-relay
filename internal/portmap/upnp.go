@@ -32,7 +32,7 @@ const (
 	maxSOAPBytes        = 64 << 10
 	maxDeviceDepth      = 8
 
-	upnpDescription = "herdr-mobile-relay"
+	upnpDescription = "lerdr"
 )
 
 // upnpSearchTargets are the SSDP search targets that find an IGD root device.

@@ -120,7 +120,7 @@ func TestServesContentAddressedReleaseAndStableBootstrap(t *testing.T) {
 	}
 	defer h.Close()
 
-	for _, requestURL := range []string{"/", "/index.html?herdr_reload=0.20.10-1"} {
+	for _, requestURL := range []string{"/", "/index.html?herdr_reload=0.20.10-1", "/index.html?lerdr_reload=0.20.10-1"} {
 		request := httptest.NewRequest(http.MethodGet, requestURL, nil)
 		response := httptest.NewRecorder()
 		h.ServeHTTP(response, request)
@@ -262,15 +262,17 @@ func TestRedirectsLegacyUpdateReloadToDistinctAppPath(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	req := httptest.NewRequest("GET", "/?setup=preserved&herdr_reload=0.14.4-42", nil)
-	w := httptest.NewRecorder()
-	h.ServeHTTP(w, req)
+	for _, param := range []string{"herdr_reload", "lerdr_reload"} {
+		req := httptest.NewRequest("GET", "/?setup=preserved&"+param+"=0.14.4-42", nil)
+		w := httptest.NewRecorder()
+		h.ServeHTTP(w, req)
 
-	if w.Code != http.StatusTemporaryRedirect {
-		t.Fatalf("status = %d, want %d", w.Code, http.StatusTemporaryRedirect)
-	}
-	if location := w.Header().Get("Location"); location != "/index.html?setup=preserved&herdr_reload=0.14.4-42" {
-		t.Fatalf("location = %q", location)
+		if w.Code != http.StatusTemporaryRedirect {
+			t.Fatalf("%s status = %d, want %d", param, w.Code, http.StatusTemporaryRedirect)
+		}
+		if location := w.Header().Get("Location"); location != "/index.html?setup=preserved&"+param+"=0.14.4-42" {
+			t.Fatalf("%s location = %q", param, location)
+		}
 	}
 }
 

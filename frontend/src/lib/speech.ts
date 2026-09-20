@@ -3,8 +3,8 @@ import { get, writable } from 'svelte/store';
 import { speakableText } from './markdown';
 import { securityState } from './security';
 
-const ENABLED_KEY = 'herdr_speech_enabled';
-const LANGUAGE_KEY = 'herdr_speech_language';
+const ENABLED_KEY = 'lerdr_speech_enabled';
+const LANGUAGE_KEY = 'lerdr_speech_language';
 
 /**
  * The languages a relay can read responses in, in the order the settings

@@ -19,11 +19,11 @@ The candidate must be a release archive with its checksum and release manifest. 
 ```sh
 bun install --frozen-lockfile --cwd tests/mobile
 bun run --cwd tests/mobile prepare:bundle -- \
-  --candidate "$PWD/dist/release/herdr-mobile-relay_0.21.0_linux_amd64.tar.gz" \
+  --candidate "$PWD/dist/release/lerdr_0.21.0_linux_amd64.tar.gz" \
   --candidate-version 0.21.0 \
   --candidate-assets 367 \
   --candidate-revision "$(git rev-parse HEAD)" \
-  --candidate-sha256 "$(awk '$2 == "herdr-mobile-relay_0.21.0_linux_amd64.tar.gz" { print $1 }' dist/release/checksums.txt)" \
+  --candidate-sha256 "$(awk '$2 == "lerdr_0.21.0_linux_amd64.tar.gz" { print $1 }' dist/release/checksums.txt)" \
   --output "$PWD/run-artifacts/mobile" \
   --baseline 0.20.8 --baseline 0.20.9 --baseline 0.20.10
 ```
@@ -38,7 +38,7 @@ Build the fixture and install the harness dependencies first:
 
 ```sh
 mkdir -p run-artifacts
-go build -trimpath -o "$PWD/run-artifacts/herdr-mobile-fixture" ./tests/mobile/fixture
+go build -trimpath -o "$PWD/run-artifacts/lerdr-fixture" ./tests/mobile/fixture
 bun install --frozen-lockfile --cwd tests/mobile
 ```
 
@@ -47,8 +47,8 @@ For Android, create exactly one disposable emulator and record an ownership mark
 ```sh
 android_system_image="$(jq -r '.android.systemImage' tests/mobile/toolchains.json)"
 android_device_profile="$(jq -r '.android.deviceProfile' tests/mobile/toolchains.json)"
-avdmanager create avd --force --name herdr-mobile-ci --package "$android_system_image" --device "$android_device_profile"
-emulator -avd herdr-mobile-ci -no-window -no-audio -no-boot-anim -no-snapshot &
+avdmanager create avd --force --name lerdr-ci --package "$android_system_image" --device "$android_device_profile"
+emulator -avd lerdr-ci -no-window -no-audio -no-boot-anim -no-snapshot &
 export MOBILE_PLATFORM=android
 export ANDROID_SERIAL=emulator-5554
 export MOBILE_DEVICE_OWNERSHIP_FILE="$PWD/run-artifacts/android-owned"
@@ -56,7 +56,7 @@ printf 'android:%s\n' "$ANDROID_SERIAL" > "$MOBILE_DEVICE_OWNERSHIP_FILE"
 npm install --global appium@3.1.1
 appium driver install uiautomator2@8.2.2
 appium --address 127.0.0.1 --port 4723 &
-export MOBILE_FIXTURE_BINARY="$PWD/run-artifacts/herdr-mobile-fixture"
+export MOBILE_FIXTURE_BINARY="$PWD/run-artifacts/lerdr-fixture"
 ```
 
 Hosted Android installs the pinned Chrome/Trichrome pair declared in
@@ -81,7 +81,7 @@ For iOS, select the Xcode/runtime declared in `toolchains.json`, create one disp
 sudo xcode-select -s /Applications/Xcode_16.4.app
 runtime="$(xcrun simctl list runtimes | grep -E '^iOS 18\\.5 ' | grep -v unavailable | grep -oE 'com\\.apple\\.CoreSimulator\\.SimRuntime\\.[^ ]+' | head -n1)"
 device_type="$(xcrun simctl list devicetypes | awk -F'[()]' '/iPhone 16 \\(/ { print $2; exit }')"
-export IOS_SIMULATOR_UDID="$(xcrun simctl create herdr-mobile-ci "$device_type" "$runtime")"
+export IOS_SIMULATOR_UDID="$(xcrun simctl create lerdr-ci "$device_type" "$runtime")"
 export MOBILE_DEVICE_OWNERSHIP_FILE="$PWD/run-artifacts/ios-owned"
 printf 'ios:%s\n' "$IOS_SIMULATOR_UDID" > "$MOBILE_DEVICE_OWNERSHIP_FILE"
 xcrun simctl boot "$IOS_SIMULATOR_UDID"
@@ -91,7 +91,7 @@ npm install --global appium@3.1.1
 appium driver install xcuitest@12.10.0
 appium --address 127.0.0.1 --port 4723 &
 export MOBILE_PLATFORM=ios
-export MOBILE_FIXTURE_BINARY="$PWD/run-artifacts/herdr-mobile-fixture"
+export MOBILE_FIXTURE_BINARY="$PWD/run-artifacts/lerdr-fixture"
 ```
 
 Run one baseline at a time:

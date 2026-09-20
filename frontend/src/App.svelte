@@ -49,6 +49,7 @@
   } from '$lib/push';
   import { isNativeShell, nativeNotify } from '$lib/native';
   import { parsePushOpenTarget, RELAY_PROTOCOL_VERSION } from '$lib/protocol';
+  import { createRelayStatusNotifier } from '$lib/relay-status-notify';
   import { targetRefForAgent, targetRefMatchesAgent } from '$lib/resource-id';
   import {
     closeCurrentView,
@@ -217,10 +218,20 @@
   // relayStore.showToast stays the single entry point for callers; each store
   // emission is forwarded to the M3 snackbar, whose default timeout matches
   // the old toast's 4s. The M3 snackbar has no error tint, so error toasts
-  // keep a visible distinction by staying manually closable.
+  // keep a visible distinction by staying manually closable. The snackbar
+  // paints in z-index space, so it sits inside a manual popover to recover
+  // the old toast's top-layer rendering above modal dialogs; the popover
+  // doubles as the role="status" live region the old toast provided.
+  let toastLayer: HTMLDivElement | undefined;
+  let toastLayerTimer: ReturnType<typeof setTimeout> | undefined;
   $effect(() => {
     const current = $toast;
-    if (current) snackbar(current.message, undefined, current.error);
+    if (!current) return;
+    snackbar(current.message, undefined, current.error);
+    if (toastLayer && !toastLayer.matches(':popover-open')) toastLayer.showPopover();
+    clearTimeout(toastLayerTimer);
+    // The snackbar fade-out outro needs the layer to outlive its 4s timeout.
+    toastLayerTimer = setTimeout(() => toastLayer?.hidePopover(), 4200);
   });
 
   $effect(() => {
@@ -275,22 +286,16 @@
 
   // Relay flapping matters to an operator; connected/disconnected transitions
   // surface as low-importance status alerts in the shell (silent by design).
-  let lastConnectionStatus = new Map<string, string>();
+  // The notifier debounces drops and reuses a per-relay notification id, so
+  // brief flaps stay silent and real outages update one shade entry in place.
+  const relayStatusNotifier = createRelayStatusNotifier({ enabled: nativeRelayStatusNotificationsEnabled });
   $effect(() => {
     for (const [relayId, connection] of $connections) {
-      const previous = lastConnectionStatus.get(relayId);
-      const current = connection.status;
-      lastConnectionStatus.set(relayId, current);
-      if (!previous || previous === current) continue;
-      if (current !== 'connected' && current !== 'disconnected') continue;
       if (!nativeRelayStatusNotificationsEnabled()) continue;
       const label = $relays.find((relay) => relay.id === relayId)?.label || relayId;
-      void nativeNotify({
-        title: current === 'connected' ? `${label} reconnected` : `${label} disconnected`,
-        channelId: 'relay-status',
-        silent: true,
-      });
+      relayStatusNotifier.sync(relayId, connection.status, label);
     }
+    relayStatusNotifier.retain($connections.keys());
   });
 
   let notificationFallback: ReturnType<typeof setTimeout> | null = null;
@@ -507,6 +512,7 @@
       window.removeEventListener('blur', visibilityChanged);
       for (const timeout of typedPushTimeouts.values()) clearTimeout(timeout);
       typedPushTimeouts.clear();
+      relayStatusNotifier.dispose();
       relayStore.destroy();
     };
   });
@@ -874,6 +880,6 @@
 <GlobalJump bind:open={jumpOpen} agents={$agents} onselect={openAgent} />
 <WorkspaceInspector bind:open={workspaceOpen} agent={activeAgent} />
 <LockScreen />
-<div role="status">
+<div bind:this={toastLayer} popover="manual" class="toast-layer" role="status">
   <Snackbar />
 </div>

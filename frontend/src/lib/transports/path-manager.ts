@@ -20,7 +20,7 @@ export const DIRECT_MIN_INTERVAL_MS = 2_000;
 /** A direct attempt that never delivers its first message is abandoned. */
 export const DIRECT_ATTEMPT_TIMEOUT_MS = 20_000;
 /** Test switch that pins the connection to the relayed path. */
-export const FORCE_RELAY_KEY = 'herdr_force_relay';
+export const FORCE_RELAY_KEY = 'lerdr_force_relay';
 
 /**
  * Signalling rides the relayed session, so these arrive on the gateway

@@ -37,6 +37,10 @@ export interface NativeNotification {
   inboxLines?: string[];
   /** Stable id so a repeat alert replaces instead of stacking. */
   id?: number;
+  /** Dismiss the notification when the user taps it. */
+  autoCancel?: boolean;
+  /** Sticky notification the user cannot swipe away. */
+  ongoing?: boolean;
   silent?: boolean;
 }
 

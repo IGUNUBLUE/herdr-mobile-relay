@@ -71,7 +71,7 @@ describe('agent view controls and conversation loading hook', () => {
     await user.selectOptions(select, 'conversation');
     expect(select).toHaveValue('conversation');
     expect(paneAgentViewOverrides).toBeDefined();
-    expect(localStorage.getItem('herdr_pane_agent_view_overrides')).toContain('conversation');
+    expect(localStorage.getItem('lerdr_pane_agent_view_overrides')).toContain('conversation');
     expect(currentView).toBeDefined();
     expect(screen.getByRole('dialog', { name: 'Manage Agent' })).toBeVisible();
     expect(screen.getByRole('button', { name: 'Close' })).toBeVisible();
@@ -87,9 +87,9 @@ describe('agent view controls and conversation loading hook', () => {
     expect(select).toHaveValue('conversation');
     await user.selectOptions(select, 'default');
     expect(select).toHaveValue('default');
-    expect(localStorage.getItem('herdr_pane_agent_view_overrides')).toBeNull();
+    expect(localStorage.getItem('lerdr_pane_agent_view_overrides')).toBeNull();
     await user.selectOptions(select, 'conversation');
-    expect(JSON.parse(localStorage.getItem('herdr_pane_agent_view_overrides')!)[paneViewPreferenceKey(current)!]).toBe('conversation');
+    expect(JSON.parse(localStorage.getItem('lerdr_pane_agent_view_overrides')!)[paneViewPreferenceKey(current)!]).toBe('conversation');
   });
 
   it('does not leak a pane choice when the dialog changes agents', async () => {

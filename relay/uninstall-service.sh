@@ -1,7 +1,7 @@
 #!/bin/bash
 set -euo pipefail
 
-LABELS=("com.herdr-mobile-relay.service" "com.herdr-remote.service")
+LABELS=("com.lerdr.service" "com.herdr-mobile-relay.service" "com.herdr-remote.service")
 
 for label in "${LABELS[@]}"; do
     plist="$HOME/Library/LaunchAgents/$label.plist"

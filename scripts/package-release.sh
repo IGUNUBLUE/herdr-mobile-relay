@@ -42,27 +42,27 @@ command -v tar >/dev/null 2>&1 || {
 }
 
 mkdir -p "$OUTPUT_DIR"
-WORK_DIR=$(mktemp -d "${TMPDIR:-/tmp}/herdr-release.XXXXXX")
+WORK_DIR=$(mktemp -d "${TMPDIR:-/tmp}/lerdr-release.XXXXXX")
 trap 'rm -rf "$WORK_DIR"' EXIT INT TERM
 
 CGO_ENABLED=0 go build \
     -trimpath \
     -ldflags "-s -w -X main.version=$VERSION -X main.revision=$REVISION" \
     -o "$WORK_DIR/release-tool" \
-    "$REPO_DIR/cmd/herdr-mobile-relay"
+    "$REPO_DIR/cmd/lerdr"
 
 for TARGET in linux/amd64 linux/arm64 darwin/amd64 darwin/arm64; do
     GOOS=${TARGET%/*}
     GOARCH=${TARGET#*/}
-    ARCHIVE="herdr-mobile-relay_${VERSION}_${GOOS}_${GOARCH}.tar.gz"
+    ARCHIVE="lerdr_${VERSION}_${GOOS}_${GOARCH}.tar.gz"
     STAGE="$WORK_DIR/${GOOS}-${GOARCH}"
     mkdir -p "$STAGE/relay"
 
     CGO_ENABLED=0 GOOS="$GOOS" GOARCH="$GOARCH" go build \
         -trimpath \
         -ldflags "-s -w -X main.version=$VERSION -X main.revision=$REVISION" \
-        -o "$STAGE/herdr-mobile-relay" \
-        "$REPO_DIR/cmd/herdr-mobile-relay"
+        -o "$STAGE/lerdr" \
+        "$REPO_DIR/cmd/lerdr"
     cp -R "$REPO_DIR/web" "$STAGE/web"
     # Validate before stamping the relay revision: stamping must never turn a
     # bundle for another product version into a candidate for this release.
@@ -72,7 +72,7 @@ for TARGET in linux/amd64 linux/arm64 darwin/amd64 darwin/arm64; do
     cp "$REPO_DIR/README.md" "$STAGE/README.md"
     for WRAPPER in \
         common.sh \
-        herdr-mobile-relay-service.sh \
+        lerdr-service.sh \
         install-service.sh \
         install-systemd-user-service.sh \
         plugin-on-event.sh \
@@ -95,7 +95,7 @@ done
 
 CHECKSUMS="$OUTPUT_DIR/checksums.txt"
 : > "$CHECKSUMS"
-for ARCHIVE in "$OUTPUT_DIR"/herdr-mobile-relay_"$VERSION"_*.tar.gz; do
+for ARCHIVE in "$OUTPUT_DIR"/lerdr_"$VERSION"_*.tar.gz; do
     NAME=${ARCHIVE##*/}
     if command -v sha256sum >/dev/null 2>&1; then
         HASH=$(sha256sum "$ARCHIVE" | awk '{print $1}')

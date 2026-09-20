@@ -15,12 +15,12 @@ import (
 )
 
 func TestCommandSubprocess(t *testing.T) {
-	if os.Getenv("HERDR_TEST_COMMAND_HELPER") != "1" {
+	if os.Getenv("LERDR_TEST_COMMAND_HELPER") != "1" {
 		return
 	}
 
 	var args []string
-	if err := json.Unmarshal([]byte(os.Getenv("HERDR_TEST_COMMAND_ARGS")), &args); err != nil {
+	if err := json.Unmarshal([]byte(os.Getenv("LERDR_TEST_COMMAND_ARGS")), &args); err != nil {
 		panic(err)
 	}
 	os.Args = append([]string{os.Args[0]}, args...)
@@ -30,8 +30,8 @@ func TestCommandSubprocess(t *testing.T) {
 
 func TestCommandBoundaries(t *testing.T) {
 	t.Run("serve usage", func(t *testing.T) {
-		t.Setenv("HERDR_RELAY_LOG_FORMAT", "json")
-		t.Setenv("HERDR_RELAY_LOG_LEVEL", "info")
+		t.Setenv("LERDR_RELAY_LOG_FORMAT", "json")
+		t.Setenv("LERDR_RELAY_LOG_LEVEL", "info")
 		t.Setenv("JOURNAL_STREAM", "")
 
 		result := runCommandSubprocess(t, "serve", "bad")
@@ -52,8 +52,8 @@ func TestCommandBoundaries(t *testing.T) {
 	})
 
 	t.Run("invalid config startup", func(t *testing.T) {
-		t.Setenv("HERDR_RELAY_LOG_FORMAT", "json")
-		t.Setenv("HERDR_RELAY_LOG_LEVEL", "verbose")
+		t.Setenv("LERDR_RELAY_LOG_FORMAT", "json")
+		t.Setenv("LERDR_RELAY_LOG_LEVEL", "verbose")
 		t.Setenv("JOURNAL_STREAM", "")
 
 		result := runCommandSubprocess(t)
@@ -68,13 +68,13 @@ func TestCommandBoundaries(t *testing.T) {
 			t.Fatalf("record = %#v, want one relay failure ERROR", record)
 		}
 		message, ok := record["error"].(string)
-		if !ok || !strings.Contains(message, "invalid HERDR_RELAY_LOG_LEVEL") {
+		if !ok || !strings.Contains(message, "invalid LERDR_RELAY_LOG_LEVEL") {
 			t.Fatalf("record = %#v, want invalid log-level error", record)
 		}
 	})
 
 	t.Run("version json", func(t *testing.T) {
-		t.Setenv("HERDR_RELAY_LOG_LEVEL", "verbose")
+		t.Setenv("LERDR_RELAY_LOG_LEVEL", "verbose")
 		t.Setenv("JOURNAL_STREAM", "")
 
 		result := runCommandSubprocess(t, "version", "--json")
@@ -157,31 +157,31 @@ func commandEnvironment(args, root, herdr string) []string {
 		"PATH=/usr/bin:/bin",
 		"LANG=C",
 		"LC_ALL=C",
-		"HERDR_RELAY_HOST=127.0.0.1",
-		"HERDR_RELAY_PORT=1",
-		"HERDR_RELAY_PLUGIN_PORT=2",
-		"HERDR_RELAY_TOKEN=",
-		"HERDR_RELAY_INSTANCE_ID=",
-		"HERDR_RELAY_ENV=" + filepath.Join(root, "config", "relay.env"),
+		"LERDR_RELAY_HOST=127.0.0.1",
+		"LERDR_RELAY_PORT=1",
+		"LERDR_RELAY_PLUGIN_PORT=2",
+		"LERDR_RELAY_TOKEN=",
+		"LERDR_RELAY_INSTANCE_ID=",
+		"LERDR_RELAY_ENV=" + filepath.Join(root, "config", "relay.env"),
 		"HERDR_PLUGIN_CONFIG_DIR=" + filepath.Join(root, "plugin"),
-		"HERDR_WEB_ROOT=" + filepath.Join(root, "web"),
+		"LERDR_WEB_ROOT=" + filepath.Join(root, "web"),
 		"HERDR_BIN=" + herdr,
 		"HERDR_SOCKET_PATH=" + filepath.Join(root, "runtime", "relay.sock"),
-		"HERDR_RELAY_POLL_INTERVAL=2",
-		"HERDR_RELAY_LOG_FORMAT=" + os.Getenv("HERDR_RELAY_LOG_FORMAT"),
-		"HERDR_RELAY_LOG_LEVEL=" + os.Getenv("HERDR_RELAY_LOG_LEVEL"),
-		"HERDR_RELAY_SERVICE_NAME=herdr-command-test.service",
-		"HERDR_ALLOWED_ORIGINS=",
-		"HERDR_GATEWAY_URL=",
-		"HERDR_GATEWAY_SELECTION=",
-		"HERDR_WEBRTC_UDP_PORT=0",
-		"HERDR_TRANSPORT_FORCE_RELAY=false",
-		"HERDR_REACHABILITY_PORT_MAPPING=false",
-		"HERDR_RELAY_REARM_BOOTSTRAP=false",
-		"HERDR_RELEASE_ROOT=" + filepath.Join(root, "releases"),
+		"LERDR_RELAY_POLL_INTERVAL=2",
+		"LERDR_RELAY_LOG_FORMAT=" + os.Getenv("LERDR_RELAY_LOG_FORMAT"),
+		"LERDR_RELAY_LOG_LEVEL=" + os.Getenv("LERDR_RELAY_LOG_LEVEL"),
+		"LERDR_RELAY_SERVICE_NAME=lerdr-command-test.service",
+		"LERDR_ALLOWED_ORIGINS=",
+		"LERDR_GATEWAY_URL=",
+		"LERDR_GATEWAY_SELECTION=",
+		"LERDR_WEBRTC_UDP_PORT=0",
+		"LERDR_TRANSPORT_FORCE_RELAY=false",
+		"LERDR_REACHABILITY_PORT_MAPPING=false",
+		"LERDR_RELAY_REARM_BOOTSTRAP=false",
+		"LERDR_RELEASE_ROOT=" + filepath.Join(root, "releases"),
 		"JOURNAL_STREAM=",
-		"HERDR_TEST_COMMAND_HELPER=1",
-		"HERDR_TEST_COMMAND_ARGS=" + args,
+		"LERDR_TEST_COMMAND_HELPER=1",
+		"LERDR_TEST_COMMAND_ARGS=" + args,
 	}
 }
 

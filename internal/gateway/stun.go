@@ -53,7 +53,7 @@ const (
 
 	// stunSoftware is a packet-capture aid. It carries no version, because a
 	// blind gateway should not fingerprint itself to strangers.
-	stunSoftware = "herdr-gateway"
+	stunSoftware = "lerdr-gateway"
 )
 
 // stunMaxResponse bounds one response: the header, XOR-MAPPED-ADDRESS for an

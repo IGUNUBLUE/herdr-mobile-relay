@@ -76,7 +76,7 @@ Separate multiple entries with a colon — the platform path-list separator, as
 in `PATH` — so a directory whose name contains a literal colon can't be
 listed this way.
 
-Set these in the file named by `HERDR_RELAY_ENV`:
+Set these in the file named by `LERDR_RELAY_ENV`:
 `$HERDR_PLUGIN_CONFIG_DIR/relay.env` for an installation, `relay/.env` for a
 checkout. For example, with two herdr setups using `~/agents/claude-work` and
 `~/agents/claude-personal` as their Claude profiles, add:

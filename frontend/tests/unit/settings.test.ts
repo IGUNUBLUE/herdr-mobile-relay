@@ -350,7 +350,7 @@ describe('settings relay status', () => {
     await user.click(await screen.findByRole('button', { name: 'How to update Fedora' }));
     const dialog = screen.getByRole('dialog', { name: 'Update Fedora' });
     expect(dialog).toHaveTextContent('one-time Terminal update before phone-driven updates can continue');
-    expect(within(dialog).getByText(/HERDR_MOBILE_RELAY_NO_AUTO_SETUP=1 herdr plugin install/)).not.toHaveTextContent(
+    expect(within(dialog).getByText(/LERDR_NO_AUTO_SETUP=1 herdr plugin install/)).not.toHaveTextContent(
       'plugin action invoke install-service',
     );
     expect(dialog).toHaveTextContent('preserves the configuration used by an existing stable service');
@@ -421,7 +421,7 @@ describe('settings relay status', () => {
     expect(views.getByRole('button', { name: 'Terminal' })).toHaveAttribute('aria-pressed', 'true');
     await user.click(views.getByRole('button', { name: 'Conversation' }));
     expect(views.getByRole('button', { name: 'Conversation' })).toHaveAttribute('aria-pressed', 'true');
-    expect(localStorage.getItem('herdr_default_agent_view')).toBe('conversation');
+    expect(localStorage.getItem('lerdr_default_agent_view')).toBe('conversation');
     first.unmount();
     render(SettingsView);
     expect(within(screen.getByRole('group', { name: 'Default View' })).getByRole('button', { name: 'Conversation' })).toHaveAttribute('aria-pressed', 'true');
@@ -454,7 +454,7 @@ describe('settings relay status', () => {
 
     await user.click(sizes.getByRole('button', { name: 'Large' }));
     expect(document.documentElement.dataset.interfaceSize).toBe('large');
-    expect(localStorage.getItem('herdr_terminal_font_size')).toBe('large');
+    expect(localStorage.getItem('lerdr_terminal_font_size')).toBe('large');
 
     await user.click(sizes.getByRole('button', { name: 'Compact' }));
     expect(document.documentElement.dataset.interfaceSize).toBe('compact');

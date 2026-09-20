@@ -7,12 +7,12 @@
 # nothing downloaded from GitHub. The relay key never leaves this computer, which
 # keeps the secret-free gateway and the key-holding relay apart.
 #
-# Non-interactive: set HERDR_GATEWAY_DEPLOY_HOST to skip the hostname prompt,
-# HERDR_GATEWAY_DEPLOY_EMAIL for the ACME contact, HERDR_GATEWAY_DEPLOY_DIR for
-# the bundle directory, HERDR_GATEWAY_DEPLOY_FORCE=true to reuse a directory that
-# already has files in it, HERDR_GATEWAY_DEPLOY_SERVER for the SSH address to
-# deploy to, HERDR_GATEWAY_DEPLOY_REMOTE_DIR for the directory on that server,
-# and HERDR_GATEWAY_DEPLOY_INSTALL_DOCKER=true to install Docker there when it is
+# Non-interactive: set LERDR_GATEWAY_DEPLOY_HOST to skip the hostname prompt,
+# LERDR_GATEWAY_DEPLOY_EMAIL for the ACME contact, LERDR_GATEWAY_DEPLOY_DIR for
+# the bundle directory, LERDR_GATEWAY_DEPLOY_FORCE=true to reuse a directory that
+# already has files in it, LERDR_GATEWAY_DEPLOY_SERVER for the SSH address to
+# deploy to, LERDR_GATEWAY_DEPLOY_REMOTE_DIR for the directory on that server,
+# and LERDR_GATEWAY_DEPLOY_INSTALL_DOCKER=true to install Docker there when it is
 # missing. Answers are remembered beside the relay environment, so a rerun offers
 # them as defaults and a non-interactive rerun reuses them outright: a redeploy
 # after changing the gateway source is `bash relay/gateway-deploy.sh` and Enter.
@@ -29,12 +29,12 @@ ENV_FILE="$(relay_env_file "$SCRIPT_DIR")"
 # explicit environment variable, then remembered answer, then built-in default.
 DEPLOY_STATE_FILE="$(dirname "$ENV_FILE")/gateway-deploy"
 
-DEFAULT_BUNDLE_DIR="./herdr-gateway-deploy"
-DEFAULT_REMOTE_DIR="/opt/herdr-gateway"
+DEFAULT_BUNDLE_DIR="./lerdr-gateway-deploy"
+DEFAULT_REMOTE_DIR="/opt/lerdr-gateway"
 # The gateway image is not published to a registry, so compose builds it on the
 # server from the source this bundle carries in gateway-source/.
 DEFAULT_BUILD_CONTEXT="./gateway-source"
-DEFAULT_GATEWAY_IMAGE="herdr-gateway:local"
+DEFAULT_GATEWAY_IMAGE="lerdr-gateway:local"
 DEFAULT_CADDY_IMAGE="caddy:2-alpine"
 # uid/gid of "nonroot" in gcr.io/distroless/static:nonroot, the base image
 # Dockerfile.gateway ships. The state volume has to be writable by it.
@@ -45,20 +45,20 @@ GATEWAY_SOURCE_PATHS=(
     Dockerfile.gateway
     go.mod
     go.sum
-    cmd/herdr-gateway
+    cmd/lerdr-gateway
     internal/gateway
     internal/gatewaywire
 )
 REPO_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 SSH_BIN=()
-read -r -a SSH_BIN <<<"${HERDR_GATEWAY_DEPLOY_SSH:-ssh}"
+read -r -a SSH_BIN <<<"${LERDR_GATEWAY_DEPLOY_SSH:-${HERDR_GATEWAY_DEPLOY_SSH:-ssh}}"
 SSH_ARGS=()
 SSH_CONTROL_DIR=""
 REMOTE_SUDO=""
 # Seconds to wait for the gateway on the server, then for its first certificate.
 # A small server compiling the gateway and a slow ACME round trip both live here.
-REMOTE_HEALTH_TIMEOUT="${HERDR_GATEWAY_DEPLOY_HEALTH_TIMEOUT:-120}"
-PUBLIC_HEALTH_TIMEOUT="${HERDR_GATEWAY_DEPLOY_PUBLIC_TIMEOUT:-240}"
+REMOTE_HEALTH_TIMEOUT="${LERDR_GATEWAY_DEPLOY_HEALTH_TIMEOUT:-${HERDR_GATEWAY_DEPLOY_HEALTH_TIMEOUT:-120}}"
+PUBLIC_HEALTH_TIMEOUT="${LERDR_GATEWAY_DEPLOY_PUBLIC_TIMEOUT:-${HERDR_GATEWAY_DEPLOY_PUBLIC_TIMEOUT:-240}}"
 
 
 gateway_source_version() {
@@ -69,8 +69,8 @@ gateway_source_revision() {
     git -C "$REPO_DIR" rev-parse HEAD 2>/dev/null || printf 'unknown\n'
 }
 
-GATEWAY_BUILD_VERSION="${HERDR_GATEWAY_DEPLOY_VERSION:-$(gateway_source_version)}"
-GATEWAY_BUILD_REVISION="${HERDR_GATEWAY_DEPLOY_REVISION:-$(gateway_source_revision)}"
+GATEWAY_BUILD_VERSION="${LERDR_GATEWAY_DEPLOY_VERSION:-${HERDR_GATEWAY_DEPLOY_VERSION:-$(gateway_source_version)}}"
+GATEWAY_BUILD_REVISION="${LERDR_GATEWAY_DEPLOY_REVISION:-${HERDR_GATEWAY_DEPLOY_REVISION:-$(gateway_source_revision)}}"
 GATEWAY_BUILD_VERSION="${GATEWAY_BUILD_VERSION:-dev}"
 GATEWAY_BUILD_REVISION="${GATEWAY_BUILD_REVISION:-unknown}"
 have_tty() {
@@ -198,9 +198,10 @@ prompt_bundle_dir() {
     printf '%s\n' "${entered:-$default_dir}"
 }
 
-# Reads one remembered answer. Missing file or key prints nothing.
+# Reads one remembered answer, LERDR_ first then the HERDR_ key a pre-rename
+# run wrote. Missing file or key prints nothing.
 remembered_answer() {
-    env_file_value "$DEPLOY_STATE_FILE" "$1"
+    env_file_setting "$DEPLOY_STATE_FILE" "$1"
 }
 
 # Records the answers this run used, so the next one only needs Enter. Failing to
@@ -236,12 +237,12 @@ confirm_reuse_directory() {
     local directory="$1"
     local answer
 
-    if [ "${HERDR_GATEWAY_DEPLOY_FORCE:-}" = "true" ]; then
+    if [ "${LERDR_GATEWAY_DEPLOY_FORCE:-${HERDR_GATEWAY_DEPLOY_FORCE:-}}" = "true" ]; then
         return 0
     fi
     if ! have_tty; then
         echo "✗ $directory already has files in it." >&2
-        echo "  Pick an empty directory, or set HERDR_GATEWAY_DEPLOY_FORCE=true to overwrite." >&2
+        echo "  Pick an empty directory, or set LERDR_GATEWAY_DEPLOY_FORCE=true to overwrite." >&2
         return 1
     fi
     echo ""
@@ -308,7 +309,7 @@ render_bundle_file() {
 
 write_compose_file() {
     render_bundle_file "$1" <<'YAML'
-# Herdr gateway deployment for @HOST@, generated by relay/gateway-deploy.sh.
+# Lerdr gateway deployment for @HOST@, generated by relay/gateway-deploy.sh.
 #
 # Two long-running services:
 #   gateway  the blind WSS rendezvous gateway, published on loopback only
@@ -317,7 +318,7 @@ write_compose_file() {
 # Tunables live in .env beside this file. Edit them there and rerun
 # "docker compose up -d".
 
-name: herdr-gateway
+name: lerdr-gateway
 
 services:
   # No gateway image is published to a registry, so compose builds one from the
@@ -325,17 +326,17 @@ services:
   # tags it @GATEWAY_IMAGE@. Because "image:" is set too, an image already
   # carrying that tag - built here with "docker compose build", or loaded from a
   # tarball - is reused and nothing is fetched. Point
-  # HERDR_GATEWAY_BUILD_CONTEXT in .env elsewhere to build from another checkout.
+  # LERDR_GATEWAY_BUILD_CONTEXT in .env elsewhere to build from another checkout.
   gateway:
-    image: ${HERDR_GATEWAY_IMAGE:-@GATEWAY_IMAGE@}
+    image: ${LERDR_GATEWAY_IMAGE:-@GATEWAY_IMAGE@}
     build:
-      context: ${HERDR_GATEWAY_BUILD_CONTEXT:-@BUILD_CONTEXT@}
+      context: ${LERDR_GATEWAY_BUILD_CONTEXT:-@BUILD_CONTEXT@}
       dockerfile: Dockerfile.gateway
       args:
-        HERDR_GATEWAY_VERSION: ${HERDR_GATEWAY_VERSION:-@GATEWAY_VERSION@}
-        HERDR_GATEWAY_REVISION: ${HERDR_GATEWAY_REVISION:-@GATEWAY_REVISION@}
+        LERDR_GATEWAY_VERSION: ${LERDR_GATEWAY_VERSION:-@GATEWAY_VERSION@}
+        LERDR_GATEWAY_REVISION: ${LERDR_GATEWAY_REVISION:-@GATEWAY_REVISION@}
     restart: unless-stopped
-    # HERDR_GATEWAY_ADDR stays ":8443" so Caddy can reach the container as
+    # LERDR_GATEWAY_ADDR stays ":8443" so Caddy can reach the container as
     # "gateway:8443" over the compose network. The published port is bound to
     # the server's loopback only, for "curl 127.0.0.1:8443/healthz" while
     # debugging; nothing off the box can talk to the gateway except through TLS.
@@ -351,19 +352,19 @@ services:
       - "127.0.0.1:8443:8443"
       - "3478:3478/udp"
     environment:
-      HERDR_GATEWAY_ADDR: ":8443"
-      HERDR_GATEWAY_STUN_ADDR: ${HERDR_GATEWAY_STUN_ADDR-:3478}
+      LERDR_GATEWAY_ADDR: ":8443"
+      LERDR_GATEWAY_STUN_ADDR: ${LERDR_GATEWAY_STUN_ADDR-:3478}
       # Caddy is in front, so the leftmost X-Forwarded-For entry is the real
       # client: the per-IP connect limit and /probe need it. Safe only because
       # port 8443 is unreachable from outside the host.
-      HERDR_GATEWAY_TRUSTED_PROXY: "true"
-      HERDR_GATEWAY_STATE: /state/counters.json
-      HERDR_GATEWAY_LOG_FORMAT: ${HERDR_GATEWAY_LOG_FORMAT:-json}
-      HERDR_GATEWAY_MONTHLY_BYTES: ${HERDR_GATEWAY_MONTHLY_BYTES:-0}
-      HERDR_GATEWAY_QUOTA_WARN_PERCENT: ${HERDR_GATEWAY_QUOTA_WARN_PERCENT:-80}
-      HERDR_GATEWAY_MAX_CLIENTS_PER_RELAY: ${HERDR_GATEWAY_MAX_CLIENTS_PER_RELAY:-8}
-      HERDR_GATEWAY_CONNECT_RATE_PER_MINUTE: ${HERDR_GATEWAY_CONNECT_RATE_PER_MINUTE:-30}
-      HERDR_GATEWAY_IDLE_TIMEOUT: ${HERDR_GATEWAY_IDLE_TIMEOUT:-300}
+      LERDR_GATEWAY_TRUSTED_PROXY: "true"
+      LERDR_GATEWAY_STATE: /state/counters.json
+      LERDR_GATEWAY_LOG_FORMAT: ${LERDR_GATEWAY_LOG_FORMAT:-json}
+      LERDR_GATEWAY_MONTHLY_BYTES: ${LERDR_GATEWAY_MONTHLY_BYTES:-0}
+      LERDR_GATEWAY_QUOTA_WARN_PERCENT: ${LERDR_GATEWAY_QUOTA_WARN_PERCENT:-80}
+      LERDR_GATEWAY_MAX_CLIENTS_PER_RELAY: ${LERDR_GATEWAY_MAX_CLIENTS_PER_RELAY:-8}
+      LERDR_GATEWAY_CONNECT_RATE_PER_MINUTE: ${LERDR_GATEWAY_CONNECT_RATE_PER_MINUTE:-30}
+      LERDR_GATEWAY_IDLE_TIMEOUT: ${LERDR_GATEWAY_IDLE_TIMEOUT:-300}
     volumes:
       - gateway-state:/state
     depends_on:
@@ -371,7 +372,7 @@ services:
         condition: service_healthy
 
   caddy:
-    image: ${HERDR_CADDY_IMAGE:-@CADDY_IMAGE@}
+    image: ${LERDR_CADDY_IMAGE:-@CADDY_IMAGE@}
     restart: unless-stopped
     # 80 is not decoration: it carries the ACME HTTP challenge and the redirect
     # to HTTPS. 443 is what phones dial.
@@ -418,7 +419,7 @@ YAML
 
 write_caddyfile() {
     render_bundle_file "$1" <<'CADDY'
-# Caddy configuration for the Herdr gateway on @HOST@, generated by
+# Caddy configuration for the Lerdr gateway on @HOST@, generated by
 # relay/gateway-deploy.sh.
 #
 # Caddy gets and renews the certificate itself over ACME. That needs DNS for
@@ -448,7 +449,7 @@ write_caddyfile() {
 	# re-issues the hop-by-hop Connection and Upgrade headers upstream and then
 	# streams the hijacked connection unbuffered, which is exactly what /relay
 	# and /connect want. Caddy also sets X-Forwarded-For to the real client
-	# address, which the gateway trusts via HERDR_GATEWAY_TRUSTED_PROXY=true.
+	# address, which the gateway trusts via LERDR_GATEWAY_TRUSTED_PROXY=true.
 	#
 	# Compression is deliberately not enabled: frames are ciphertext, so encode
 	# would buy nothing and leak length information.
@@ -459,7 +460,7 @@ CADDY
 
 write_env_file() {
     render_bundle_file "$1" <<'ENVFILE'
-# Herdr gateway deployment settings for @HOST@. Every value here was written by
+# Lerdr gateway deployment settings for @HOST@. Every value here was written by
 # relay/gateway-deploy.sh, and a redeploy untars the bundle over this directory
 # and replaces the file, so keep local changes in the wizard's answers or expect
 # to make them again. docker compose reads this file automatically from the
@@ -468,19 +469,19 @@ write_env_file() {
 
 # The public hostname Caddy serves. Informational here: the certificate and the
 # site are keyed on the site address in the Caddyfile, so change both together.
-HERDR_GATEWAY_HOSTNAME=@HOST@
+LERDR_GATEWAY_HOSTNAME=@HOST@
 
 # Images. The gateway tag is built on the first "up" from the gateway-source/
 # directory this bundle carries; point the build context at another checkout to
 # build from source you already have on the server.
-HERDR_GATEWAY_IMAGE=@GATEWAY_IMAGE@
-HERDR_GATEWAY_BUILD_CONTEXT="@BUILD_CONTEXT@"
-HERDR_CADDY_IMAGE=@CADDY_IMAGE@
+LERDR_GATEWAY_IMAGE=@GATEWAY_IMAGE@
+LERDR_GATEWAY_BUILD_CONTEXT="@BUILD_CONTEXT@"
+LERDR_CADDY_IMAGE=@CADDY_IMAGE@
 
 # Build identity published by /healthz and the gateway hello. A current relay
 # compares this release with its own and tells the operator when to redeploy.
-HERDR_GATEWAY_VERSION=@GATEWAY_VERSION@
-HERDR_GATEWAY_REVISION=@GATEWAY_REVISION@
+LERDR_GATEWAY_VERSION=@GATEWAY_VERSION@
+LERDR_GATEWAY_REVISION=@GATEWAY_REVISION@
 
 # --- Gateway tunables ---
 
@@ -489,15 +490,15 @@ HERDR_GATEWAY_REVISION=@GATEWAY_REVISION@
 # gateway's own default is 5368709120 (5 GiB). Hosting for a group: take your
 # plan's monthly egress, divide by the number of relays, then halve it, because
 # a relay spends every byte twice - once inbound, once outbound.
-HERDR_GATEWAY_MONTHLY_BYTES=0
+LERDR_GATEWAY_MONTHLY_BYTES=0
 
 # Percent of that quota at which a relay gets exactly one advisory warning
 # (gateway default 80, negative disables it). Idle while the quota is 0.
-HERDR_GATEWAY_QUOTA_WARN_PERCENT=80
+LERDR_GATEWAY_QUOTA_WARN_PERCENT=80
 
 # Concurrent phone connections per relay (gateway default 8, negative removes
 # the cap). Refusals are reported as too_many_clients.
-HERDR_GATEWAY_MAX_CLIENTS_PER_RELAY=8
+LERDR_GATEWAY_MAX_CLIENTS_PER_RELAY=8
 
 # Whole-gateway ceilings, which matter once an instance is shared rather than
 # yours alone: every other limit here is per-relay or per-IP, so without these a
@@ -509,21 +510,21 @@ HERDR_GATEWAY_MAX_CLIENTS_PER_RELAY=8
 # near 2 GiB while a real population sits close to empty. There is deliberately
 # no per-IP concurrency cap: carrier NAT puts thousands of unrelated phones
 # behind one address, and such a cap would refuse legitimate users.
-HERDR_GATEWAY_MAX_RELAYS=1024
-HERDR_GATEWAY_MAX_CLIENTS=512
+LERDR_GATEWAY_MAX_RELAYS=1024
+LERDR_GATEWAY_MAX_CLIENTS=512
 
 # Phone connection attempts per client IP per minute (gateway default 30,
 # negative removes the limit). Relay registrations are counted separately
 # against the same number. Refusals are reported as rate_limited.
-HERDR_GATEWAY_CONNECT_RATE_PER_MINUTE=30
+LERDR_GATEWAY_CONNECT_RATE_PER_MINUTE=30
 
 # Seconds a phone connection may carry no traffic before it is closed (gateway
 # default 300, negative disables reaping). Relay links use ping/pong instead.
-HERDR_GATEWAY_IDLE_TIMEOUT=300
+LERDR_GATEWAY_IDLE_TIMEOUT=300
 
 # text or json structured logs on stderr (gateway default text). Transport
 # events only: no frame contents, and relay ids truncated to six characters.
-HERDR_GATEWAY_LOG_FORMAT=json
+LERDR_GATEWAY_LOG_FORMAT=json
 
 # UDP address discovery, published on 3478 by docker-compose.yml. Phones and
 # relays ask the gateway what address it sees them coming from, which is what
@@ -531,21 +532,21 @@ HERDR_GATEWAY_LOG_FORMAT=json
 # empty value here disables the listener: peers behind NAT then fall back to the
 # relayed path through this gateway. With it empty, the "3478:3478/udp" mapping
 # in docker-compose.yml can be deleted too, which closes the port on the host.
-HERDR_GATEWAY_STUN_ADDR=:3478
+LERDR_GATEWAY_STUN_ADDR=:3478
 
 # Set in docker-compose.yml rather than here, because the deployment shape
 # depends on them:
-#   HERDR_GATEWAY_ADDR=:8443                   published to 127.0.0.1 only
-#   HERDR_GATEWAY_TRUSTED_PROXY=true           Caddy sets X-Forwarded-For
-#   HERDR_GATEWAY_STATE=/state/counters.json   on the gateway-state volume
+#   LERDR_GATEWAY_ADDR=:8443                   published to 127.0.0.1 only
+#   LERDR_GATEWAY_TRUSTED_PROXY=true           Caddy sets X-Forwarded-For
+#   LERDR_GATEWAY_STATE=/state/counters.json   on the gateway-state volume
 ENVFILE
 }
 
 write_readme() {
     render_bundle_file "$1" <<'MARKDOWN'
-# Herdr gateway on @HOST@
+# Lerdr gateway on @HOST@
 
-Generated by `relay/gateway-deploy.sh`. Two containers: the Herdr gateway, bound
+Generated by `relay/gateway-deploy.sh`. Two containers: the Lerdr gateway, bound
 to loopback, and Caddy terminating TLS in front of it. The gateway holds no
 secrets — it copies encrypted frames between a phone and a relay and cannot read
 them — so this server only ever carries traffic.
@@ -577,10 +578,10 @@ same steps by hand:
 
 ```sh
 # 1. from this computer
-scp -r @BUNDLE@ root@@HOST@:/opt/herdr-gateway
+scp -r @BUNDLE@ root@@HOST@:/opt/lerdr-gateway
 
 # 2. on the server
-cd /opt/herdr-gateway
+cd /opt/lerdr-gateway
 docker compose up -d --build --force-recreate gateway caddy
 ```
 
@@ -623,7 +624,7 @@ Connection Method → Your own gateway → I already run a gateway**, then enter
 ```
 
 The chooser checks `/healthz` before it saves anything, and writes
-`HERDR_GATEWAY_URL=@WSS@` into the relay environment. Setting that variable by
+`LERDR_GATEWAY_URL=@WSS@` into the relay environment. Setting that variable by
 hand does the same thing. Re-pair nothing: the relay key is unchanged by the
 move, and the phone learns the new base from the next QR or setup link.
 
@@ -650,7 +651,7 @@ copy_gateway_source() {
     for path in "${GATEWAY_SOURCE_PATHS[@]}"; do
         if [ ! -e "$REPO_DIR/$path" ]; then
             echo "✗ $REPO_DIR/$path is missing, so the bundle cannot build the gateway." >&2
-            echo "  Run this from the plugin checkout that ships cmd/herdr-gateway." >&2
+            echo "  Run this from the plugin checkout that ships cmd/lerdr-gateway." >&2
             return 1
         fi
     done
@@ -738,7 +739,7 @@ ssh_session_stop() {
 ssh_session_start() {
     # Short path on purpose: a control socket lives under the ~104 byte sun_path
     # limit, which a macOS TMPDIR alone can exhaust.
-    SSH_CONTROL_DIR="$(mktemp -d "/tmp/herdr-gw.XXXXXX")"
+    SSH_CONTROL_DIR="$(mktemp -d "/tmp/lerdr-gw.XXXXXX")"
     SSH_ARGS=(
         -o ControlMaster=auto
         -o "ControlPath=$SSH_CONTROL_DIR/control"
@@ -787,7 +788,7 @@ remote_docker_ready() {
 }
 
 install_remote_docker() {
-    remote_shell 'set -e; command -v curl >/dev/null 2>&1 || { echo "curl is missing on the server" >&2; exit 3; }; curl -fsSL https://get.docker.com -o /tmp/herdr-get-docker.sh; sh /tmp/herdr-get-docker.sh; rm -f /tmp/herdr-get-docker.sh'
+    remote_shell 'set -e; command -v curl >/dev/null 2>&1 || { echo "curl is missing on the server" >&2; exit 3; }; curl -fsSL https://get.docker.com -o /tmp/lerdr-get-docker.sh; sh /tmp/lerdr-get-docker.sh; rm -f /tmp/lerdr-get-docker.sh'
 }
 
 upload_bundle() {
@@ -934,7 +935,7 @@ explain_ssh_failure() {
     echo "  debian@, ubuntu@, admin@, or ec2-user@ instead." >&2
     echo "  ssh offers only the default ~/.ssh/id_* keys and whatever" >&2
     echo "  ~/.ssh/config names for this host. Any other key has to be named:" >&2
-    echo "    HERDR_GATEWAY_DEPLOY_SSH=\"ssh -i ~/.ssh/yourkey\" rerun this" >&2
+    echo "    LERDR_GATEWAY_DEPLOY_SSH=\"ssh -i ~/.ssh/yourkey\" rerun this" >&2
 }
 
 deploy_bundle() {
@@ -1029,15 +1030,15 @@ echo ""
 # A relay already pointed at a gateway records that URL, which is a better
 # remembered host than anything this script keeps: it is the address the phone
 # was paired against.
-REMEMBERED_HOST="$(remembered_answer HERDR_GATEWAY_DEPLOY_HOST)"
+REMEMBERED_HOST="$(remembered_answer GATEWAY_DEPLOY_HOST)"
 if [ -z "$REMEMBERED_HOST" ]; then
     REMEMBERED_HOST="$(gateway_url "$ENV_FILE")"
     REMEMBERED_HOST="${REMEMBERED_HOST#wss://}"
     REMEMBERED_HOST="${REMEMBERED_HOST#ws://}"
 fi
 
-if [ -n "${HERDR_GATEWAY_DEPLOY_HOST:-}" ]; then
-    if ! GATEWAY_HOST="$(public_gateway_host "$HERDR_GATEWAY_DEPLOY_HOST")"; then
+if [ -n "${LERDR_GATEWAY_DEPLOY_HOST:-${HERDR_GATEWAY_DEPLOY_HOST:-}}" ]; then
+    if ! GATEWAY_HOST="$(public_gateway_host "${LERDR_GATEWAY_DEPLOY_HOST:-$HERDR_GATEWAY_DEPLOY_HOST}")"; then
         exit 1
     fi
 elif have_tty; then
@@ -1052,7 +1053,7 @@ elif [ -n "$REMEMBERED_HOST" ] &&
     echo "▸ Reusing the remembered hostname $GATEWAY_HOST"
 else
     echo "✗ No hostname to generate for, and stdin is not a terminal." >&2
-    echo "  Set HERDR_GATEWAY_DEPLOY_HOST=gw.example.com and run this again." >&2
+    echo "  Set LERDR_GATEWAY_DEPLOY_HOST=gw.example.com and run this again." >&2
     exit 1
 fi
 
@@ -1060,11 +1061,11 @@ GATEWAY_WSS="wss://$GATEWAY_HOST"
 GATEWAY_HTTPS="$(gateway_http_base "$GATEWAY_WSS")"
 echo "✓ Phones will dial $GATEWAY_WSS"
 
-SSH_TARGET="${HERDR_GATEWAY_DEPLOY_SERVER:-}"
-REMEMBERED_SERVER="$(remembered_answer HERDR_GATEWAY_DEPLOY_SERVER)"
+SSH_TARGET="${LERDR_GATEWAY_DEPLOY_SERVER:-${HERDR_GATEWAY_DEPLOY_SERVER:-}}"
+REMEMBERED_SERVER="$(remembered_answer GATEWAY_DEPLOY_SERVER)"
 if [ -n "$SSH_TARGET" ]; then
     if ! valid_ssh_target "$SSH_TARGET"; then
-        echo "✗ HERDR_GATEWAY_DEPLOY_SERVER is not an SSH address: $SSH_TARGET" >&2
+        echo "✗ LERDR_GATEWAY_DEPLOY_SERVER is not an SSH address: $SSH_TARGET" >&2
         exit 1
     fi
 elif have_tty; then
@@ -1082,23 +1083,23 @@ fi
 
 # The ssh command itself is an answer like any other: a host reached with a
 # named key stays reachable on the next run without retyping anything.
-if [ -z "${HERDR_GATEWAY_DEPLOY_SSH:-}" ]; then
-    REMEMBERED_SSH="$(remembered_answer HERDR_GATEWAY_DEPLOY_SSH)"
+if [ -z "${LERDR_GATEWAY_DEPLOY_SSH:-${HERDR_GATEWAY_DEPLOY_SSH:-}}" ]; then
+    REMEMBERED_SSH="$(remembered_answer GATEWAY_DEPLOY_SSH)"
     if [ -n "$REMEMBERED_SSH" ]; then
         read -r -a SSH_BIN <<<"$REMEMBERED_SSH"
         echo "▸ Reusing the remembered SSH command ${SSH_BIN[*]}"
     fi
 fi
 
-REMOTE_DIR="${HERDR_GATEWAY_DEPLOY_REMOTE_DIR:-}"
-REMEMBERED_REMOTE_DIR="$(remembered_answer HERDR_GATEWAY_DEPLOY_REMOTE_DIR)"
+REMOTE_DIR="${LERDR_GATEWAY_DEPLOY_REMOTE_DIR:-${HERDR_GATEWAY_DEPLOY_REMOTE_DIR:-}}"
+REMEMBERED_REMOTE_DIR="$(remembered_answer GATEWAY_DEPLOY_REMOTE_DIR)"
 if [ -n "$REMEMBERED_REMOTE_DIR" ] && ! valid_remote_dir "$REMEMBERED_REMOTE_DIR"; then
     REMEMBERED_REMOTE_DIR=""
 fi
 if [ -n "$REMOTE_DIR" ]; then
     REMOTE_DIR="${REMOTE_DIR%/}"
     if ! valid_remote_dir "$REMOTE_DIR"; then
-        echo "✗ HERDR_GATEWAY_DEPLOY_REMOTE_DIR is not a usable absolute path: $REMOTE_DIR" >&2
+        echo "✗ LERDR_GATEWAY_DEPLOY_REMOTE_DIR is not a usable absolute path: $REMOTE_DIR" >&2
         exit 1
     fi
 elif [ -n "$SSH_TARGET" ] && have_tty; then
@@ -1109,19 +1110,19 @@ else
     REMOTE_DIR="${REMEMBERED_REMOTE_DIR:-$DEFAULT_REMOTE_DIR}"
 fi
 
-INSTALL_DOCKER="${HERDR_GATEWAY_DEPLOY_INSTALL_DOCKER:-}"
+INSTALL_DOCKER="${LERDR_GATEWAY_DEPLOY_INSTALL_DOCKER:-${HERDR_GATEWAY_DEPLOY_INSTALL_DOCKER:-}}"
 if [ -z "$INSTALL_DOCKER" ]; then
     INSTALL_DOCKER="ask"
 fi
 
-ACME_EMAIL="${HERDR_GATEWAY_DEPLOY_EMAIL:-}"
-REMEMBERED_EMAIL="$(remembered_answer HERDR_GATEWAY_DEPLOY_EMAIL)"
+ACME_EMAIL="${LERDR_GATEWAY_DEPLOY_EMAIL:-${HERDR_GATEWAY_DEPLOY_EMAIL:-}}"
+REMEMBERED_EMAIL="$(remembered_answer GATEWAY_DEPLOY_EMAIL)"
 if [ -n "$REMEMBERED_EMAIL" ] && ! valid_acme_email "$REMEMBERED_EMAIL"; then
     REMEMBERED_EMAIL=""
 fi
 if [ -n "$ACME_EMAIL" ]; then
     if ! valid_acme_email "$ACME_EMAIL"; then
-        echo "✗ HERDR_GATEWAY_DEPLOY_EMAIL is not an email address: $ACME_EMAIL" >&2
+        echo "✗ LERDR_GATEWAY_DEPLOY_EMAIL is not an email address: $ACME_EMAIL" >&2
         exit 1
     fi
 elif have_tty; then
@@ -1141,8 +1142,8 @@ else
     ACME_EMAIL_NOTE="No ACME contact was set, which is fine: Caddy still issues and renews. Uncomment the \`email\` line in the \`Caddyfile\` to get expiry warnings."
 fi
 
-BUNDLE_DIR="${HERDR_GATEWAY_DEPLOY_DIR:-}"
-REMEMBERED_BUNDLE_DIR="$(remembered_answer HERDR_GATEWAY_DEPLOY_DIR)"
+BUNDLE_DIR="${LERDR_GATEWAY_DEPLOY_DIR:-${HERDR_GATEWAY_DEPLOY_DIR:-}}"
+REMEMBERED_BUNDLE_DIR="$(remembered_answer GATEWAY_DEPLOY_DIR)"
 if [ -z "$BUNDLE_DIR" ]; then
     if have_tty; then
         echo ""
@@ -1179,17 +1180,17 @@ fi
 # Remembered once the answers are known to be usable: the bundle rendered, the
 # hostname validated, the paths accepted. A failed deployment further down still
 # leaves them recorded, because retrying is exactly when re-typing hurts most.
-HERDR_GATEWAY_DEPLOY_HOST="$GATEWAY_HOST"
-HERDR_GATEWAY_DEPLOY_SERVER="$SSH_TARGET"
-HERDR_GATEWAY_DEPLOY_REMOTE_DIR="$REMOTE_DIR"
-HERDR_GATEWAY_DEPLOY_EMAIL="$ACME_EMAIL"
-HERDR_GATEWAY_DEPLOY_DIR="$BUNDLE_DIR"
+LERDR_GATEWAY_DEPLOY_HOST="$GATEWAY_HOST"
+LERDR_GATEWAY_DEPLOY_SERVER="$SSH_TARGET"
+LERDR_GATEWAY_DEPLOY_REMOTE_DIR="$REMOTE_DIR"
+LERDR_GATEWAY_DEPLOY_EMAIL="$ACME_EMAIL"
+LERDR_GATEWAY_DEPLOY_DIR="$BUNDLE_DIR"
 remember_answers \
-    HERDR_GATEWAY_DEPLOY_HOST \
-    HERDR_GATEWAY_DEPLOY_SERVER \
-    HERDR_GATEWAY_DEPLOY_REMOTE_DIR \
-    HERDR_GATEWAY_DEPLOY_EMAIL \
-    HERDR_GATEWAY_DEPLOY_DIR
+    LERDR_GATEWAY_DEPLOY_HOST \
+    LERDR_GATEWAY_DEPLOY_SERVER \
+    LERDR_GATEWAY_DEPLOY_REMOTE_DIR \
+    LERDR_GATEWAY_DEPLOY_EMAIL \
+    LERDR_GATEWAY_DEPLOY_DIR
 
 echo ""
 echo "✓ Bundle written to $BUNDLE_DIR"
@@ -1211,7 +1212,7 @@ if [ -z "$SSH_TARGET" ]; then
     echo "for /probe. UDP 3478 is address discovery: without it phones and"
     echo "computers behind NAT stay on the relayed path."
     echo ""
-    echo "▸ Once it answers, set HERDR_GATEWAY_URL=$GATEWAY_WSS in the relay"
+    echo "▸ Once it answers, set LERDR_GATEWAY_URL=$GATEWAY_WSS in the relay"
     echo "  environment, or rerun setup-menu action 3 to deploy and connect over SSH."
     exit 0
 fi
@@ -1240,8 +1241,8 @@ deploy_bundle || DEPLOY_STATUS=$?
 # Recorded after the attempt, not before it: the key that finally opened the
 # session is only known once one has.
 if [ "${SSH_BIN[*]}" != "ssh" ]; then
-    HERDR_GATEWAY_DEPLOY_SSH="${SSH_BIN[*]}"
-    remember_answers HERDR_GATEWAY_DEPLOY_SSH
+    LERDR_GATEWAY_DEPLOY_SSH="${SSH_BIN[*]}"
+    remember_answers LERDR_GATEWAY_DEPLOY_SSH
 fi
 
 case "$DEPLOY_STATUS" in

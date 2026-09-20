@@ -11,7 +11,7 @@ available as an installable PWA everywhere else.
 
 ## Download the Android app
 
-Get **`herdr-mobile-*-arm64.apk`** from
+Get **`lerdr-*-arm64.apk`** from
 [**Releases → latest**](https://github.com/IGUNUBLUE/lerdr/releases/latest) —
 sideload it, or add this repo to [Obtainium](https://obtainium.imranr.dev/)
 for automatic updates. Other ABIs (`arm`, `x86`, `x86_64`, `universal`) ship

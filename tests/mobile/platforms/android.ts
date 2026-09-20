@@ -212,7 +212,7 @@ export class AndroidPlatform implements MobilePlatform {
     await command(adb, ['-s', this.serial, 'shell', 'input', 'keyevent', 'KEYCODE_HOME']);
     await command(adb, ['-s', this.serial, 'shell', 'pm', 'clear', 'com.android.chrome']).catch(() => undefined);
     const installedPackages = await commandOutput(adb, ['-s', this.serial, 'shell', 'pm', 'list', 'packages']);
-    for (const packageName of installedPackages.split(/\r?\n/u).map((line) => line.replace(/^package:/u, '').trim()).filter((value) => /webapk|herdr/iu.test(value))) {
+    for (const packageName of installedPackages.split(/\r?\n/u).map((line) => line.replace(/^package:/u, '').trim()).filter((value) => /webapk|lerdr|herdr/iu.test(value))) {
       await command(adb, ['-s', this.serial, 'uninstall', packageName]).catch(() => undefined);
     }
     // Install the user CA before starting Chrome. Chromium caches its platform
@@ -1075,7 +1075,7 @@ export class AndroidPlatform implements MobilePlatform {
 
   private async installCertificate(): Promise<void> {
     const adb = process.env.ADB || 'adb';
-    const remote = '/sdcard/Download/herdr-mobile-ci-ca.crt';
+    const remote = '/sdcard/Download/lerdr-ci-ca.crt';
     const remoteName = basename(remote);
     const commonName = await this.certificateCommonName();
 

@@ -29,13 +29,19 @@ func TestNewerVersion(t *testing.T) {
 
 func TestUpdateWorkerLaunchForwardsAppDeploymentConfiguration(t *testing.T) {
 	values := map[string]string{
+		"LERDR_APP_DEPLOY_ORIGIN":        "https://app.example.test",
 		"HERDR_APP_DEPLOY_ORIGIN":        "https://app.example.test",
+		"LERDR_CLOUDFLARE_PAGES_PROJECT": "relay-app",
 		"HERDR_CLOUDFLARE_PAGES_PROJECT": "relay-app",
+		"LERDR_CLOUDFLARE_PAGES_BRANCH":  "main",
 		"HERDR_CLOUDFLARE_PAGES_BRANCH":  "main",
+		"LERDR_APP_DEPLOY_NPX":           "/opt/node/bin/npx",
 		"HERDR_APP_DEPLOY_NPX":           "/opt/node/bin/npx",
+		"LERDR_APP_DEPLOY_NODE_DIR":      "/opt/node/bin",
 		"HERDR_APP_DEPLOY_NODE_DIR":      "/opt/node/bin",
-		"HERDR_RELAY_ENV":                "/home/cv/.config/herdr-mobile-relay/relay.env",
-		"HERDR_PLUGIN_CONFIG_DIR":        "/home/cv/.config/herdr-mobile-relay",
+		"LERDR_RELAY_ENV":                "/home/cv/.config/lerdr/relay.env",
+		"HERDR_RELAY_ENV":                "/home/cv/.config/lerdr/relay.env",
+		"HERDR_PLUGIN_CONFIG_DIR":        "/home/cv/.config/lerdr",
 		"CLOUDFLARE_API_TOKEN":           "must-not-be-forwarded",
 	}
 	lookup := func(key string) (string, bool) {
@@ -43,13 +49,19 @@ func TestUpdateWorkerLaunchForwardsAppDeploymentConfiguration(t *testing.T) {
 		return value, found
 	}
 	assignments := []string{
+		"LERDR_APP_DEPLOY_ORIGIN=https://app.example.test",
 		"HERDR_APP_DEPLOY_ORIGIN=https://app.example.test",
+		"LERDR_CLOUDFLARE_PAGES_PROJECT=relay-app",
 		"HERDR_CLOUDFLARE_PAGES_PROJECT=relay-app",
+		"LERDR_CLOUDFLARE_PAGES_BRANCH=main",
 		"HERDR_CLOUDFLARE_PAGES_BRANCH=main",
+		"LERDR_APP_DEPLOY_NPX=/opt/node/bin/npx",
 		"HERDR_APP_DEPLOY_NPX=/opt/node/bin/npx",
+		"LERDR_APP_DEPLOY_NODE_DIR=/opt/node/bin",
 		"HERDR_APP_DEPLOY_NODE_DIR=/opt/node/bin",
-		"HERDR_RELAY_ENV=/home/cv/.config/herdr-mobile-relay/relay.env",
-		"HERDR_PLUGIN_CONFIG_DIR=/home/cv/.config/herdr-mobile-relay",
+		"LERDR_RELAY_ENV=/home/cv/.config/lerdr/relay.env",
+		"HERDR_RELAY_ENV=/home/cv/.config/lerdr/relay.env",
+		"HERDR_PLUGIN_CONFIG_DIR=/home/cv/.config/lerdr",
 	}
 
 	linux := updateWorkerLaunch("linux", "relay-update", "/opt/relay", "/tmp/job.json", lookup)

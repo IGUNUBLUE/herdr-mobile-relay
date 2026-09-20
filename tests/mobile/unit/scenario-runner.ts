@@ -78,7 +78,7 @@ export class AndroidPlatform {
 `;
 
 async function replay(mode: string, platform: string, suite: string): Promise<void> {
-  const root = await mkdtemp(join(tmpdir(), 'herdr-scenario-protocol-'));
+  const root = await mkdtemp(join(tmpdir(), 'lerdr-scenario-protocol-'));
   const source = process.env.MOBILE_RUN_TEST_SOURCE || repositoryPath('tests/mobile');
   await mkdir(join(root, 'platforms'));
   await cp(join(source, 'support'), join(root, 'support'), { recursive: true });

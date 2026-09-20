@@ -485,7 +485,7 @@ func newSentinel() (string, error) {
 	if _, err := rand.Read(data); err != nil {
 		return "", err
 	}
-	return "herdr-mobile-relay-copy-" + hex.EncodeToString(data), nil
+	return "lerdr-copy-" + hex.EncodeToString(data), nil
 }
 
 func bytesEqualString(data []byte, value string) bool {

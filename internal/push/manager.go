@@ -1005,6 +1005,8 @@ func payloadType(payload []byte) string {
 		} `json:"data"`
 	}
 	_ = json.Unmarshal(payload, &envelope)
+	// The tag prefix is part of the push-payload contract shared with the
+	// phone app (contracts/fixtures/push), so it keeps the legacy spelling.
 	if envelope.Data.Type == "" && strings.HasPrefix(envelope.Tag, "herdr-finished-") {
 		return "finished"
 	}

@@ -1287,7 +1287,7 @@ describe('hybrid relay configuration', () => {
     expect(loadRelayConfigs()).toEqual([legacy, hybrid]);
 
     // Entries with neither address are still dropped.
-    localStorage.setItem('herdr_relays', JSON.stringify([{ label: 'Broken', token: 'abc' }, legacy]));
+    localStorage.setItem('lerdr_relays', JSON.stringify([{ label: 'Broken', token: 'abc' }, legacy]));
     expect(loadRelayConfigs()).toEqual([legacy]);
   });
 });

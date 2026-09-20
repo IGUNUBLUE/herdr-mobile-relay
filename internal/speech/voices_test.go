@@ -48,7 +48,7 @@ func publishedVoices(t *testing.T, corrupt map[string]bool) *httptest.Server {
 		writer.Write(body)
 	}))
 	t.Cleanup(server.Close)
-	t.Setenv("HERDR_PIPER_VOICE_BASE_URL", server.URL)
+	t.Setenv("LERDR_PIPER_VOICE_BASE_URL", server.URL)
 	return server
 }
 
@@ -113,7 +113,7 @@ func publishedRuntimeWithEngine(t *testing.T, engine []byte) {
 		writer.Write(payload)
 	}))
 	t.Cleanup(server.Close)
-	t.Setenv("HERDR_PIPER_RUNTIME_BASE_URL", server.URL)
+	t.Setenv("LERDR_PIPER_RUNTIME_BASE_URL", server.URL)
 }
 
 // restoreCatalog keeps a test's fixture digests from leaking into the next one.
@@ -162,7 +162,7 @@ func TestInstallCachesTheEngineAndVoiceOnce(t *testing.T) {
 		t.Fatalf("Install(fr) error = %v", err)
 	}
 
-	engine := filepath.Join(cache, "herdr-mobile-relay", "speech", "runtime", "piper", "piper")
+	engine := filepath.Join(cache, "lerdr", "speech", "runtime", "piper", "piper")
 	if info, err := os.Stat(engine); err != nil || info.Mode().Perm()&0o111 == 0 {
 		t.Fatalf("cached engine = %v (%v), want an executable", info, err)
 	}
@@ -203,14 +203,14 @@ func TestInstallCachesTheEngineAndVoiceOnce(t *testing.T) {
 
 	// A second install is a no-op: this is what keeps a relay update from
 	// downloading the voices again.
-	before, err := os.Stat(filepath.Join(cache, "herdr-mobile-relay", "speech", "voices", "fr_FR-siwis-medium.onnx"))
+	before, err := os.Stat(filepath.Join(cache, "lerdr", "speech", "voices", "fr_FR-siwis-medium.onnx"))
 	if err != nil {
 		t.Fatal(err)
 	}
 	if err := Install(context.Background(), "fr"); err != nil {
 		t.Fatalf("second Install(fr) error = %v", err)
 	}
-	after, err := os.Stat(filepath.Join(cache, "herdr-mobile-relay", "speech", "voices", "fr_FR-siwis-medium.onnx"))
+	after, err := os.Stat(filepath.Join(cache, "lerdr", "speech", "voices", "fr_FR-siwis-medium.onnx"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -429,7 +429,7 @@ func TestInstallRejectsTamperedBytesAndUnknownLanguages(t *testing.T) {
 	if err == nil || !strings.Contains(err.Error(), "published checksum") {
 		t.Fatalf("Install(de) error = %v, want a checksum rejection", err)
 	}
-	voices := filepath.Join(cache, "herdr-mobile-relay", "speech", "voices")
+	voices := filepath.Join(cache, "lerdr", "speech", "voices")
 	for _, leftover := range []string{"de_DE-thorsten-medium.onnx", "de_DE-thorsten-medium.onnx.part"} {
 		if _, err := os.Stat(filepath.Join(voices, leftover)); !errors.Is(err, os.ErrNotExist) {
 			t.Fatalf("%s survived a failed download", leftover)
