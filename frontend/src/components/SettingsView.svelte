@@ -79,6 +79,12 @@
     setDeviceVerificationRequired,
   } from '$lib/security';
   import { wakeLockState } from '$lib/wake-lock';
+  import {
+    isNativeShell,
+    readClipboardText,
+    scanQrCode,
+  } from '$lib/native';
+  import { importSetupLinkText, setupLinkToast } from '$lib/setup-link';
   import { relayStore } from '$lib/store';
   import {
     appUpdateStatus,
@@ -184,6 +190,8 @@
   let relayLabel = $state('');
   let relayUrl = $state('');
   let relayToken = $state('');
+  let setupLinkBusy = $state(false);
+  const nativeShell = isNativeShell();
   let deviceLock = $state(deviceVerificationEnabled());
   let updateOpen = $state(false);
   let pendingUpdateAction = $state<SafeUpdateAction | null>(null);
@@ -367,6 +375,29 @@
     relayLabel = '';
     relayUrl = '';
     relayToken = '';
+  }
+
+  function importSetupText(text: string | null) {
+    const toast = setupLinkToast(importSetupLinkText(text));
+    if (toast) relayStore.showToast(toast);
+  }
+
+  async function scanSetupQr() {
+    setupLinkBusy = true;
+    try {
+      importSetupText(await scanQrCode());
+    } finally {
+      setupLinkBusy = false;
+    }
+  }
+
+  async function pasteSetupLink() {
+    setupLinkBusy = true;
+    try {
+      importSetupText(await readClipboardText());
+    } finally {
+      setupLinkBusy = false;
+    }
   }
 
   function requestRelayRemoval(id: string) {
@@ -650,6 +681,17 @@
         <Button type="submit">Add Relay</Button>
         <Button variant="secondary" onclick={() => relayStore.connectAll()}>Reconnect All</Button>
       </div>
+      {#if nativeShell}
+        <div class="form-actions setup-link-actions">
+          <Button variant="secondary" size="sm" disabled={setupLinkBusy} onclick={scanSetupQr}>
+            Scan QR
+          </Button>
+          <Button variant="secondary" size="sm" disabled={setupLinkBusy} onclick={pasteSetupLink}>
+            Paste setup link
+          </Button>
+        </div>
+        <p class="hint">Pair with a computer by scanning its setup QR or pasting its link.</p>
+      {/if}
     </form>
     <div class="relay-list">
       {#if !$relays.length}<p class="hint">No relays configured.</p>{/if}
@@ -933,7 +975,12 @@
 
   <Card>
     <h3>Security</h3>
-    <AppSwitch checked={deviceLock} disabled={$securityState.busy} label="Require Fingerprint / Device Unlock" onchange={changeDeviceLock} />
+    <AppSwitch
+      bind:checked={deviceLock}
+      disabled={$securityState.busy}
+      label={nativeShell ? 'Require device unlock' : 'Require Fingerprint / Device Unlock'}
+      onchange={changeDeviceLock}
+    />
     <p class="hint">{deviceVerificationSupported() ? $securityState.hint : 'Device verification needs HTTPS and WebAuthn support.'}</p>
   </Card>
 
@@ -945,7 +992,8 @@
 
   <Card>
     <h3>About</h3>
-    <p>Phone app version {APP_VERSION}</p>
+    <p>{nativeShell ? 'Android app' : 'Phone app'} version {APP_VERSION}</p>
+    <p class="hint about-build">build {APP_BUILD_ID.slice(0, 12)}{#if nativeShell} · Tauri shell{/if}</p>
     <div class="app-update-status" aria-busy={appUpdateChecking}>
       <div class:app-update-status-hidden={appUpdateChecking} aria-hidden={appUpdateChecking}>
         {#if appUpdateForLayout.state === 'reload-ready'}

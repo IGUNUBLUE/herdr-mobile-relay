@@ -2,7 +2,19 @@ import { get, writable } from 'svelte/store';
 import { base64UrlDecode, base64UrlEncode } from './base64url';
 import { clearConversationPreviews } from './conversation-cache-control';
 import { DEVICE_CREDENTIAL_KEY, DEVICE_LOCK_KEY } from './config';
+import {
+  authenticateBiometric,
+  biometricAvailable,
+  isNativeShell,
+} from './native';
 import { relayStore } from './store';
+
+/**
+ * In the native shell the lock delegates to the system BiometricPrompt rather
+ * than a WebAuthn ceremony — no credential is enrolled, so a marker stands in
+ * for `DEVICE_CREDENTIAL_KEY` to keep `deviceVerificationEnabled()` working.
+ */
+const NATIVE_LOCK_MARKER = 'native-biometric';
 
 
 export interface SecurityState {
@@ -13,12 +25,18 @@ export interface SecurityState {
   hint: string;
 }
 
+function defaultHint(): string {
+  return isNativeShell()
+    ? "Uses this device's fingerprint, face unlock, or screen lock."
+    : "Uses this browser's platform authenticator. Requires HTTPS.";
+}
+
 export const securityState = writable<SecurityState>({
   locked: false,
   busy: false,
   reason: 'open',
   status: '',
-  hint: "Uses this browser's platform authenticator. Requires HTTPS.",
+  hint: defaultHint(),
 });
 
 
@@ -27,6 +45,9 @@ let automaticUnlockPending = false;
 const RESUME_HEALTH_TIMEOUT_MS = 2_000;
 
 export function deviceVerificationSupported(): boolean {
+  // The shell gates on its own biometric plugin; availability is confirmed
+  // when the user actually enrolls or unlocks.
+  if (isNativeShell()) return true;
   return Boolean(window.PublicKeyCredential && navigator.credentials && window.isSecureContext);
 }
 
@@ -190,7 +211,7 @@ export async function setDeviceVerificationRequired(required: boolean): Promise<
       busy: false,
       reason: 'open',
       status: '',
-      hint: "Uses this browser's platform authenticator. Requires HTTPS.",
+      hint: defaultHint(),
     });
     return true;
   }
@@ -198,6 +219,21 @@ export async function setDeviceVerificationRequired(required: boolean): Promise<
 }
 
 export async function enrollDeviceVerification(): Promise<boolean> {
+  if (isNativeShell()) {
+    securityState.update((state) => ({ ...state, busy: true, hint: 'Waiting for device verification...' }));
+    if (!await biometricAvailable()) {
+      securityState.update((state) => ({ ...state, busy: false, hint: 'No fingerprint or face unlock is enrolled on this device.' }));
+      return false;
+    }
+    if (!await authenticateBiometric('Confirm to require unlock')) {
+      securityState.update((state) => ({ ...state, busy: false, hint: 'Device verification was cancelled or failed.' }));
+      return false;
+    }
+    localStorage.setItem(DEVICE_CREDENTIAL_KEY, NATIVE_LOCK_MARKER);
+    localStorage.setItem(DEVICE_LOCK_KEY, 'true');
+    securityState.update((state) => ({ ...state, busy: false, hint: 'Device verification is enabled.' }));
+    return true;
+  }
   if (!deviceVerificationSupported()) {
     securityState.update((state) => ({ ...state, hint: 'Device verification needs HTTPS and WebAuthn support.' }));
     return false;
@@ -254,6 +290,26 @@ export async function unlockWithDevice(reason: 'open' | 'resume' = 'open'): Prom
   const credentialId = localStorage.getItem(DEVICE_CREDENTIAL_KEY);
   if (!credentialId) {
     securityState.update((state) => ({ ...state, locked: true, reason, status: 'No device credential is enrolled.' }));
+    return false;
+  }
+  if (credentialId === NATIVE_LOCK_MARKER) {
+    unlockInProgress = true;
+    securityState.update((state) => ({ ...state, locked: true, busy: true, reason, status: 'Waiting for device verification...' }));
+    const granted = await authenticateBiometric(
+      reason === 'resume' ? 'Verify to pick up where you left off' : 'Verify to open Herdr',
+    );
+    unlockInProgress = false;
+    if (granted) {
+      securityState.update((state) => ({ ...state, locked: false, busy: false, status: '' }));
+      resumeAfterUnlock(reason);
+      return true;
+    }
+    securityState.update((state) => ({
+      ...state,
+      locked: true,
+      busy: false,
+      status: 'Verification failed. Tap Unlock to try again.',
+    }));
     return false;
   }
   unlockInProgress = true;

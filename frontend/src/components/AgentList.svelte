@@ -17,6 +17,8 @@
   } from '$lib/agents';
   import { homeLayout } from '$lib/preferences';
   import { haptic } from '$lib/haptics';
+  import { isNativeShell, readClipboardText, scanQrCode } from '$lib/native';
+  import { importSetupLinkText, setupLinkToast } from '$lib/setup-link';
   import { relayStore } from '$lib/store';
   import type { Agent, RelayConfig, RelayConnectionView, RelayWorkspace } from '$lib/types';
   import { homeRelativePath, informativePath, workspaceGroupTrees, workspaceGroups, workspaceIdentity, workspaceProvenance, workspaceStateTone, type WorkspaceGroup, type WorkspaceGroupTree, type WorkspaceTab } from '$lib/workspaces';
@@ -58,6 +60,32 @@
     ['blocked', 'Needs input', 'danger'],
   ] as const;
   let relativeNow = $state(Date.now());
+  let setupLinkBusy = $state(false);
+  const nativeShell = isNativeShell();
+
+  function importSetupText(text: string | null) {
+    const toast = setupLinkToast(importSetupLinkText(text));
+    if (toast) relayStore.showToast(toast);
+  }
+
+  async function scanSetupQr() {
+    setupLinkBusy = true;
+    try {
+      importSetupText(await scanQrCode());
+    } finally {
+      setupLinkBusy = false;
+    }
+  }
+
+  async function pasteSetupLink() {
+    setupLinkBusy = true;
+    try {
+      importSetupText(await readClipboardText());
+    } finally {
+      setupLinkBusy = false;
+    }
+  }
+
   let listElement = $state<HTMLElement>(null!);
   let pullDistance = $state(0);
   let pullArmed = $state(false);
@@ -721,6 +749,12 @@
         <li>Give each computer its own <code>wss://</code> URL.</li>
         <li>Open Settings and add each relay.</li>
       </ol>
+      {#if nativeShell}
+        <div class="empty-state-actions">
+          <Button variant="secondary" disabled={setupLinkBusy} onclick={scanSetupQr}>Scan setup QR</Button>
+          <Button variant="ghost" disabled={setupLinkBusy} onclick={pasteSetupLink}>Paste setup link</Button>
+        </div>
+      {/if}
     </div>
   {:else if !agents.length && startingRelays.length}
     <div class="agent-grid" role="status" aria-label="Loading agents">
