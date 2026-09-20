@@ -5,6 +5,30 @@ project follows [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.26.0] - 2026-09-20
+
+### Changed
+
+- **Completed the Lerdr rename across the operational surface**: the relay
+  and gateway binaries are now `lerdr` / `lerdr-gateway`, the plugin
+  registers as `lerdr.events`, the user service is `lerdr.service`, and
+  release artifacts are `lerdr_<version>_<target>`. Environment variables
+  prefer `LERDR_*` with `HERDR_*` kept as a fallback, and legacy config,
+  cache, and data directories are adopted automatically so pairing and
+  push state survive the rename.
+
+### Fixed
+
+- **Connection notifications no longer pile up**: relay connected /
+  disconnected alerts are debounced and update a single stable
+  notification instead of stacking one line per flap.
+- **Composer hierarchy on mobile**: the prompt field, workspace context,
+  and keypad are re-laid out so the input row stays compact and reachable
+  above the keyboard.
+- **Toasts render above dialogs again**: the snackbar lives in a top-layer
+  popover with a proper status live region, so confirmations are visible
+  and announced over modals.
+
 ## [0.25.0] - 2026-09-20
 
 ### Changed
