@@ -2046,6 +2046,7 @@
   class:question-only={questionMode}
   class:find-open={findOpen}
   class:reader={readOnly}
+  class:live={agent.status === 'working'}
   class="terminal-view"
   aria-label={`${questionMode ? 'Questions' : 'Terminal'} for ${agent.project || agent.name || agent.agent || 'agent'}`}
 >

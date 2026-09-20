@@ -160,27 +160,38 @@
     if ($currentView.view === 'terminal') return 'Terminal';
     return '🐑 herdr';
   });
-  const headerMeta = $derived(activeAgent ? terminalSecondaryLabel(activeAgent) : '');
+  const headerMeta = $derived.by(() => {
+    let meta = activeAgent ? terminalSecondaryLabel(activeAgent) : '';
+    if (activeConnection?.status === 'connected' && activeConnection.path) {
+      meta += meta ? ' · ' : '';
+      meta += activeConnection.path === 'webrtc' ? 'p2p' : activeConnection.path === 'gateway' ? 'relayed' : 'ws';
+    }
+    return meta;
+  });
   const headerIndicator = $derived.by(() => {
     if (!activeAgent) return {
       tone: inventoryUnavailable || inventoryLoading ? 'warning' : connected ? 'success' : connecting ? 'warning' : 'danger',
       hollow: false,
+      live: !connected && connecting,
       label: `${connected}/${$relays.length} relays connected${inventoryUnavailable ? `; ${inventoryUnavailable} agent inventory unavailable` : inventoryLoading ? `; ${inventoryLoading} agent inventory loading` : ''}`,
     };
     if (activeConnection?.status !== 'connected') return {
       tone: 'warning' as const,
       hollow: false,
+      live: true,
       label: 'Relay reconnecting',
     };
     if (activeConnection.inventory.state !== 'ready') return {
       tone: 'warning' as const,
       hollow: false,
+      live: true,
       label: activeConnection.inventory.state === 'error' ? 'Agent inventory unavailable' : 'Agent inventory loading',
     };
     const group = agentStatusGroup(activeAgent);
     return {
       tone: agentStatusTone(activeAgent),
       hollow: group === 'ready',
+      live: group === 'working',
       label: `Agent ${group === 'ready'
         ? 'idle'
         : group === 'attention'
@@ -580,6 +591,7 @@
     <span
       class={`status-dot status-${headerIndicator.tone}`}
       class:hollow={headerIndicator.hollow}
+      class:live={headerIndicator.live}
       role="img"
       aria-label={headerIndicator.label}
     ></span>

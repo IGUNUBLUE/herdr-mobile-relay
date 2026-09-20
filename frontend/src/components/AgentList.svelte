@@ -456,7 +456,7 @@
 
 {#snippet agentGrid(visible: Agent[], compact: boolean, reorderWorkspace?: WorkspaceGroup, reorderTabId?: string)}
   <div class:compact-agent-grid={compact} class="agent-grid">
-    {#each visible as agent (agent.pane_id)}
+    {#each visible as agent, index (agent.pane_id)}
       {@const interaction = questionInteraction(agent)}
       {@const options = approvalOptions(agent)}
       {@const group = agentStatusGroup(agent)}
@@ -467,7 +467,7 @@
       {@const age = relativeAge(agent)}
       {@const agentPath = compact ? relayPath(agent.relay_id, String(agent.cwd || '')) : ''}
       {@const inventoryReady = !connections.has(agent.relay_id) || connections.get(agent.relay_id)?.inventory.state === 'ready'}
-      <article class:blocked class:compact-agent-card={compact} class:stale={!inventoryReady} class="agent-card">
+      <article class:blocked class:compact-agent-card={compact} class:stale={!inventoryReady} class="agent-card" style:--i={index}>
         <button
           class="agent-open"
           aria-label={`Open ${displayName(agent)} on ${hostLabel(agent)}`}
@@ -482,7 +482,7 @@
         >
           <span class="agent-identity">
             <AgentLogo agent={agent.agent} />
-            <span class={`status-dot status-${tone}`} class:hollow={group === 'ready'} aria-hidden="true"></span>
+            <span class={`status-dot status-${tone}`} class:hollow={group === 'ready'} class:live={group === 'working'} class:attention={blocked || needsInspection} aria-hidden="true"></span>
           </span>
           <span class="agent-copy">
             <span class="agent-title-row">
@@ -558,7 +558,7 @@
 
 {#snippet workspaceGrid(trees: WorkspaceGroupTree[], defaultOpen: boolean, kind: 'working' | 'done' | 'idle' | 'mixed')}
   <div class="workspace-grid">
-    {#each trees as tree (tree.workspace.key)}
+    {#each trees as tree, index (tree.workspace.key)}
       {@const workspace = tree.workspace}
       {@const summary = tree.aggregate}
       {@const working = kind === 'working'}
@@ -575,6 +575,7 @@
         class:working-workspace-card={working}
         class:done-workspace-card={done}
         class="workspace-card"
+        style:--i={index}
         open={workspaceDisclosure[disclosureKey] ?? openDefault}
         ontoggle={(event) => rememberWorkspaceDisclosure(disclosureKey, event)}
       >
@@ -583,6 +584,7 @@
             <span
               class={`status-dot workspace-state-dot status-${stateTone}`}
               class:hollow={stateTone === 'muted'}
+              class:live={stateTone === 'warning'}
               role="img"
               aria-label={stateTone === 'success'
                 ? 'Has a done session'
@@ -679,7 +681,7 @@
     {#if visible.length}
       <section class="agent-section" aria-labelledby={`section-${group}`}>
         <h2 id={`section-${group}`} class="section-heading">
-          <span class={`status-dot status-${tone}`}></span>{title}
+          <span class={`status-dot status-${tone}`} class:attention={true}></span>{title}
           <span class="section-count" aria-hidden="true">{visible.length}</span>
         </h2>
         {@render agentGrid(visible, false)}
@@ -700,7 +702,7 @@
   {#if workingWorkspaces.length}
     <section class="agent-section working-section" aria-labelledby="section-working">
       <h2 id="section-working" class="section-heading">
-        <span class="status-dot status-warning"></span>Working
+        <span class="status-dot status-warning live"></span>Working
         <span class="section-count" aria-hidden="true">{workingAgents.length}</span>
       </h2>
       {@render workspaceGrid(workingWorkspaces, true, 'working')}
