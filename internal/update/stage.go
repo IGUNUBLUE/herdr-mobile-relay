@@ -18,12 +18,12 @@ import (
 	"strings"
 	"time"
 
-	"github.com/0cv/herdr-mobile-relay/internal/appdeploy"
-	relayrelease "github.com/0cv/herdr-mobile-relay/internal/release"
+	"github.com/IGUNUBLUE/lerdr/internal/appdeploy"
+	relayrelease "github.com/IGUNUBLUE/lerdr/internal/release"
 )
 
 const (
-	canonicalReleaseAssets = "https://github.com/0cv/herdr-mobile-relay/releases/download"
+	canonicalReleaseAssets = "https://github.com/IGUNUBLUE/lerdr/releases/download"
 	maxChecksumBytes       = 1 * 1024 * 1024
 	maxArchiveBytes        = 128 * 1024 * 1024
 	maxExtractedBytes      = 256 * 1024 * 1024

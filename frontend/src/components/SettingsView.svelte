@@ -2,10 +2,11 @@
   import { onMount } from 'svelte';
   import DeviceSettings from '$components/DeviceSettings.svelte';
   import NotificationSettings from '$components/NotificationSettings.svelte';
+  import SettingsRow from '$components/settings/SettingsRow.svelte';
+  import SettingsSection from '$components/settings/SettingsSection.svelte';
   import AppDialog from '$components/ui/AppDialog.svelte';
   import AppSwitch from '$components/ui/AppSwitch.svelte';
   import Button from '$components/ui/Button.svelte';
-  import Card from '$components/ui/Card.svelte';
   import {
     AGENT_VIEW_LABELS,
     AGENT_VIEWS,
@@ -668,31 +669,32 @@
 >
   <h2 id="settings-title">Settings</h2>
 
-  <Card>
-    <h3>Relays</h3>
-    <form class="form-stack" onsubmit={addRelay}>
-      <label for="relay-label">Relay Name</label>
-      <input id="relay-label" bind:value={relayLabel} placeholder="Fedora" />
-      <label for="relay-url">Relay URL</label>
-      <input id="relay-url" bind:value={relayUrl} type="url" required placeholder="wss://relay-fedora.example.com" />
-      <label for="relay-token">Relay key</label>
-      <input id="relay-token" bind:value={relayToken} type="password" placeholder="HERDR_RELAY_TOKEN" />
-      <div class="form-actions">
-        <Button type="submit">Add Relay</Button>
-        <Button variant="secondary" onclick={() => relayStore.connectAll()}>Reconnect All</Button>
-      </div>
-      {#if nativeShell}
-        <div class="form-actions setup-link-actions">
-          <Button variant="secondary" size="sm" disabled={setupLinkBusy} onclick={scanSetupQr}>
-            Scan QR
-          </Button>
-          <Button variant="secondary" size="sm" disabled={setupLinkBusy} onclick={pasteSetupLink}>
-            Paste setup link
-          </Button>
+  <SettingsSection title="Connection">
+    <div class="pad">
+      <form class="form-stack" onsubmit={addRelay}>
+        <label for="relay-label">Relay Name</label>
+        <input id="relay-label" bind:value={relayLabel} placeholder="Fedora" />
+        <label for="relay-url">Relay URL</label>
+        <input id="relay-url" bind:value={relayUrl} type="url" required placeholder="wss://relay-fedora.example.com" />
+        <label for="relay-token">Relay key</label>
+        <input id="relay-token" bind:value={relayToken} type="password" placeholder="HERDR_RELAY_TOKEN" />
+        <div class="form-actions">
+          <Button type="submit">Add Relay</Button>
+          <Button variant="secondary" onclick={() => relayStore.connectAll()}>Reconnect All</Button>
         </div>
-        <p class="hint">Pair with a computer by scanning its setup QR or pasting its link.</p>
-      {/if}
-    </form>
+        {#if nativeShell}
+          <div class="form-actions setup-link-actions">
+            <Button variant="secondary" size="sm" disabled={setupLinkBusy} onclick={scanSetupQr}>
+              Scan QR
+            </Button>
+            <Button variant="secondary" size="sm" disabled={setupLinkBusy} onclick={pasteSetupLink}>
+              Paste setup link
+            </Button>
+          </div>
+          <p class="hint">Pair with a computer by scanning its setup QR or pasting its link.</p>
+        {/if}
+      </form>
+    </div>
     <div class="relay-list">
       {#if !$relays.length}<p class="hint">No relays configured.</p>{/if}
       {#each relayRows as { relay, connection } (relay.id)}
@@ -785,8 +787,10 @@
         </article>
       {/each}
     </div>
-    <p class="hint">Use one relay URL per computer. Relay keys stay in this browser’s local storage and encrypt relay messages end to end.</p>
-  </Card>
+    <div class="pad">
+      <p class="hint">Use one relay URL per computer. Relay keys stay in this browser’s local storage and encrypt relay messages end to end.</p>
+    </div>
+  </SettingsSection>
   {#each relayRows as { relay, connection } (relay.id)}
     {@const credential = relayStore.deviceCredential(relay.id)}
     {#if credential}
@@ -811,114 +815,132 @@
   {/each}
 
 
-  <Card>
-    <h3>Agents</h3>
-    <fieldset class="choice-grid compact-grid">
-      <legend>Default View</legend>
-      {#each AGENT_VIEWS as item (item)}
-        <button
-          class:active={$defaultAgentView === item}
-          type="button"
-          aria-pressed={$defaultAgentView === item}
-          onclick={() => changeDefaultAgentView(item)}
-        >{AGENT_VIEW_LABELS[item]}</button>
-      {/each}
-    </fieldset>
-    <p class="hint">Saved on this device. Used when opening an agent unless that pane has its own setting. Conversation falls back to Terminal when a native transcript is unavailable.</p>
-  </Card>
+  <SettingsSection title="Agents">
+    <div class="pad">
+      <fieldset class="choice-grid compact-grid">
+        <legend>Default View</legend>
+        {#each AGENT_VIEWS as item (item)}
+          <button
+            class:active={$defaultAgentView === item}
+            type="button"
+            aria-pressed={$defaultAgentView === item}
+            onclick={() => changeDefaultAgentView(item)}
+          >{AGENT_VIEW_LABELS[item]}</button>
+        {/each}
+      </fieldset>
+      <p class="hint">Saved on this device. Used when opening an agent unless that pane has its own setting. Conversation falls back to Terminal when a native transcript is unavailable.</p>
+    </div>
+  </SettingsSection>
 
-  <Card>
-    <h3>Appearance</h3>
-    <fieldset class="choice-grid">
-      <legend>Theme</legend>
-      {#each THEMES as item (item)}
-        <button class:active={$theme === item} type="button" aria-pressed={$theme === item} onclick={() => setTheme(item as Theme)}>{item}</button>
-      {/each}
-    </fieldset>
-    <fieldset class="choice-grid compact-grid">
-      <legend>Interface Size</legend>
-      {#each INTERFACE_SIZES as item (item)}
-        <button class:active={$interfaceSize === item} type="button" aria-pressed={$interfaceSize === item} onclick={() => setInterfaceSize(item as InterfaceSize)}>{item.charAt(0).toUpperCase() + item.slice(1)}</button>
-      {/each}
-    </fieldset>
-    <fieldset class="choice-grid compact-grid">
-      <legend>Home Workspaces</legend>
-      {#each HOME_LAYOUTS as item (item)}
-        <button
-          class:active={$homeLayout === item}
-          type="button"
-          aria-pressed={$homeLayout === item}
-          onclick={() => setHomeLayout(item as HomeLayout)}
-        >{HOME_LAYOUT_LABELS[item]}</button>
-      {/each}
-    </fieldset>
-    <p class="hint">By State separates Done, Working, and Idle workspace sections. Mixed shows each workspace once with a dot for its most notable session: done, then working, then idle. Agents needing input always stay on top.</p>
-    <fieldset class="choice-grid history-grid">
-      <legend>Terminal History</legend>
-      {#each TERMINAL_HISTORY_OPTIONS as item (item)}
-        <button
-          class:active={$terminalHistoryLines === item}
-          type="button"
-          aria-pressed={$terminalHistoryLines === item}
-          onclick={() => setTerminalHistoryLines(item as TerminalHistoryLines)}
-        >{item}</button>
-      {/each}
-    </fieldset>
-    <p class="hint">Lines kept in the terminal view. Direct connections honor the selected limit; gateway transport caps each read at 1,000 lines to bound relayed traffic. Use Copy or Conversation History for clean response text.</p>
-    <fieldset class="choice-grid history-grid refresh-grid">
-      <legend>Terminal Refresh</legend>
-      {#each TERMINAL_REFRESH_OPTIONS as item (item)}
-        <button
-          class:active={$terminalRefreshInterval === item}
-          type="button"
-          aria-pressed={$terminalRefreshInterval === item}
-          onclick={() => setTerminalRefreshInterval(item as TerminalRefreshInterval)}
-        >{TERMINAL_REFRESH_LABELS[item]}</button>
-      {/each}
-    </fieldset>
-    <p class="hint">How often the relay checks the visible pane. 250 ms is balanced; faster refresh uses more computer and phone CPU during active output.</p>
-    <p class="hint">Resize Session automatically leases the shared terminal at the phone width while it is open, so the laptop view changes too. The previous width is restored when the terminal closes or disconnects.</p>
-    <AppSwitch
-      checked={$terminalHeightLease}
-      label="Lease Terminal Height"
-      descriptionId="height-lease-hint"
-      onchange={(value) => setTerminalHeightLease(value)}
-    />
-    <p class="hint" id="height-lease-hint">Off by default. Also leases the terminal at the phone's height so full-screen agents redraw to fit the phone instead of serving a mostly empty desktop-sized grid. The shared pane physically shrinks on the computer, and inline agents such as omp or Claude Code can strand duplicate status bars in the scrollback each time the height changes.</p>
-    <AppSwitch
-      checked={$terminalWakeLock}
-      label="Keep Screen Awake"
-      descriptionId="wake-lock-hint"
-      onchange={(value) => setTerminalWakeLock(value)}
-    />
-    <p class="hint" id="wake-lock-hint">Off by default. When enabled, requests the browser screen wake lock only while a Terminal is mounted and visible. Status: {wakeLockStatus}.</p>
-    <AppSwitch
-      checked={$speechEnabled}
-      label="Read Responses Aloud"
-      descriptionId="speech-hint"
-      onchange={(value) => setSpeechEnabled(value)}
-    />
-    <p class="hint" id="speech-hint">Enabled automatically the first time a connected relay offers a compatible voice; after that, this setting remains under your control. Adds a Speak button next to Copy in the Terminal and Conversation History views. The relay synthesizes each response with its own neural voice and streams the audio here encrypted, so reading continues while the screen is off. Response text never reaches a third-party speech server.</p>
-    <label class="field-label settings-field" for="speech-language">Language</label>
-    <select
-      id="speech-language"
-      disabled={!$speechEnabled}
-      value={$speechLanguage}
-      onchange={(event) => setSpeechLanguage(event.currentTarget.value)}
-    >
-      {#each SPEECH_LANGUAGES as language (language.code)}
-        <option value={language.code}>{language.label}</option>
-      {/each}
-    </select>
-    {#if $speechState === 'error'}
-      <p class="hint error" role="alert">Reading aloud failed. Check the relay's voice below, then try again.</p>
-    {/if}
-    {#if $speechEnabled && relaysWithoutVoice.length}
-      <p class="hint" role="status">No {speechLanguageLabel($speechLanguage)} voice on {relaysWithoutVoice.join(', ')}. Download it below, or install a system speech engine on that computer.</p>
-    {/if}
-    {#if $speechState === 'speaking'}
-      <Button variant="secondary" size="sm" onclick={stopSpeech}>Stop reading</Button>
-    {/if}
+  <SettingsSection title="Appearance">
+    <div class="pad">
+      <fieldset class="choice-grid">
+        <legend>Theme</legend>
+        {#each THEMES as item (item)}
+          <button class:active={$theme === item} type="button" aria-pressed={$theme === item} onclick={() => setTheme(item as Theme)}>{item}</button>
+        {/each}
+      </fieldset>
+      <fieldset class="choice-grid compact-grid">
+        <legend>Interface Size</legend>
+        {#each INTERFACE_SIZES as item (item)}
+          <button class:active={$interfaceSize === item} type="button" aria-pressed={$interfaceSize === item} onclick={() => setInterfaceSize(item as InterfaceSize)}>{item.charAt(0).toUpperCase() + item.slice(1)}</button>
+        {/each}
+      </fieldset>
+      <fieldset class="choice-grid compact-grid">
+        <legend>Home Workspaces</legend>
+        {#each HOME_LAYOUTS as item (item)}
+          <button
+            class:active={$homeLayout === item}
+            type="button"
+            aria-pressed={$homeLayout === item}
+            onclick={() => setHomeLayout(item as HomeLayout)}
+          >{HOME_LAYOUT_LABELS[item]}</button>
+        {/each}
+      </fieldset>
+      <p class="hint">By State separates Done, Working, and Idle workspace sections. Mixed shows each workspace once with a dot for its most notable session: done, then working, then idle. Agents needing input always stay on top.</p>
+    </div>
+  </SettingsSection>
+
+  <SettingsSection title="Terminal">
+    <div class="pad">
+      <fieldset class="choice-grid history-grid">
+        <legend>Terminal History</legend>
+        {#each TERMINAL_HISTORY_OPTIONS as item (item)}
+          <button
+            class:active={$terminalHistoryLines === item}
+            type="button"
+            aria-pressed={$terminalHistoryLines === item}
+            onclick={() => setTerminalHistoryLines(item as TerminalHistoryLines)}
+          >{item}</button>
+        {/each}
+      </fieldset>
+      <p class="hint">Lines kept in the terminal view. Direct connections honor the selected limit; gateway transport caps each read at 1,000 lines to bound relayed traffic. Use Copy or Conversation History for clean response text.</p>
+      <fieldset class="choice-grid history-grid refresh-grid">
+        <legend>Terminal Refresh</legend>
+        {#each TERMINAL_REFRESH_OPTIONS as item (item)}
+          <button
+            class:active={$terminalRefreshInterval === item}
+            type="button"
+            aria-pressed={$terminalRefreshInterval === item}
+            onclick={() => setTerminalRefreshInterval(item as TerminalRefreshInterval)}
+          >{TERMINAL_REFRESH_LABELS[item]}</button>
+        {/each}
+      </fieldset>
+      <p class="hint">How often the relay checks the visible pane. 250 ms is balanced; faster refresh uses more computer and phone CPU during active output.</p>
+      <p class="hint">Resize Session automatically leases the shared terminal at the phone width while it is open, so the laptop view changes too. The previous width is restored when the terminal closes or disconnects.</p>
+    </div>
+    <SettingsRow>
+      <AppSwitch
+        checked={$terminalHeightLease}
+        label="Lease Terminal Height"
+        descriptionId="height-lease-hint"
+        onchange={(value) => setTerminalHeightLease(value)}
+      />
+      <p class="hint" id="height-lease-hint">Off by default. Also leases the terminal at the phone's height so full-screen agents redraw to fit the phone instead of serving a mostly empty desktop-sized grid. The shared pane physically shrinks on the computer, and inline agents such as omp or Claude Code can strand duplicate status bars in the scrollback each time the height changes.</p>
+    </SettingsRow>
+    <SettingsRow>
+      <AppSwitch
+        checked={$terminalWakeLock}
+        label="Keep Screen Awake"
+        descriptionId="wake-lock-hint"
+        onchange={(value) => setTerminalWakeLock(value)}
+      />
+      <p class="hint" id="wake-lock-hint">Off by default. When enabled, requests the browser screen wake lock only while a Terminal is mounted and visible. Status: {wakeLockStatus}.</p>
+    </SettingsRow>
+  </SettingsSection>
+
+  <SettingsSection title="Speech">
+    <SettingsRow>
+      <AppSwitch
+        checked={$speechEnabled}
+        label="Read Responses Aloud"
+        descriptionId="speech-hint"
+        onchange={(value) => setSpeechEnabled(value)}
+      />
+      <p class="hint" id="speech-hint">Enabled automatically the first time a connected relay offers a compatible voice; after that, this setting remains under your control. Adds a Speak button next to Copy in the Terminal and Conversation History views. The relay synthesizes each response with its own neural voice and streams the audio here encrypted, so reading continues while the screen is off. Response text never reaches a third-party speech server.</p>
+    </SettingsRow>
+    <div class="pad">
+      <label class="field-label settings-field" for="speech-language">Language</label>
+      <select
+        id="speech-language"
+        disabled={!$speechEnabled}
+        value={$speechLanguage}
+        onchange={(event) => setSpeechLanguage(event.currentTarget.value)}
+      >
+        {#each SPEECH_LANGUAGES as language (language.code)}
+          <option value={language.code}>{language.label}</option>
+        {/each}
+      </select>
+      {#if $speechState === 'error'}
+        <p class="hint error" role="alert">Reading aloud failed. Check the relay's voice below, then try again.</p>
+      {/if}
+      {#if $speechEnabled && relaysWithoutVoice.length}
+        <p class="hint" role="status">No {speechLanguageLabel($speechLanguage)} voice on {relaysWithoutVoice.join(', ')}. Download it below, or install a system speech engine on that computer.</p>
+      {/if}
+      {#if $speechState === 'speaking'}
+        <Button variant="secondary" size="sm" onclick={stopSpeech}>Stop reading</Button>
+      {/if}
+    </div>
     {#if $speechEnabled}
       {#each speechVoiceRelays as { relay, connection } (relay.id)}
         <div class="relay-list">
@@ -960,7 +982,7 @@
         </div>
       {/each}
     {/if}
-  </Card>
+  </SettingsSection>
 
   <NotificationSettings
     scopes={notificationScopes}
@@ -973,94 +995,102 @@
     ontest={(request) => { sendTargetedPushTest(request); }}
   />
 
-  <Card>
-    <h3>Security</h3>
-    <AppSwitch
-      bind:checked={deviceLock}
-      disabled={$securityState.busy}
-      label={nativeShell ? 'Require device unlock' : 'Require Fingerprint / Device Unlock'}
-      onchange={changeDeviceLock}
-    />
-    <p class="hint">{deviceVerificationSupported() ? $securityState.hint : 'Device verification needs HTTPS and WebAuthn support.'}</p>
-  </Card>
+  <SettingsSection title="Security">
+    <SettingsRow>
+      <AppSwitch
+        bind:checked={deviceLock}
+        disabled={$securityState.busy}
+        label={nativeShell ? 'Require device unlock' : 'Require Fingerprint / Device Unlock'}
+        onchange={changeDeviceLock}
+      />
+      <p class="hint">{deviceVerificationSupported() ? $securityState.hint : 'Device verification needs HTTPS and WebAuthn support.'}</p>
+    </SettingsRow>
+  </SettingsSection>
 
-  <Card>
-    <h3>Status</h3>
-    <p><span class={`status-dot status-${degradedCount ? 'warning' : connectedCount ? 'success' : 'danger'}`}></span> {connectedCount}/{$relays.length} relays connected · {$agents.length} agents</p>
-    {#if degradedCount}<p class="warning" role="status">{degradedCount} connected {degradedCount === 1 ? 'relay has' : 'relays have'} unavailable agent inventory.</p>{/if}
-  </Card>
+  <SettingsSection title="Status">
+    <SettingsRow>
+      {#snippet icon()}
+        <span class={`status-dot status-${degradedCount ? 'warning' : connectedCount ? 'success' : 'danger'}`}></span>
+      {/snippet}
+      <p>{connectedCount}/{$relays.length} relays connected · {$agents.length} agents</p>
+      {#if degradedCount}<p class="warning" role="status">{degradedCount} connected {degradedCount === 1 ? 'relay has' : 'relays have'} unavailable agent inventory.</p>{/if}
+    </SettingsRow>
+  </SettingsSection>
 
-  <Card>
-    <h3>About</h3>
-    <p>{nativeShell ? 'Android app' : 'Phone app'} version {APP_VERSION}</p>
-    <p class="hint about-build">build {APP_BUILD_ID.slice(0, 12)}{#if nativeShell} · Tauri shell{/if}</p>
-    <div class="app-update-status" aria-busy={appUpdateChecking}>
-      <div class:app-update-status-hidden={appUpdateChecking} aria-hidden={appUpdateChecking}>
-        {#if appUpdateForLayout.state === 'reload-ready'}
-          <p class="warning" role="status">Version {appUpdateForLayout.deployedVersion} is deployed to this app origin and ready to load.</p>
-        {:else if appUpdateForLayout.state === 'deployment-required'}
-          <p class="warning" role="status">
-            Version {appUpdateForLayout.upstreamVersion} is released, but this app origin still serves {appUpdateForLayout.deployedVersion}.
-          </p>
-          {#if appDeploymentOwner}
-            {#if ['scheduled', 'preparing', 'deploying_app', 'installing', 'restarting'].includes(appDeploymentOwner.connection?.update.state || '')}
-              <p class="hint" role="status">Publishing v{appUpdateForLayout.upstreamVersion} and waiting for this app origin to update. This can take up to two minutes; the relay remains online.</p>
-            {:else if ['scheduled', 'deploying'].includes(appDeploymentOwner.connection?.appDeploy.state || '')}
-              <p class="hint" role="status">Publishing v{appUpdateForLayout.upstreamVersion} from {appDeploymentOwner.relay.label} and waiting for this app origin to update. This can take up to two minutes.</p>
-            {:else if appDeploymentOwner.connection?.appDeploy.state === 'failed'}
-              <p class="warning" role="status">Deployment failed: {appDeploymentOwner.connection.appDeploy.error}</p>
-            {:else if appDeploymentOwner.connection?.releaseVersion !== appUpdateForLayout.upstreamVersion}
-              {#if appDeploymentOwner.connection && relayNeedsManualBootstrap(appDeploymentOwner.connection)}
-                <p class="warning" role="status">{appDeploymentOwner.relay.label} needs the one-time Terminal bootstrap shown in Update Help before it can deploy this app version.</p>
-              {:else if ownerUpdateReady}
-                <p class="hint">{appDeploymentOwner.relay.label} can deploy the app and update to {appUpdateForLayout.upstreamVersion} in one safe step.</p>
+  <SettingsSection title="About">
+    <SettingsRow>
+      <p>{nativeShell ? 'Android app' : 'Phone app'} version {APP_VERSION}</p>
+      <p class="hint about-build">build {APP_BUILD_ID.slice(0, 12)}{#if nativeShell} · Tauri shell{/if}</p>
+    </SettingsRow>
+    <div class="pad">
+      <div class="app-update-status" aria-busy={appUpdateChecking}>
+        <div class:app-update-status-hidden={appUpdateChecking} aria-hidden={appUpdateChecking}>
+          {#if appUpdateForLayout.state === 'reload-ready'}
+            <p class="warning" role="status">Version {appUpdateForLayout.deployedVersion} is deployed to this app origin and ready to load.</p>
+          {:else if appUpdateForLayout.state === 'deployment-required'}
+            <p class="warning" role="status">
+              Version {appUpdateForLayout.upstreamVersion} is released, but this app origin still serves {appUpdateForLayout.deployedVersion}.
+            </p>
+            {#if appDeploymentOwner}
+              {#if ['scheduled', 'preparing', 'deploying_app', 'installing', 'restarting'].includes(appDeploymentOwner.connection?.update.state || '')}
+                <p class="hint" role="status">Publishing v{appUpdateForLayout.upstreamVersion} and waiting for this app origin to update. This can take up to two minutes; the relay remains online.</p>
+              {:else if ['scheduled', 'deploying'].includes(appDeploymentOwner.connection?.appDeploy.state || '')}
+                <p class="hint" role="status">Publishing v{appUpdateForLayout.upstreamVersion} from {appDeploymentOwner.relay.label} and waiting for this app origin to update. This can take up to two minutes.</p>
+              {:else if appDeploymentOwner.connection?.appDeploy.state === 'failed'}
+                <p class="warning" role="status">Deployment failed: {appDeploymentOwner.connection.appDeploy.error}</p>
+              {:else if appDeploymentOwner.connection?.releaseVersion !== appUpdateForLayout.upstreamVersion}
+                {#if appDeploymentOwner.connection && relayNeedsManualBootstrap(appDeploymentOwner.connection)}
+                  <p class="warning" role="status">{appDeploymentOwner.relay.label} needs the one-time Terminal bootstrap shown in Update Help before it can deploy this app version.</p>
+                {:else if ownerUpdateReady}
+                  <p class="hint">{appDeploymentOwner.relay.label} can deploy the app and update to {appUpdateForLayout.upstreamVersion} in one safe step.</p>
+                {:else}
+                  <p class="hint">No installable v{appUpdateForLayout.upstreamVersion} relay update is available from {appDeploymentOwner.relay.label} yet.</p>
+                {/if}
               {:else}
-                <p class="hint">No installable v{appUpdateForLayout.upstreamVersion} relay update is available from {appDeploymentOwner.relay.label} yet.</p>
+                <p class="hint">{appDeploymentOwner.relay.label} is authorized to deploy this app origin.</p>
               {/if}
             {:else}
-              <p class="hint">{appDeploymentOwner.relay.label} is authorized to deploy this app origin.</p>
+              <p class="hint">This is a separately hosted app. Configure one relay as its deployment owner:</p>
+              <pre class="update-command"><code>{APP_DEPLOY_SETUP_COMMAND}</code></pre>
             {/if}
+          {:else if appUpdateForLayout.state === 'checking'}
+            <p class="hint" role="status">Checking this app origin and the upstream release…</p>
+          {:else if appUpdateForLayout.state === 'failed'}
+            <p class="hint" role="status">Could not verify app updates: {appUpdateForLayout.error}</p>
           {:else}
-            <p class="hint">This is a separately hosted app. Configure one relay as its deployment owner:</p>
-            <pre class="update-command"><code>{APP_DEPLOY_SETUP_COMMAND}</code></pre>
+            <p class="hint" role="status">Phone app is current at v{appUpdateForLayout.upstreamVersion || APP_VERSION}.</p>
+            {#if relayUpdateCount}
+              <p class="warning" role="status">{relayUpdateCount} {relayUpdateCount === 1 ? 'relay update is' : 'relay updates are'} available.</p>
+            {/if}
+            {#if blockedRelayUpdateCount}
+              <p class="warning" role="status">{blockedRelayUpdateCount} {blockedRelayUpdateCount === 1 ? 'relay update needs' : 'relay updates need'} attention.</p>
+            {/if}
+            {#if manualRelayUpdateCount}
+              <p class="warning" role="status">{manualRelayUpdateCount} {manualRelayUpdateCount === 1 ? 'relay requires' : 'relays require'} a one-time manual update.</p>
+            {/if}
           {/if}
-        {:else if appUpdateForLayout.state === 'checking'}
-          <p class="hint" role="status">Checking this app origin and the upstream release…</p>
-        {:else if appUpdateForLayout.state === 'failed'}
-          <p class="hint" role="status">Could not verify app updates: {appUpdateForLayout.error}</p>
-        {:else}
-          <p class="hint" role="status">Phone app is current at v{appUpdateForLayout.upstreamVersion || APP_VERSION}.</p>
-          {#if relayUpdateCount}
-            <p class="warning" role="status">{relayUpdateCount} {relayUpdateCount === 1 ? 'relay update is' : 'relay updates are'} available.</p>
-          {/if}
-          {#if blockedRelayUpdateCount}
-            <p class="warning" role="status">{blockedRelayUpdateCount} {blockedRelayUpdateCount === 1 ? 'relay update needs' : 'relay updates need'} attention.</p>
-          {/if}
-          {#if manualRelayUpdateCount}
-            <p class="warning" role="status">{manualRelayUpdateCount} {manualRelayUpdateCount === 1 ? 'relay requires' : 'relays require'} a one-time manual update.</p>
-          {/if}
+        </div>
+        {#if appUpdateChecking}
+          <p class="hint app-update-status-checking" role="status">Checking this app origin and the upstream release…</p>
         {/if}
       </div>
-      {#if appUpdateChecking}
-        <p class="hint app-update-status-checking" role="status">Checking this app origin and the upstream release…</p>
-      {/if}
+      <div class="form-actions">
+        <Button
+          class="update-check-button"
+          variant="secondary"
+          aria-busy={appUpdateChecking}
+          disabled={appUpdateChecking}
+          onclick={checkAppAndRelays}
+        >Check for Updates</Button>
+        {#if updatePending}
+          <Button disabled={!safeUpdateAction || Boolean(busyRelayId)} onclick={requestSafeUpdate}>
+            {updateActionLabel(safeUpdateAction)}
+          </Button>
+        {/if}
+      </div>
+      <p class="hint">Relay-hosted apps update with their relay. A separately hosted Pages app can be deployed only by its configured owner relay.</p>
     </div>
-    <div class="form-actions">
-      <Button
-        class="update-check-button"
-        variant="secondary"
-        aria-busy={appUpdateChecking}
-        disabled={appUpdateChecking}
-        onclick={checkAppAndRelays}
-      >Check for Updates</Button>
-      {#if updatePending}
-        <Button disabled={!safeUpdateAction || Boolean(busyRelayId)} onclick={requestSafeUpdate}>
-          {updateActionLabel(safeUpdateAction)}
-        </Button>
-      {/if}
-    </div>
-    <p class="hint">Relay-hosted apps update with their relay. A separately hosted Pages app can be deployed only by its configured owner relay.</p>
-  </Card>
+  </SettingsSection>
 </main>
 
 <AppDialog
@@ -1114,3 +1144,24 @@
     <Button variant="ghost" onclick={() => { removalOpen = false; }}>Cancel</Button>
   </div>
 </AppDialog>
+
+<style>
+  /* Padded content blocks inside a section body; each non-leading block is
+     separated by the same subtle divider the list rows use. */
+  .pad { padding: .85rem .9rem; }
+  .pad:not(:first-child) { border-top: 1px solid var(--border); }
+  .pad > :first-child { margin-top: 0; }
+  .pad > :last-child { margin-bottom: 0; }
+
+  /* The relay and voice rows keep their global look, but inside a section
+     body they read as list rows: full-width padding and top dividers so the
+     last row does not carry a border into the rounded corner. */
+  .relay-list { margin-top: 0; }
+  .relay-list > .hint { margin: .7rem .9rem; }
+  .relay-row {
+    border-bottom: 0;
+    border-top: 1px solid var(--border);
+    padding: .75rem .9rem;
+  }
+  .relay-row:first-child { border-top: 0; }
+</style>

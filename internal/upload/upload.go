@@ -23,7 +23,7 @@ import (
 	"time"
 	"unicode/utf8"
 
-	"github.com/0cv/herdr-mobile-relay/internal/protocol"
+	"github.com/IGUNUBLUE/lerdr/internal/protocol"
 )
 
 const (

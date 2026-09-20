@@ -1,6 +1,6 @@
 #!/bin/bash
 set -euo pipefail
-echo "🐑 Herdr Mobile Relay quick start"
+echo "🐑 Lerdr quick start"
 echo ""
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
@@ -232,7 +232,7 @@ elif command -v cloudflared >/dev/null 2>&1; then
     if ! kill -0 "$RELAY_PID" 2>/dev/null; then
         echo "✗ The relay process stopped. The tunnel cannot serve the app without it."
         if [ -n "${HERDR_PLUGIN_CONFIG_DIR:-}" ]; then
-            echo "  Run Herdr Mobile Relay: Quick Start again; check port $PORT if it fails again."
+            echo "  Run Lerdr: Quick Start again; check port $PORT if it fails again."
         else
             echo "  Rerun make quick-start; check port $PORT if it fails again."
         fi

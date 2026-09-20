@@ -1,8 +1,8 @@
 #!/bin/sh
-# Install one exact, complete Herdr Mobile Relay release. No toolchain needed.
+# Install one exact, complete Lerdr release. No toolchain needed.
 set -eu
 
-REPO=${HERDR_RELEASE_REPOSITORY:-0cv/herdr-mobile-relay}
+REPO=${LERDR_RELEASE_REPOSITORY:-${HERDR_RELEASE_REPOSITORY:-IGUNUBLUE/lerdr}}
 BINARY=herdr-mobile-relay
 
 info() { printf '==> %s\n' "$1" >&2; }

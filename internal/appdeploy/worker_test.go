@@ -22,7 +22,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/0cv/herdr-mobile-relay/internal/release"
+	"github.com/IGUNUBLUE/lerdr/internal/release"
 	"github.com/andybalholm/brotli"
 )
 

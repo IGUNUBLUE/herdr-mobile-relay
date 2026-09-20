@@ -13,10 +13,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/0cv/herdr-mobile-relay/internal/config"
-	"github.com/0cv/herdr-mobile-relay/internal/coordinator"
-	"github.com/0cv/herdr-mobile-relay/internal/slashcmd"
-	"github.com/0cv/herdr-mobile-relay/internal/transport"
+	"github.com/IGUNUBLUE/lerdr/internal/config"
+	"github.com/IGUNUBLUE/lerdr/internal/coordinator"
+	"github.com/IGUNUBLUE/lerdr/internal/slashcmd"
+	"github.com/IGUNUBLUE/lerdr/internal/transport"
 	"github.com/coder/websocket"
 )
 

@@ -31,7 +31,7 @@ if [ -n "$(gateway_urls "$ENV_FILE")" ]; then
     echo ""
 fi
 
-echo "🐑 Herdr Mobile Relay stable tunnel setup"
+echo "🐑 Lerdr stable tunnel setup"
 echo ""
 echo "This wizard provisions or reuses a named Cloudflare tunnel, installs the"
 echo "background service, and verifies the public relay before showing its QR."

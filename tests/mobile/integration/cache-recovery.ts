@@ -148,7 +148,7 @@ async function main(): Promise<void> {
     });
     await control(info, '/activate', 'POST', { release: 'candidate' });
     await page.goto(`${info.app_url}/index.html?herdr_reload=cache-recovery`, { waitUntil: 'domcontentloaded' });
-    await page.getByRole('heading', { name: 'Herdr could not load' }).waitFor();
+    await page.getByRole('heading', { name: /^(Lerdr|Herdr) could not load$/ }).waitFor();
     await waitForFault(info, bundleSet.candidate.identity.style, faultId, faultGeneration);
     await page.waitForFunction(() => JSON.parse(sessionStorage.getItem('herdr_update_progress') || '{}').phoneState === 'failed');
     const failedPlan = await page.evaluate(() => JSON.parse(sessionStorage.getItem('herdr_update_progress') || '{}')) as { phoneAcknowledged?: boolean; phoneState?: string };

@@ -163,7 +163,7 @@ print_status() {
 }
 
 render_menu() {
-    echo "🐑 Herdr Mobile Relay Setup"
+    echo "🐑 Lerdr Setup"
     echo ""
     print_status
     echo ""

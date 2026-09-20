@@ -21,7 +21,7 @@ if [ -z "${HERDR_RELAY_BIN:-}" ]; then
     export HERDR_RELAY_BIN="$DEV_BIN_DIR/herdr-mobile-relay"
 fi
 
-echo "🐑 Herdr Mobile Relay development tunnel"
+echo "🐑 Lerdr development tunnel"
 echo ""
 echo "  Config:      $HERDR_RELAY_ENV"
 echo "  Relay:       http://127.0.0.1:$HERDR_RELAY_PORT"

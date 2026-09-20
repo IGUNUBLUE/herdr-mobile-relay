@@ -6,10 +6,10 @@ import (
 	"sync"
 	"time"
 
-	"github.com/0cv/herdr-mobile-relay/internal/history"
-	"github.com/0cv/herdr-mobile-relay/internal/panedelta"
-	"github.com/0cv/herdr-mobile-relay/internal/protocol"
-	"github.com/0cv/herdr-mobile-relay/internal/transport"
+	"github.com/IGUNUBLUE/lerdr/internal/history"
+	"github.com/IGUNUBLUE/lerdr/internal/panedelta"
+	"github.com/IGUNUBLUE/lerdr/internal/protocol"
+	"github.com/IGUNUBLUE/lerdr/internal/transport"
 )
 
 const defaultPaneWatchInterval = 250 * time.Millisecond

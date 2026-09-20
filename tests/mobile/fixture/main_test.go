@@ -12,8 +12,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/0cv/herdr-mobile-relay/internal/deviceauth"
-	"github.com/0cv/herdr-mobile-relay/internal/transport"
+	"github.com/IGUNUBLUE/lerdr/internal/deviceauth"
+	"github.com/IGUNUBLUE/lerdr/internal/transport"
 )
 
 func fixtureWebRoot(t *testing.T, version string, marker string) string {

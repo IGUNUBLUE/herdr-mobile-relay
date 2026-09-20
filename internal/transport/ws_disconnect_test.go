@@ -11,7 +11,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/0cv/herdr-mobile-relay/internal/config"
+	"github.com/IGUNUBLUE/lerdr/internal/config"
 	"github.com/coder/websocket"
 )
 

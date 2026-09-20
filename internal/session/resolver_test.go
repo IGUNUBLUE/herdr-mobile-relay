@@ -9,8 +9,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/0cv/herdr-mobile-relay/internal/agentroots"
-	"github.com/0cv/herdr-mobile-relay/internal/conversation"
+	"github.com/IGUNUBLUE/lerdr/internal/agentroots"
+	"github.com/IGUNUBLUE/lerdr/internal/conversation"
 )
 
 // TestMain clears every environment variable agentroots consults before any

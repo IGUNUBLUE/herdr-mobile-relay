@@ -10,7 +10,7 @@ export PATH="/opt/homebrew/bin:/usr/local/bin:/home/linuxbrew/.linuxbrew/bin:$HO
 
 ENV_FILE="$(relay_env_file "$SCRIPT_DIR")"
 
-echo "🐑 Herdr Mobile Relay token rotation"
+echo "🐑 Lerdr token rotation"
 echo ""
 
 assert_service_env_matches "$ENV_FILE"

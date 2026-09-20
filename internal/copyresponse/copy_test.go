@@ -11,8 +11,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/0cv/herdr-mobile-relay/internal/herdr"
-	"github.com/0cv/herdr-mobile-relay/internal/slashcmd"
+	"github.com/IGUNUBLUE/lerdr/internal/herdr"
+	"github.com/IGUNUBLUE/lerdr/internal/slashcmd"
 )
 
 type fakePane struct {

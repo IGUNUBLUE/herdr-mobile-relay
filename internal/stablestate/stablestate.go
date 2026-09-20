@@ -201,7 +201,7 @@ func ReadState(filename string) (map[string]any, error) {
 	}
 	state, ok := value.(map[string]any)
 	if !ok || state["owner"] != Owner {
-		return nil, fmt.Errorf("state file is not owned by Herdr Mobile Relay: %s", filename)
+		return nil, fmt.Errorf("state file is not owned by Lerdr: %s", filename)
 	}
 	return state, nil
 }

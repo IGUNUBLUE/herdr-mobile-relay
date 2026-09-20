@@ -9,8 +9,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/0cv/herdr-mobile-relay/internal/agentroots"
-	"github.com/0cv/herdr-mobile-relay/internal/conversation"
+	"github.com/IGUNUBLUE/lerdr/internal/agentroots"
+	"github.com/IGUNUBLUE/lerdr/internal/conversation"
 )
 
 const cacheTTL = 60 * time.Second

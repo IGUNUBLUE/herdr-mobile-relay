@@ -1,28 +1,31 @@
-# Herdr Mobile Relay
+# Lerdr
 
-[![check](https://github.com/IGUNUBLUE/herdr-mobile-relay/actions/workflows/check.yml/badge.svg)](https://github.com/IGUNUBLUE/herdr-mobile-relay/actions/workflows/check.yml)
+[![check](https://github.com/IGUNUBLUE/lerdr/actions/workflows/check.yml/badge.svg)](https://github.com/IGUNUBLUE/lerdr/actions/workflows/check.yml)
 
-Control [Herdr](https://herdr.dev) agents from your phone. Each Linux or macOS
-computer runs its own relay; the phone connects to them and merges every agent
-into one app — installable PWA or native Android APK.
-
-> [!NOTE]
-> **This fork** tracks [`0cv/herdr-mobile-relay`](https://github.com/0cv/herdr-mobile-relay)
-> and adds a zero-third-party **Tailscale Serve** transport
-> ([docs/tailscale.md](docs/tailscale.md)), a **native Android app** (Tauri 2,
-> no Play Store), and a mobile UX pass: live status motion, haptics,
-> pull-to-refresh, skeleton loaders, and per-integration logos.
+Lerdr is the mobile companion for [Herdr](https://herdr.dev) coding agents —
+your agents, in your pocket, Telegram-style. Each Linux or macOS computer
+runs its own relay; the app connects to all of them and merges every agent
+into one place: prompts, approvals, plan questions, terminal output, and
+notifications. Ships as a signed native Android APK, with the same app
+available as an installable PWA everywhere else.
 
 ## Download the Android app
 
 Get **`herdr-mobile-*-arm64.apk`** from
-[**Releases → latest**](https://github.com/IGUNUBLUE/herdr-mobile-relay/releases/latest)
-— sideload it, or add this repo to [Obtainium](https://obtainium.imranr.dev/)
-for automatic updates. Other ABIs (`arm`, `x86`, `x86_64`, `universal`) ship in
-the same release; verify against `apk-checksums.txt`.
+[**Releases → latest**](https://github.com/IGUNUBLUE/lerdr/releases/latest) —
+sideload it, or add this repo to [Obtainium](https://obtainium.imranr.dev/)
+for automatic updates. Other ABIs (`arm`, `x86`, `x86_64`, `universal`) ship
+in the same release; verify against `apk-checksums.txt`. APKs are signed by
+the maintainer's release key — see
+[docs/android-tauri.md](docs/android-tauri.md) for the signing details.
 
-In the app: **Settings → paste a setup link** from `make tailscale-setup` (or
-any of the transports below). Native notifications and haptics included.
+In the app: **Settings → scan the QR or paste a setup link** printed by the
+relay (`make tailscale-setup`, or any of the transports below). Native
+notifications, haptics, and biometric lock included.
+
+No Android or prefer the browser? The same app is an installable PWA served
+by the relay itself — scan the pairing QR, then Add to Home Screen. That is
+the path iOS uses today.
 
 ## Get started in two minutes
 
@@ -30,7 +33,7 @@ Requirements: Herdr 0.7.5+ (0.9.0 recommended), Git, `curl`. Linux or macOS —
 native Windows is not supported (WSL2 untested).
 
 ```bash
-herdr plugin install IGUNUBLUE/herdr-mobile-relay
+herdr plugin install IGUNUBLUE/lerdr
 ```
 
 The setup menu opens automatically. Pick a transport — **Tailscale Serve**
@@ -59,6 +62,17 @@ needed) are the recommended paths — and scan the QR with your phone.
   and revoke any of them.
 
 **[Full feature tour →](docs/mobile-app.md)**
+
+### Native Android extras
+
+- **Pairing without typing**: scan the pairing QR with the in-app camera, or
+  paste the setup link straight from the clipboard.
+- **Native notifications** with Android channels for agents needing
+  attention, finished agents, and relay status — no FCM roundtrip.
+- **Biometric / device lock**: require the system fingerprint, face, or
+  screen-lock prompt before the app connects or unlocks on resume (WebAuthn
+  on the PWA path).
+- **Hardware haptics** on sends, approvals, and denies.
 
 ## Choosing how your phone connects
 
@@ -96,6 +110,17 @@ gateway — sees connection metadata only, never plaintext. Paired credentials
 distinguish controller and reader devices, mutations default to
 controller-only, and the app can require device verification before it
 reconnects. [Details →](docs/security.md)
+
+## Upstream
+
+Lerdr began as a fork of
+[`0cv/herdr-mobile-relay`](https://github.com/0cv/herdr-mobile-relay), which
+created the relay architecture, the end-to-end pairing model, and the phone
+UI this project builds on. It has since diverged — a native Tauri 2 Android
+shell, the Tailscale Serve transport, native notifications/haptics/
+biometrics, and signed APK releases — and is maintained and released
+independently here. Thanks and credit to the upstream authors; the AGPL
+license below carries their copyright forward.
 
 ## License
 

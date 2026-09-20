@@ -4,7 +4,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/0cv/herdr-mobile-relay/internal/release"
+	"github.com/IGUNUBLUE/lerdr/internal/release"
 )
 
 func TestVerifyReleaseIdentity(t *testing.T) {

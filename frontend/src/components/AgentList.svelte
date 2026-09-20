@@ -1,5 +1,6 @@
 <script lang="ts">
   import { onMount } from 'svelte';
+  import { LoadingIndicator } from 'm3-svelte';
   import AgentLogo, { hasAgentLogo } from '$components/AgentLogo.svelte';
   import Button from '$components/ui/Button.svelte';
   import {
@@ -741,8 +742,8 @@
 
   {#if !agents.length && !relays.length}
     <div class="empty-state">
-      <span class="empty-icon" aria-hidden="true">🐑</span>
-      <h2>Herdr Mobile Relay</h2>
+      <img class="empty-icon" src="icons/icon.svg" alt="" width="72" height="72">
+      <h2>Lerdr</h2>
       <p>Monitor and approve agents from your phone.</p>
       <ol>
         <li>Run a relay on each computer.</li>
@@ -773,11 +774,14 @@
     <div class="empty-state" role="status">No chat agents are running.</div>
   {:else if !agents.length && deferredRelays.length === relays.length}
     <div class="empty-state" role="status">
-      <p>Add Herdr to the Home Screen, then open it there to finish pairing.</p>
+      <p>Add Lerdr to the Home Screen, then open it there to finish pairing.</p>
       <p>This browser tab keeps the setup link unused so the installed app can redeem it.</p>
     </div>
   {:else if !agents.length && !unavailableRelays.length}
-    <div class="empty-state" role="status">Waiting for relays…</div>
+    <div class="empty-state" role="status">
+      <LoadingIndicator aria-label="Waiting for relays" />
+      <p>Waiting for relays…</p>
+    </div>
   {/if}
 
   {#each statusDefinitions as [group, title, tone] (group)}

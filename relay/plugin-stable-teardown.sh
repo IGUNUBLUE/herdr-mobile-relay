@@ -6,7 +6,7 @@ SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 # shellcheck source=common.sh
 . "$SCRIPT_DIR/common.sh"
 
-echo "🐑 Herdr Mobile Relay stable tunnel teardown"
+echo "🐑 Lerdr stable tunnel teardown"
 echo ""
 echo "This removes the service, tunnel, config, and credentials recorded for"
 echo "this stable relay, regardless of how an earlier setup created them."

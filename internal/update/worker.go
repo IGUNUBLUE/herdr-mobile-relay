@@ -16,8 +16,8 @@ import (
 	"syscall"
 	"time"
 
-	relayrelease "github.com/0cv/herdr-mobile-relay/internal/release"
-	"github.com/0cv/herdr-mobile-relay/internal/setuphelper"
+	relayrelease "github.com/IGUNUBLUE/lerdr/internal/release"
+	"github.com/IGUNUBLUE/lerdr/internal/setuphelper"
 )
 
 const (

@@ -10,7 +10,7 @@ import (
 	"strings"
 	"unicode/utf8"
 
-	"github.com/0cv/herdr-mobile-relay/internal/history"
+	"github.com/IGUNUBLUE/lerdr/internal/history"
 )
 
 // MaxPromptChars bounds both the accepted and the reported prompt line. A real

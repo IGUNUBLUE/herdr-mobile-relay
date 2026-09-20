@@ -567,7 +567,7 @@ install_service() {
 }
 
 if [ "${HERDR_STABLE_SETUP_WRAPPED:-}" != 1 ]; then
-    echo "🐑 Herdr Mobile Relay stable tunnel setup"
+    echo "🐑 Lerdr stable tunnel setup"
     echo ""
 fi
 

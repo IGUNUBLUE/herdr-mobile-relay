@@ -243,7 +243,7 @@ export async function enrollDeviceVerification(): Promise<boolean> {
     const credential = await navigator.credentials.create({
       publicKey: {
         challenge: randomBytes(32),
-        rp: { name: 'Herdr Mobile Relay' },
+        rp: { name: 'Lerdr' },
         user: { id: randomBytes(16), name: 'local-device', displayName: 'This device' },
         pubKeyCredParams: [{ type: 'public-key', alg: -7 }, { type: 'public-key', alg: -257 }],
         authenticatorSelection: { authenticatorAttachment: 'platform', userVerification: 'required' },
@@ -296,7 +296,7 @@ export async function unlockWithDevice(reason: 'open' | 'resume' = 'open'): Prom
     unlockInProgress = true;
     securityState.update((state) => ({ ...state, locked: true, busy: true, reason, status: 'Waiting for device verification...' }));
     const granted = await authenticateBiometric(
-      reason === 'resume' ? 'Verify to pick up where you left off' : 'Verify to open Herdr',
+      reason === 'resume' ? 'Verify to pick up where you left off' : 'Verify to open Lerdr',
     );
     unlockInProgress = false;
     if (granted) {

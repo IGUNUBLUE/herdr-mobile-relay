@@ -26,7 +26,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/0cv/herdr-mobile-relay/internal/portmap"
+	"github.com/IGUNUBLUE/lerdr/internal/portmap"
 )
 
 // MethodDirect is reported when no port mapping was needed or available and

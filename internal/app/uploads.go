@@ -4,10 +4,10 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/0cv/herdr-mobile-relay/internal/coordinator"
-	"github.com/0cv/herdr-mobile-relay/internal/protocol"
-	"github.com/0cv/herdr-mobile-relay/internal/transport"
-	"github.com/0cv/herdr-mobile-relay/internal/upload"
+	"github.com/IGUNUBLUE/lerdr/internal/coordinator"
+	"github.com/IGUNUBLUE/lerdr/internal/protocol"
+	"github.com/IGUNUBLUE/lerdr/internal/transport"
+	"github.com/IGUNUBLUE/lerdr/internal/upload"
 	"strings"
 )
 

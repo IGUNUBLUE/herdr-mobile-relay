@@ -30,7 +30,7 @@
       panel.style.cssText = 'position:fixed;inset:0;z-index:2147483647;display:grid;place-content:center;gap:1rem;'
         + 'padding:2rem;background:#0a0a0a;color:#f5f5f5;font:16px/1.5 system-ui,sans-serif;text-align:center;';
       const heading = document.createElement('h1');
-      heading.textContent = 'Herdr could not load';
+      heading.textContent = 'Lerdr could not load';
       heading.style.cssText = 'margin:0;font-size:1.25rem;';
       const message = document.createElement('p');
       message.textContent = detail;

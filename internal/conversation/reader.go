@@ -17,8 +17,8 @@ import (
 	"time"
 	"unicode/utf8"
 
-	"github.com/0cv/herdr-mobile-relay/internal/agentroots"
-	panehistory "github.com/0cv/herdr-mobile-relay/internal/history"
+	"github.com/IGUNUBLUE/lerdr/internal/agentroots"
+	panehistory "github.com/IGUNUBLUE/lerdr/internal/history"
 )
 
 const (

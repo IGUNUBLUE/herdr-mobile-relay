@@ -1,12 +1,12 @@
 [package]
-name = "herdr-mobile"
-version = "0.24.0"
-description = "Native Android shell for the Herdr Mobile Relay web app"
+name = "lerdr"
+version = "0.25.0"
+description = "Native Android shell for the Lerdr web app"
 edition = "2021"
 rust-version = "1.77.2"
 
 [lib]
-name = "herdr_mobile_lib"
+name = "lerdr_lib"
 crate-type = ["staticlib", "cdylib", "rlib"]
 
 [build-dependencies]

@@ -986,7 +986,7 @@ if grep -qE '^HERDR_GATEWAY_(URL|SELECTION)=' "$HERDR_RELAY_ENV" ||
     exit 1
 fi
 if [ "${HERDR_STABLE_SETUP_WRAPPED:-}" != 1 ]; then
-    echo "🐑 Herdr Mobile Relay stable tunnel setup"
+    echo "🐑 Lerdr stable tunnel setup"
 fi
 printf 'called\n' > "$STABLE_SWITCH_MARKER"
 EOF
@@ -1009,7 +1009,7 @@ case "$STABLE_SWITCH_OUTPUT" in
     *) echo "the stable tunnel action did not explain the transport switch" >&2; exit 1 ;;
 esac
 test "$(printf '%s\n' "$STABLE_SWITCH_OUTPUT" |
-    grep -c 'Herdr Mobile Relay stable tunnel setup')" -eq 1 ||
+    grep -c 'Lerdr stable tunnel setup')" -eq 1 ||
     { echo "stable tunnel action printed its heading more than once" >&2; exit 1; }
 
 # The setup menu opens after every install, including upgrades, so it has to
@@ -1046,10 +1046,10 @@ MENU_OUTPUT="$(
         bash "$REPO_DIR/relay/plugin-setup-menu.sh"
 )"
 case "$MENU_OUTPUT" in
-    *"Herdr Mobile Relay status"*) ;;
+    *"Lerdr status"*) ;;
     *) echo "setup menu did not open the status action" >&2; exit 1 ;;
 esac
-test "$(printf '%s\n' "$MENU_OUTPUT" | grep -c 'Herdr Mobile Relay Setup')" -ge 2 ||
+test "$(printf '%s\n' "$MENU_OUTPUT" | grep -c 'Lerdr Setup')" -ge 2 ||
     { echo "setup menu did not come back after an action" >&2; exit 1; }
 case "$MENU_OUTPUT" in
     *"Relay:      9.9.9 running"*) ;;

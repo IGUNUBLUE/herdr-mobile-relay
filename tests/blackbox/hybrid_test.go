@@ -22,8 +22,8 @@ import (
 
 	"github.com/coder/websocket"
 
-	"github.com/0cv/herdr-mobile-relay/internal/framing"
-	"github.com/0cv/herdr-mobile-relay/internal/gatewaywire"
+	"github.com/IGUNUBLUE/lerdr/internal/framing"
+	"github.com/IGUNUBLUE/lerdr/internal/gatewaywire"
 )
 
 // relayKey is a fixed 32-byte relay key so the derived gateway credentials are

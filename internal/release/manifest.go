@@ -6,7 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	relayprotocol "github.com/0cv/herdr-mobile-relay/internal/protocol"
+	relayprotocol "github.com/IGUNUBLUE/lerdr/internal/protocol"
 	"io"
 	"io/fs"
 	"os"

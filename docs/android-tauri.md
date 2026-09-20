@@ -113,11 +113,11 @@ apksigner sign --ks ~/.local/share/herdr-mobile-relay/android-release.jks \
 apksigner verify herdr-mobile-0.23.0-universal.apk
 sha256sum herdr-mobile-*.apk > checksums.txt
 gh release upload v0.23.0 herdr-mobile-*.apk checksums.txt \
-  --repo IGUNUBLUE/herdr-mobile-relay
+  --repo IGUNUBLUE/lerdr
 ```
 
 `zipalign` and `apksigner` live in `$ANDROID_HOME/build-tools/35.0.0/`.
-This fork's releases are signed with the key under
+Lerdr releases are signed with the key under
 `~/.local/share/herdr-mobile-relay/` on the maintainer's machine — never
 committed, never in CI secrets unless reproducibility is explicitly traded
 for convenience.
@@ -132,8 +132,11 @@ maps cleanly onto F-Droid's build variants.
 
 ## Notes
 
-- `tauri.conf.json` pins `identifier` `com.github.igunublue.herdr-mobile-relay`
-  — the Android application id; changing it later creates a different app.
+- `tauri.conf.json` pins `identifier` `com.github.igunublue.lerdr` — the
+  Android application id; changing it creates a different app. It was
+  `com.github.igunublue.herdr-mobile-relay` before the Lerdr rename, so
+  pre-rename installs cannot be upgraded in place — uninstall and
+  reinstall instead (pairings do not survive).
 - CSP allows `https:`/`wss:`/`http:`/`ws:` connect-src: the app dials
   user-configured relay hosts, which cannot be enumerated ahead of time.
   Cleartext is enabled (`usesCleartextTraffic=true`, patched by

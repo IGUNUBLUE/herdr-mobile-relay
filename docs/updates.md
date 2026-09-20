@@ -55,7 +55,7 @@ old phone connected.
 Upgrade each relay manually, exactly as for a fresh install:
 
 ```bash
-herdr plugin install 0cv/herdr-mobile-relay
+herdr plugin install IGUNUBLUE/lerdr
 ```
 
 The setup menu opens by itself a moment after the install finishes. If it does
@@ -147,7 +147,7 @@ signoff for a user-facing release.
 
 - **Update operation failed with `read canonical release: HTTP 403`:** an older
   relay's unauthenticated GitHub release check was rate-limited. Run
-  `HERDR_MOBILE_RELAY_NO_AUTO_SETUP=1 herdr plugin install 0cv/herdr-mobile-relay --yes`
+  `HERDR_MOBILE_RELAY_NO_AUTO_SETUP=1 herdr plugin install IGUNUBLUE/lerdr --yes`
   once on that computer as the signed-in user; current releases retry through
   the public release redirect and commit feed.
 - **Updated app still shows the previous version:** open Settings, choose

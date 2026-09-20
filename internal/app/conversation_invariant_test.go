@@ -7,9 +7,9 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/0cv/herdr-mobile-relay/internal/agentroots"
-	"github.com/0cv/herdr-mobile-relay/internal/conversation"
-	"github.com/0cv/herdr-mobile-relay/internal/session"
+	"github.com/IGUNUBLUE/lerdr/internal/agentroots"
+	"github.com/IGUNUBLUE/lerdr/internal/conversation"
+	"github.com/IGUNUBLUE/lerdr/internal/session"
 )
 
 // The bug this package's conversation plumbing exists to avoid: the pane title

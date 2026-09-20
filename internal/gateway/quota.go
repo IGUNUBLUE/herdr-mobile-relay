@@ -11,7 +11,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/0cv/herdr-mobile-relay/internal/gatewaywire"
+	"github.com/IGUNUBLUE/lerdr/internal/gatewaywire"
 )
 
 // stateVersion is the on-disk counter format. A file from a newer gateway is an

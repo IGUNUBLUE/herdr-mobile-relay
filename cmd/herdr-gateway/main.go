@@ -17,7 +17,7 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/0cv/herdr-mobile-relay/internal/gateway"
+	"github.com/IGUNUBLUE/lerdr/internal/gateway"
 )
 
 // drainTimeout bounds how long the HTTP server is given to finish in-flight

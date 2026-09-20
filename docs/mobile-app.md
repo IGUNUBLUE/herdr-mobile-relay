@@ -1,4 +1,4 @@
-# The Herdr Mobile Relay app
+# The Lerdr app
 
 What the phone app does once a relay is connected: the agent list, read-only
 workspace inspection, and the mobile terminal. Read this if you have finished

@@ -16,8 +16,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/0cv/herdr-mobile-relay/internal/herdr"
-	"github.com/0cv/herdr-mobile-relay/internal/question"
+	"github.com/IGUNUBLUE/lerdr/internal/herdr"
+	"github.com/IGUNUBLUE/lerdr/internal/question"
 )
 
 func recordingHerdr(t *testing.T, dir, record, stdout string) string {

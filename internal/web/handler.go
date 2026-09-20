@@ -15,7 +15,7 @@ import (
 	"strconv"
 	"strings"
 
-	relayrelease "github.com/0cv/herdr-mobile-relay/internal/release"
+	relayrelease "github.com/IGUNUBLUE/lerdr/internal/release"
 )
 
 var lazyAssetReferencePattern = regexp.MustCompile("import\\(\\s*[`\\\"']\\./([A-Za-z0-9_.-]+-[0-9]+\\.js)[`\\\"']\\s*\\)")

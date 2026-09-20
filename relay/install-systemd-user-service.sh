@@ -53,7 +53,7 @@ mkdir -p "$UNIT_DIR"
 
 cat > "$UNIT_FILE" <<EOF
 [Unit]
-Description=Herdr Mobile Relay and Cloudflare tunnel
+Description=Lerdr and Cloudflare tunnel
 After=network-online.target
 Wants=network-online.target
 

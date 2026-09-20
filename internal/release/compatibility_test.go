@@ -4,7 +4,7 @@ import (
 	"strings"
 	"testing"
 
-	relayprotocol "github.com/0cv/herdr-mobile-relay/internal/protocol"
+	relayprotocol "github.com/IGUNUBLUE/lerdr/internal/protocol"
 )
 
 func TestValidateUpgradeCompatibilityTreatsLegacyReleaseAsE2EEV1(t *testing.T) {

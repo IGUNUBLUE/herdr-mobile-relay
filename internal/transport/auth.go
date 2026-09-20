@@ -4,7 +4,7 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/0cv/herdr-mobile-relay/internal/config"
+	"github.com/IGUNUBLUE/lerdr/internal/config"
 )
 
 func webSocketUpgradeAllowed(cfg *config.Config, r *http.Request) bool {

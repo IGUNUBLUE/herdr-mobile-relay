@@ -3,6 +3,7 @@ import { readFileSync } from 'node:fs';
 import { fileURLToPath, URL } from 'node:url';
 import { svelte } from '@sveltejs/vite-plugin-svelte';
 import type { Plugin } from 'vite';
+import { functionsMixins } from 'vite-plugin-functions-mixins';
 import { defineConfig } from 'vitest/config';
 import versions from './build-versions.json' with { type: 'json' };
 
@@ -204,7 +205,11 @@ export function assetContentVersion(source: string | Uint8Array): string {
 const devRuntime = process.env.HERDR_DEV_RUNTIME === '1';
 
 export default defineConfig({
-  plugins: [svelte(devRuntime ? { compilerOptions: { dev: true } } : {}), stableReleaseAssets()],
+  plugins: [
+    svelte(devRuntime ? { compilerOptions: { dev: true } } : {}),
+    functionsMixins({ deps: ['m3-svelte'] }),
+    stableReleaseAssets(),
+  ],
   resolve: {
     alias: {
       $lib: fileURLToPath(new URL('./src/lib', import.meta.url)),

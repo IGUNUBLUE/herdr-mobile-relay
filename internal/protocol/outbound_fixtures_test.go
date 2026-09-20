@@ -7,9 +7,9 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/0cv/herdr-mobile-relay/internal/activity"
-	"github.com/0cv/herdr-mobile-relay/internal/coordinator"
-	"github.com/0cv/herdr-mobile-relay/internal/slashcmd"
+	"github.com/IGUNUBLUE/lerdr/internal/activity"
+	"github.com/IGUNUBLUE/lerdr/internal/coordinator"
+	"github.com/IGUNUBLUE/lerdr/internal/slashcmd"
 )
 
 func TestAgentsFixtureMatchesGoType(t *testing.T) {

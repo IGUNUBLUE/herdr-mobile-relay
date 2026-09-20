@@ -11,12 +11,12 @@ import (
 	"sync"
 	"time"
 
-	"github.com/0cv/herdr-mobile-relay/internal/portmap"
-	"github.com/0cv/herdr-mobile-relay/internal/protocol"
-	"github.com/0cv/herdr-mobile-relay/internal/reachability"
-	"github.com/0cv/herdr-mobile-relay/internal/transport"
-	relayupdate "github.com/0cv/herdr-mobile-relay/internal/update"
-	"github.com/0cv/herdr-mobile-relay/internal/webrtclink"
+	"github.com/IGUNUBLUE/lerdr/internal/portmap"
+	"github.com/IGUNUBLUE/lerdr/internal/protocol"
+	"github.com/IGUNUBLUE/lerdr/internal/reachability"
+	"github.com/IGUNUBLUE/lerdr/internal/transport"
+	relayupdate "github.com/IGUNUBLUE/lerdr/internal/update"
+	"github.com/IGUNUBLUE/lerdr/internal/webrtclink"
 )
 
 const (

@@ -22,7 +22,7 @@ import (
 	"github.com/pion/ice/v4"
 	"github.com/pion/webrtc/v4"
 
-	"github.com/0cv/herdr-mobile-relay/internal/transport"
+	"github.com/IGUNUBLUE/lerdr/internal/transport"
 )
 
 const (

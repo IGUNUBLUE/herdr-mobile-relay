@@ -18,7 +18,7 @@ import (
 	"time"
 	"unicode/utf8"
 
-	relayprotocol "github.com/0cv/herdr-mobile-relay/internal/protocol"
+	relayprotocol "github.com/IGUNUBLUE/lerdr/internal/protocol"
 )
 
 const (

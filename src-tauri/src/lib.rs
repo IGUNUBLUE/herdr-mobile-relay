@@ -1,4 +1,4 @@
-/// Native shell for the Herdr Mobile web app. The whole product surface —
+/// Native shell for the Lerdr web app. The whole product surface —
 /// pairing, E2EE, WebRTC, terminal rendering — lives in the bundled web app;
 /// Rust only supplies what the Android WebView cannot: local notifications,
 /// hardware haptics, camera QR scanning, clipboard, biometric unlock, and (on
@@ -25,7 +25,7 @@ pub fn run() {
 
     builder
         .run(tauri::generate_context!())
-        .expect("error while running herdr-mobile");
+        .expect("error while running lerdr");
 }
 
 /// Notification channels are an Android-side resource the JS bridge cannot

@@ -164,7 +164,7 @@ for SOURCE in Dockerfile.gateway go.mod go.sum \
 done
 
 # The server builds from the bundled source: no GitHub context, no Go toolchain.
-if grep -Fq 'github.com/0cv/herdr-mobile-relay.git' "$BUNDLE_DIR/docker-compose.yml"; then
+if grep -Eq 'github\.com/[A-Za-z0-9_.-]+/(herdr-mobile-relay|lerdr)\.git' "$BUNDLE_DIR/docker-compose.yml"; then
     fail "compose file still builds from a GitHub context"
 fi
 grep -Fq 'context: ${HERDR_GATEWAY_BUILD_CONTEXT:-./gateway-source}' \

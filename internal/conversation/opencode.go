@@ -14,7 +14,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/0cv/herdr-mobile-relay/internal/agentroots"
+	"github.com/IGUNUBLUE/lerdr/internal/agentroots"
 )
 
 const (

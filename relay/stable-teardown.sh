@@ -148,7 +148,7 @@ case "$(uname -s)" in
 esac
 
 if [ "${HERDR_STABLE_TEARDOWN_WRAPPED:-}" != 1 ]; then
-    echo "🐑 Herdr Mobile Relay stable tunnel teardown"
+    echo "🐑 Lerdr stable tunnel teardown"
     echo ""
 fi
 echo "The recorded stable relay and its local Cloudflare files will be removed:"

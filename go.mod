@@ -1,4 +1,4 @@
-module github.com/0cv/herdr-mobile-relay
+module github.com/IGUNUBLUE/lerdr
 
 go 1.27.0
 

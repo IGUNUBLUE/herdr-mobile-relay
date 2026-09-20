@@ -9,4 +9,4 @@ for label in "${LABELS[@]}"; do
     rm -f "$plist"
 done
 
-echo "Stopped and removed Herdr Mobile Relay services"
+echo "Stopped and removed Lerdr services"

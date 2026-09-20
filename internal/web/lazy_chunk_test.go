@@ -8,7 +8,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	relayrelease "github.com/0cv/herdr-mobile-relay/internal/release"
+	relayrelease "github.com/IGUNUBLUE/lerdr/internal/release"
 )
 
 func TestServesShippedConversationHistoryLazyChunk(t *testing.T) {

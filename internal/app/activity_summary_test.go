@@ -6,8 +6,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/0cv/herdr-mobile-relay/internal/activity"
-	"github.com/0cv/herdr-mobile-relay/internal/coordinator"
+	"github.com/IGUNUBLUE/lerdr/internal/activity"
+	"github.com/IGUNUBLUE/lerdr/internal/coordinator"
 )
 
 func TestObservedWorkingTransitionRemainsInActivityAfterStateAdvances(t *testing.T) {

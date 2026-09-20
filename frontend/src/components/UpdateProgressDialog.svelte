@@ -124,7 +124,7 @@
     : complete
       ? 'Update complete'
       : active
-        ? 'Updating Herdr'
+        ? 'Updating Lerdr'
         : 'Continue update');
 
   $effect(() => {
@@ -253,7 +253,7 @@
     return {
       ...base,
       label: `Waiting for v${currentPlan.targetVersion}`,
-      detail: 'Herdr will verify and start this relay automatically when its turn begins.',
+      detail: 'Lerdr will verify and start this relay automatically when its turn begins.',
       tone: 'pending',
       score: 0,
       canStart: true,
@@ -362,7 +362,7 @@
         <span>{overallProgress}%</span>
         <progress max="100" value={overallProgress} aria-label={`Overall update progress: ${overallProgress}%`}></progress>
       </div>
-      <p class="hint">Herdr follows the safe order automatically and updates relays one at a time. A Terminal command is needed only when a relay says Manual update required.</p>
+      <p class="hint">Lerdr follows the safe order automatically and updates relays one at a time. A Terminal command is needed only when a relay says Manual update required.</p>
 
       {#if phoneApp}
         <article class={`update-progress-item update-progress-${phoneApp.tone}`}>

@@ -10,7 +10,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/0cv/herdr-mobile-relay/internal/seqmatch"
+	"github.com/IGUNUBLUE/lerdr/internal/seqmatch"
 )
 
 const (

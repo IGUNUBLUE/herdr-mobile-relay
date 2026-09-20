@@ -150,7 +150,7 @@ if [ "${#missing_tools[@]}" -ne 0 ]; then
     printf ' %s' "${missing_tools[@]}"
     echo ""
     if [ -n "${HERDR_PLUGIN_CONFIG_DIR:-}" ]; then
-        echo "Run Herdr Mobile Relay: Quick Start again to install them interactively, or install them yourself:"
+        echo "Run Lerdr: Quick Start again to install them interactively, or install them yourself:"
     else
         echo "Run make quick-start to install them interactively, or install them yourself:"
     fi

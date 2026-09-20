@@ -196,7 +196,7 @@ case "$url" in
         ;;
     https://*/manifest.webmanifest)
         if [ "${STUB_APP_ORIGIN:-}" = "${url%/manifest.webmanifest}" ]; then
-            echo '{"name":"Herdr Mobile Relay"}'
+            echo '{"name":"Lerdr"}'
         else
             exit 22
         fi
@@ -316,7 +316,7 @@ test_success_and_alternate_port() {
     assert_contains "$HOME/cloudflared/config.yml" 'service: http://127.0.0.1:8399'
     assert_contains "$HERDR_RELAY_ENV" 'HERDR_RELAY_INSTANCE_ID='
     assert_contains "$OUTPUT" 'Stable relay verified'
-    assert_contains "$OUTPUT" 'Herdr Mobile Relay phone setup'
+    assert_contains "$OUTPUT" 'Lerdr phone setup'
     assert_contains "$OUTPUT" 'https://relay-workstation.example.test/#label=workstation&relay=wss%3A%2F%2Frelay-workstation.example.test&setup=fake-token'
     assert_contains "$HOME/phone-app-origin-configured" 'https://relay-workstation.example.test'
     MODE="$(stat -c '%a' "$HOME/phone-app-origin-configured" 2>/dev/null || stat -f '%Lp' "$HOME/phone-app-origin-configured")"
@@ -520,7 +520,7 @@ test_zone_failure_preserves_state() {
     assert_contains "$OUTPUT" 'zone selected during cloudflared tunnel login'
     assert_contains "$OUTPUT" 'Setup state was preserved'
     assert_contains "$OUTPUT" "HERDR_RELAY_ENV=$HERDR_RELAY_ENV make stable-setup"
-    assert_not_contains "$OUTPUT" 'Herdr Mobile Relay phone setup'
+    assert_not_contains "$OUTPUT" 'Lerdr phone setup'
     [ "$("$TEST_RELAY_BIN" stable-state get "$HERDR_STABLE_STATE_FILE" stage)" = routing_dns ] || fail "route stage not preserved"
     pass "zone authorization failures retain the original error and resumable state"
 }
@@ -533,7 +533,7 @@ test_occupied_hostname() {
     assert_contains "$OUTPUT" 'already has a public DNS record'
     assert_contains "$OUTPUT" 'will not overwrite it'
     assert_not_contains "$STUB_LOG" ' tunnel create '
-    assert_not_contains "$OUTPUT" 'Herdr Mobile Relay phone setup'
+    assert_not_contains "$OUTPUT" 'Lerdr phone setup'
     pass "occupied DNS is rejected before Cloudflare resources are created"
 }
 
@@ -561,7 +561,7 @@ test_health_mismatch_suppresses_qr() {
     [ "$STATUS" -ne 0 ] || fail "health mismatch should fail"
     assert_contains "$OUTPUT" 'Public health identity did not match'
     assert_contains "$OUTPUT" 'instance does not match'
-    assert_not_contains "$OUTPUT" 'Herdr Mobile Relay phone setup'
+    assert_not_contains "$OUTPUT" 'Lerdr phone setup'
     pass "public relay identity mismatch suppresses the phone QR"
 }
 
@@ -572,7 +572,7 @@ test_inventory_failure_suppresses_qr() {
     [ "$STATUS" -ne 0 ] || fail "inventory mismatch should fail"
     assert_contains "$OUTPUT" 'Herdr agent inventory is unavailable'
     assert_contains "$OUTPUT" 'herdr server live-handoff'
-    assert_not_contains "$OUTPUT" 'Herdr Mobile Relay phone setup'
+    assert_not_contains "$OUTPUT" 'Lerdr phone setup'
     pass "agent inventory failure is actionable and suppresses the phone QR"
 }
 
@@ -583,7 +583,7 @@ test_separate_readiness_timeouts() {
     [ "$STATUS" -ne 0 ] || fail "DNS timeout should fail"
     assert_contains "$OUTPUT" 'Timed out after 0 seconds waiting for public DNS'
     assert_not_contains "$OUTPUT" 'Waiting up to 0 seconds for HTTPS relay health'
-    assert_not_contains "$OUTPUT" 'Herdr Mobile Relay phone setup'
+    assert_not_contains "$OUTPUT" 'Lerdr phone setup'
 
     new_case
     export STUB_HTTP_MODE=fail
@@ -591,7 +591,7 @@ test_separate_readiness_timeouts() {
     [ "$STATUS" -ne 0 ] || fail "HTTP timeout should fail"
     assert_contains "$OUTPUT" 'Waiting up to 0 seconds for public DNS'
     assert_contains "$OUTPUT" 'Timed out after 0 seconds waiting for https://'
-    assert_not_contains "$OUTPUT" 'Herdr Mobile Relay phone setup'
+    assert_not_contains "$OUTPUT" 'Lerdr phone setup'
     pass "DNS and HTTPS readiness use independent waits and both suppress QR on timeout"
 }
 

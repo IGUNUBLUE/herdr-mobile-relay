@@ -10,7 +10,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/0cv/herdr-mobile-relay/internal/agentroots"
+	"github.com/IGUNUBLUE/lerdr/internal/agentroots"
 )
 
 func TestBrowserUsesNativeHermesCursorPaging(t *testing.T) {

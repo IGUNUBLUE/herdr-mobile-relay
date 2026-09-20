@@ -1,6 +1,8 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import { get } from 'svelte/store';
+  import 'm3-svelte/etc/layer';
+  import { Snackbar, snackbar } from 'm3-svelte';
   import ActivityDetail from '$components/ActivityDetail.svelte';
   import ActivityView from '$components/ActivityView.svelte';
   import AgentList from '$components/AgentList.svelte';
@@ -16,7 +18,6 @@
   import WorkspaceInspector from '$components/WorkspaceInspector.svelte';
   import WorkspaceManager from '$components/WorkspaceManager.svelte';
   import Button from '$components/ui/Button.svelte';
-  import Toast from '$components/ui/Toast.svelte';
   import { agentOpeningView, hasConversationHistory } from '$lib/agent-view';
   import { activityForNotification } from '$lib/activity';
   import {
@@ -78,6 +79,7 @@
   const activities = relayStore.activities;
   const frames = relayStore.terminalFrames;
   const responding = relayStore.responding;
+  const toast = relayStore.toast;
   const appUpdates = appUpdateStatus;
 
   let manageOpen = $state(false);
@@ -168,7 +170,7 @@
     if ($currentView.view === 'activity_detail') return 'Activity';
     if (activeAgent) return activeAgent.project || displayName(activeAgent);
     if ($currentView.view === 'terminal') return 'Terminal';
-    return '🐑 herdr';
+    return 'lerdr';
   });
   const headerMeta = $derived.by(() => {
     let meta = activeAgent ? terminalSecondaryLabel(activeAgent) : '';
@@ -212,6 +214,15 @@
     };
   });
 
+  // relayStore.showToast stays the single entry point for callers; each store
+  // emission is forwarded to the M3 snackbar, whose default timeout matches
+  // the old toast's 4s. The M3 snackbar has no error tint, so error toasts
+  // keep a visible distinction by staying manually closable.
+  $effect(() => {
+    const current = $toast;
+    if (current) snackbar(current.message, undefined, current.error);
+  });
+
   $effect(() => {
     if ($securityState.locked) stopSpeech();
   });
@@ -234,7 +245,7 @@
 
   $effect(() => {
     const blocked = $agents.filter((agent) => agentNeedsResponse(agent) || agentNeedsInspection(agent));
-    document.title = blocked.length ? `(${blocked.length}) 🐑 herdr` : '🐑 herdr';
+    document.title = blocked.length ? `(${blocked.length}) lerdr` : 'lerdr';
     if (blocked.length && navigator.setAppBadge) void navigator.setAppBadge(blocked.length).catch(() => {});
     else if (navigator.clearAppBadge) void navigator.clearAppBadge().catch(() => {});
     const attentionKey = (agent: Agent) => `${agent.pane_id}:${agent.event_id || ''}:${attentionKind(agent)}`;
@@ -863,4 +874,6 @@
 <GlobalJump bind:open={jumpOpen} agents={$agents} onselect={openAgent} />
 <WorkspaceInspector bind:open={workspaceOpen} agent={activeAgent} />
 <LockScreen />
-<Toast />
+<div role="status">
+  <Snackbar />
+</div>
