@@ -20,6 +20,7 @@
     sortedAgents,
   } from '$lib/agents';
   import { clearPromptDraft, loadPromptDraft, savePromptDraft } from '$lib/prompt-drafts';
+  import { haptic } from '$lib/haptics';
   import {
     findTerminalText,
     terminalMatchFragments,
@@ -105,10 +106,12 @@
   let composer = $state(untrack(() => loadPromptDraft(agent)));
   let composerFocused = $state(false);
   let sendingPrompt = $state(false);
+  let sendConfirmed = $state(false);
   // Never handed to savePromptDraft: a no-echo prompt answer must not be
   // written to this phone's storage.
   let secretValue = $state('');
   let sendingSecret = $state(false);
+  let secretConfirmed = $state(false);
   // Composer text as it stood when a no-echo prompt was first recognized, and
   // whether the user has changed it since. Recognition is a heuristic, so it
   // pauses persistence instead of deleting a draft the prompt did not author.
@@ -1204,7 +1207,9 @@
       } else {
         await relayStore.sendToAgent(agent, { type: 'submit_prompt', text });
       }
-      relayStore.showToast(terminalText ? 'Terminal text submitted.' : 'Prompt sent.');
+      haptic();
+      sendConfirmed = true;
+      setTimeout(() => { sendConfirmed = false; }, 1_400);
     } catch (error) {
       const dispatchedUnknown = typeof error === 'object'
         && error !== null
@@ -1231,7 +1236,9 @@
     try {
       await relayStore.sendSecret(agent, secret);
       secretValue = '';
-      relayStore.showToast('Password sent to the terminal.');
+      haptic();
+      secretConfirmed = true;
+      setTimeout(() => { secretConfirmed = false; }, 1_400);
     } catch (error) {
       // The value stays in the field for a retry; it is never stored.
       const message = error instanceof Error && error.message
@@ -2129,6 +2136,9 @@
       style="pointer-events: none; position: absolute; visibility: hidden; white-space: pre;"
     >{CELL_MEASURE_TEXT}</span>
     <div class="term-screen" data-terminal-row-count={renderedRows.length}>
+      {#if historyTruncated}
+        <p class="truncation-notice" role="status">Older terminal history is not shown; this pane response was limited.</p>
+      {/if}
       {#if virtualTopHeight > 0}
         <span class="terminal-virtual-spacer" style={`height:${virtualTopHeight}px`} aria-hidden="true"></span>
       {/if}
@@ -2277,7 +2287,7 @@
               disabled={readOnly || !secretValue || sendingSecret}
               aria-label="Send hidden value"
               onclick={submitSecret}
-            >{sendingSecret ? '…' : 'Send'}</Button>
+            >{sendingSecret ? '…' : secretConfirmed ? '✓' : 'Send'}</Button>
           </div>
           <p class="hint">Typed straight into the terminal: never saved on this phone and never written to activity.</p>
         {:else}
@@ -2334,7 +2344,7 @@
         ></textarea>
         {#if composer}<button class="input-clear" aria-label="Clear prompt text" onclick={clearComposer}>×</button>{/if}
       </div>
-      <Button size="icon" disabled={!composer.replace(/[\r\n]+$/g, '') || composerLocked || sendingPrompt || uploadingAttachment} aria-label={sendingPrompt ? 'Submitting input' : inspectionMode ? 'Submit terminal text' : 'Send prompt'} onclick={sendPrompt}>{sendingPrompt ? '…' : '➤'}</Button>
+      <Button size="icon" disabled={!composer.replace(/[\r\n]+$/g, '') || composerLocked || sendingPrompt || uploadingAttachment} aria-label={sendingPrompt ? 'Submitting input' : sendConfirmed ? 'Input sent' : inspectionMode ? 'Submit terminal text' : 'Send prompt'} onclick={sendPrompt}>{sendingPrompt ? '…' : sendConfirmed ? '✓' : '➤'}</Button>
       <input bind:this={imageInput} type="file" accept="image/*" multiple hidden onchange={(event) => { void filesSelected(event.currentTarget.files || []); event.currentTarget.value = ''; }} />
       <input bind:this={fileInput} type="file" accept="image/png,image/jpeg,image/gif,image/webp,text/plain,text/markdown,text/csv,application/json,application/pdf,.docx,.xlsx,.pptx,.odt,.ods,.odp" multiple hidden onchange={(event) => { void filesSelected(event.currentTarget.files || []); event.currentTarget.value = ''; }} />
     </div>
@@ -2344,9 +2354,6 @@
     {#if uploadStatus}<p class:error={uploadError} class="upload-status" role="status">{uploadStatus}</p>{/if}
     {#if draftPersistenceWarning}<p class="upload-status error" role="status">{draftPersistenceWarning}</p>{/if}
     {#if paneSizeLeaseError}<p class="upload-status error" role="alert">{paneSizeLeaseError}</p>{/if}
-    {#if historyTruncated}
-      <p class="upload-status" role="status">Older terminal history is not shown; this pane response was limited.</p>
-    {/if}
 
     {#if visibleTerminalMenu}
       <section class="generic-menu-actions" aria-label={`Terminal menu: ${visibleTerminalMenu.title}`} aria-busy={keySending}>
@@ -2373,7 +2380,7 @@
         {#each options as option, index (`${index}:${option}`)}
           <Button
             variant={approvalButtonTone(option, index, options.length) === 'deny' ? 'danger' : approvalButtonTone(option, index, options.length) === 'trust' ? 'trust' : 'default'}
-            onclick={() => relayStore.respond(agent, index, options.length, option)}
+            onclick={() => { haptic(approvalButtonTone(option, index, options.length) === 'deny' ? [10, 40, 10] : 15); void relayStore.respond(agent, index, options.length, option); }}
           >{option}</Button>
         {/each}
         {#if nextBlocked}<Button variant="secondary" onclick={openNext}>Next blocked →</Button>{/if}

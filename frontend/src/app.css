@@ -329,6 +329,20 @@ textarea { min-height: 6.5rem; resize: vertical; }
 .status-dot.attention { animation: status-breathe 2.8s ease-in-out infinite; }
 
 .empty-state { color: var(--muted); padding: 3rem 1rem; text-align: center; }
+.pull-indicator { align-items: center; display: flex; justify-content: center; overflow: hidden; }
+.pull-cue { border: 2px solid var(--border); border-radius: 50%; display: block; height: 1.15rem; position: relative; transition: border-color var(--dur-fast) ease, transform var(--dur-med) var(--ease-out); width: 1.15rem; }
+.pull-cue::after { border: solid var(--muted); border-width: 0 2px 2px 0; content: ''; height: .4rem; left: 50%; position: absolute; top: 45%; transform: translate(-50%, -50%) rotate(45deg); width: .4rem; }
+.pull-cue.armed { border-color: var(--primary); transform: rotate(180deg); }
+.pull-indicator.refreshing .pull-cue { animation: pull-spin .7s linear infinite; border-color: var(--primary); border-top-color: transparent; transform: none; }
+.pull-indicator.refreshing .pull-cue::after { content: none; }
+@keyframes pull-spin { to { transform: rotate(1turn); } }
+.skeleton-card { align-items: center; display: flex; gap: .7rem; padding: .8rem; pointer-events: none; }
+.skeleton { animation: skeleton-sheen 1.5s ease-in-out infinite; background: linear-gradient(90deg, var(--border) 25%, color-mix(in srgb, var(--border) 40%, transparent) 50%, var(--border) 75%); background-size: 200% 100%; border-radius: .4rem; display: block; }
+.skeleton-dot { border-radius: 50%; flex: none; height: .7rem; width: .7rem; }
+.skeleton-lines { display: flex; flex: 1; flex-direction: column; gap: .4rem; }
+.skeleton-line { height: .6rem; width: 55%; }
+.skeleton-title { width: 80%; }
+@keyframes skeleton-sheen { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
 .empty-state h2 { color: var(--foreground); font-size: 1.05rem; }
 .empty-state ol { display: inline-block; font-size: .8rem; line-height: 1.7; margin-top: .8rem; text-align: left; }
 .empty-icon { display: block; font-size: 1.8rem; }
@@ -799,6 +813,7 @@ textarea { min-height: 6.5rem; resize: vertical; }
 .composer-field > .slash-command-menu { background: var(--card); border: 1px solid var(--border); border-radius: .72rem; bottom: calc(100% + .42rem); box-shadow: 0 .8rem 2.4rem rgb(0 0 0 / .42); left: 0; max-height: min(48dvh, 22rem); overflow-y: auto; position: absolute; right: 0; z-index: 15; }
 .composer-field > .slash-command-menu .slash-command-name em { border: 1px solid var(--border); border-radius: 999px; color: var(--muted); font-size: .56rem; font-style: normal; margin-left: auto; padding: .08rem .28rem; text-transform: capitalize; }
 .upload-status { color: var(--success); font-size: .7rem; margin: -.2rem .75rem .45rem; }
+.truncation-notice { background: var(--background); border-bottom: 1px dashed var(--border); color: var(--muted); font-size: .66rem; margin: 0; padding: .45rem .75rem .5rem; text-align: center; }
 .quick-actions { border-top: 1px solid var(--border); padding: .55rem; }
 .quick-actions .button { flex: 1; }
 .term-keys { align-items: center; border-top: 1px solid var(--border); display: flex; gap: .35rem; padding: .4rem .55rem; }

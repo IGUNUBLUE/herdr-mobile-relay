@@ -1003,6 +1003,23 @@ class RelayStore {
   }
 
   /**
+   * Pull-to-refresh from the agent list: asks every live relay for a fresh
+   * inventory frame — the reply doubles as the health signal, same as the
+   * keepalive ping — and redials anything disconnected now that the backoff
+   * is cleared.
+   */
+  requestInventoryRefresh(): void {
+    this.resetReconnectBackoff();
+    for (const [relayId, connection] of this.connectionsValue) {
+      if (connection.status === 'connected') {
+        this.sendRaw(relayId, { type: 'refresh_agents' });
+        continue;
+      }
+      if (connection.status === 'disconnected') this.connectRelay(connection.relay);
+    }
+  }
+
+  /**
    * Bridge-window migration. A relay reached over its legacy WSS URL announces
    * that it also speaks the hybrid transport; the app records its selected
    * gateway first and the remaining cold fallbacks. The legacy relay URL is
