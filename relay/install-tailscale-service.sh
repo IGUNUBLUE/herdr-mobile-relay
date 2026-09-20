@@ -62,6 +62,10 @@ Wants=network-online.target
 Type=simple
 WorkingDirectory=$WORK_DIR
 Environment=HERDR_RELAY_ENV=$ENV_FILE
+# The binary uses HERDR_RELAY_ENV only to locate its runtime directory; the
+# relay key itself must come from the env file, like the foreground wrappers
+# source it before exec. EnvironmentFile is the systemd-native equivalent.
+EnvironmentFile=$ENV_FILE
 Environment=HERDR_RELAY_HOST=127.0.0.1
 Environment=HERDR_RELAY_PORT=$PORT
 Environment=PATH=$SERVICE_PATH
