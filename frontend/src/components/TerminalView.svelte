@@ -50,6 +50,7 @@
     TERMINAL_SEPARATOR_TOKEN,
     renderTerminalContent,
     terminalResizeLayoutEngaged,
+    terminalSchemeEpoch,
     terminalScreenColumns,
   } from '$lib/terminal';
   import { detectTerminalMenu, terminalTextInputActive } from '$lib/terminal-menu';
@@ -130,9 +131,9 @@
   let resizeWaitExpired = $state(false);
   let resizeWaitTimer: ReturnType<typeof setTimeout> | null = null;
   let displayed = $state('');
-  let renderedHtml = $state('');
+  let renderedEpoch = -1;
   let renderedRows = $state<RenderedTerminalRow[]>([]);
-  let virtualHtml = $state('');
+  let virtualRows = $state<Array<{ index: number; html: string }>>([]);
   let virtualTopHeight = $state(0);
   let virtualBottomHeight = $state(0);
   let virtualContentColumns = $state(0);
@@ -149,6 +150,8 @@
   let virtualWindowFrame = 0;
   let virtualRowObserver: ResizeObserver | undefined;
   let virtualHeightCache = new Map<string, number>();
+  let virtualLineHeight = 18;
+  let lastSizedRows: RenderedTerminalRow[] = [];
   const virtualIndex = new VirtualTerminalIndex();
   const wideGridOffsets = new Map<number, number>();
   let wideGridOffsetsPane = '';
@@ -298,10 +301,16 @@
       ? terminalMenu
       : null,
   );
-  const terminalFindCorpus = $derived.by(() => ({
-    text: terminalSearchText(renderedRows),
-    offsets: terminalRowOffsets(renderedRows),
-  }));
+  const terminalFindCorpus = $derived.by(() => {
+    // The corpus joins every rendered row — skip it entirely while find is
+    // closed so each terminal frame doesn't pay an O(text) rebuild for a
+    // feature that isn't on screen.
+    if (!findOpen) return { text: '', offsets: [] as number[] };
+    return {
+      text: terminalSearchText(renderedRows),
+      offsets: terminalRowOffsets(renderedRows),
+    };
+  });
   const terminalFind = $derived(findTerminalText(terminalFindCorpus.text, findQuery.trim()));
   const armedModifierLabel = $derived([
     ctrlArmed ? 'Ctrl' : '',
@@ -391,7 +400,7 @@
       findOpen,
       findQuery,
       activeFindIndex,
-      virtualHtml,
+      virtualRows,
       terminalFind.matches.length,
     ];
     void highlightState;
@@ -461,7 +470,7 @@
         const message = waitingForResizedFrame ? 'Resizing terminal…' : 'Loading…';
         const rendered = renderTerminalContent(message, 'plain');
         displayed = rendered.display;
-        renderedHtml = rendered.html;
+        renderedEpoch = terminalSchemeEpoch();
         renderedRows = rendered.rows;
         resetVirtualRows(Number.POSITIVE_INFINITY);
         lastFormat = '';
@@ -713,7 +722,10 @@
       renderColumnCap,
     );
     lastContent = next.content;
-    if (rendered.display === displayed && rendered.html === renderedHtml
+    // The row render is deterministic on (display, format, scheme epoch,
+    // layout inputs): identical inputs mean identical rows, so the frame can
+    // skip the DOM update entirely without building the html blob to compare.
+    if (rendered.display === displayed && terminalSchemeEpoch() === renderedEpoch
       && next.format === lastFormat && !layoutChanged) return;
     const frameStick = virtualStickToBottom || Boolean(terminalElement
       && terminalElement.scrollHeight - terminalElement.scrollTop - terminalElement.clientHeight < 48);
@@ -739,7 +751,7 @@
     virtualStickToBottom = stick;
     virtualScrollResetPending = Boolean(terminalElement);
     displayed = rendered.display;
-    renderedHtml = rendered.html;
+    renderedEpoch = terminalSchemeEpoch();
     renderedRows = rendered.rows;
     lastFormat = next.format;
     lastPreserveLayout = preserve;
@@ -837,6 +849,28 @@
     return Math.max(0, matches > 1 ? height - lastSize : height - 1);
   }
 
+  function estimateVirtualRowSize(
+    row: RenderedTerminalRow,
+    lineHeight: number,
+    wrappingColumns: number,
+  ): number {
+    const measured = virtualHeightCache.get(row.html);
+    if (measured) return measured;
+    if (row.separator) return lineHeight * 1.2;
+    // One line per row only where the row really stays on one line: a leased
+    // pane's fixed-grid rows. Everything else wraps at the width in force,
+    // and estimating those at one line parks the scroll past the content.
+    // Rows wrap in the two regimes that have a width to wrap at: engaged
+    // (the leased width, fixed grids excepted) and pending (the container).
+    // A relay that cannot lease keeps every row on one line.
+    const wraps = (!lastPreserveLayout
+      || (resizeLayoutPending && !row.wideGrid)
+      || (resizeLayoutActive && !row.fixedGrid && !row.wideGrid))
+      ? Math.max(1, Math.ceil(row.columns / wrappingColumns))
+      : 1;
+    return lineHeight * wraps;
+  }
+
   function resetVirtualRows(
     scrollTop: number,
     previousAnchor = currentVirtualAnchor(scrollTop),
@@ -851,37 +885,42 @@
       $interfaceSize,
       width,
     ].join(':');
-    if (layoutSignature !== virtualLayoutSignature) {
+    const layoutChanged = layoutSignature !== virtualLayoutSignature;
+    if (layoutChanged) {
       virtualLayoutSignature = layoutSignature;
       virtualHeightCache.clear();
+      // The line-height read below is a forced style resolution — only worth
+      // paying when the layout inputs that could change it actually did.
+      const style = terminalElement ? getComputedStyle(terminalElement) : null;
+      const parsedLineHeight = Number.parseFloat(style?.lineHeight || '');
+      virtualLineHeight = Number.isFinite(parsedLineHeight) && parsedLineHeight > 0
+        ? parsedLineHeight
+        : 18;
     } else if (virtualHeightCache.size > Math.max(2_000, renderedRows.length * 2)) {
       virtualHeightCache.clear();
     }
 
-    const style = terminalElement ? getComputedStyle(terminalElement) : null;
-    const parsedLineHeight = Number.parseFloat(style?.lineHeight || '');
-    const lineHeight = Number.isFinite(parsedLineHeight) && parsedLineHeight > 0 ? parsedLineHeight : 18;
+    const lineHeight = virtualLineHeight;
     const wrappingColumns = measuredPaneColumns()
       || lastLeasedColumns
       || renderedResizeColumns
       || 80;
-    const sizes = renderedRows.map((row) => {
-      const measured = virtualHeightCache.get(row.html);
-      if (measured) return measured;
-      if (row.separator) return lineHeight * 1.2;
-      // One line per row only where the row really stays on one line: a leased
-      // pane's fixed-grid rows. Everything else wraps at the width in force,
-      // and estimating those at one line parks the scroll past the content.
-      // Rows wrap in the two regimes that have a width to wrap at: engaged
-      // (the leased width, fixed grids excepted) and pending (the container).
-      // A relay that cannot lease keeps every row on one line.
-      const wraps = (!lastPreserveLayout
-        || (resizeLayoutPending && !row.wideGrid)
-        || (resizeLayoutActive && !row.fixedGrid && !row.wideGrid))
-        ? Math.max(1, Math.ceil(row.columns / wrappingColumns))
-        : 1;
-      return lineHeight * wraps;
-    });
+    // Pane deltas mutate a handful of tail rows, and the render cache keeps
+    // those rows object-identical across frames: reuse the index's own sizes
+    // (measured heights included) for unchanged rows instead of re-estimating
+    // every row on every frame.
+    const sizes = new Array<number>(renderedRows.length);
+    const previousRows = lastSizedRows;
+    const rowShift = renderedRowShift(previousRows, renderedRows);
+    for (let index = 0; index < renderedRows.length; index += 1) {
+      const previousIndex = index + rowShift;
+      sizes[index] = !layoutChanged
+        && previousIndex < previousRows.length
+        && previousRows[previousIndex] === renderedRows[index]
+        ? virtualIndex.size(previousIndex)
+        : estimateVirtualRowSize(renderedRows[index], lineHeight, wrappingColumns);
+    }
+    lastSizedRows = renderedRows;
     virtualIndex.reset(sizes);
     let nextTop = scrollTop;
     if (previousAnchor && virtualIndex.length) {
@@ -905,15 +944,15 @@
     return nextTop;
   }
 
-  function mountedVirtualHtml(start: number, end: number): string {
-    let html = '';
+  function mountedVirtualRows(start: number, end: number): Array<{ index: number; html: string }> {
+    const rows: Array<{ index: number; html: string }> = [];
     for (let index = start; index < end; index += 1) {
       const attributes = renderedRows[index].wideGrid && wideGridBlocks[index] >= 0
         ? `<span data-terminal-row="${index}" data-terminal-wide-block="${wideGridBlocks[index]}" `
         : `<span data-terminal-row="${index}" `;
-      html += renderedRows[index].html.replace('<span ', attributes);
+      rows.push({ index, html: renderedRows[index].html.replace('<span ', attributes) });
     }
-    return html;
+    return rows;
   }
 
   // Contiguous wide box-drawn rows form one logical table. Their borders were
@@ -972,7 +1011,7 @@
     virtualTopHeight = range.top;
     virtualBottomHeight = range.bottom;
     if (force || !unchanged) {
-      virtualHtml = mountedVirtualHtml(range.start, range.end);
+      virtualRows = mountedVirtualRows(range.start, range.end);
       queueVirtualRowObservation();
     }
   }
@@ -2144,8 +2183,11 @@
       {#if virtualTopHeight > 0}
         <span class="terminal-virtual-spacer" style={`height:${virtualTopHeight}px`} aria-hidden="true"></span>
       {/if}
-      <!-- Normalized rows are escaped before controlled ANSI spans enter this bounded DOM window. -->
-      {@html virtualHtml}
+      <!-- Normalized rows are escaped before controlled ANSI spans enter this bounded DOM window.
+           Keyed by row slot so a fresh frame patches changed lines instead of
+           swapping the whole window's innerHTML (which repainted every row).
+           Kept on one line: no whitespace text nodes between row spans. -->
+      {#each virtualRows as row (row.index)}{@html row.html}{/each}
       {#if virtualBottomHeight > 0}
         <span class="terminal-virtual-spacer" style={`height:${virtualBottomHeight}px`} aria-hidden="true"></span>
       {/if}
