@@ -1,6 +1,6 @@
 /* Stable bootstrap and metadata are deliberately revalidated. Only
  * digest-addressed build entries and assets may be stored indefinitely. */
-/herdr-bootstrap.js
+/lerdr-bootstrap.js
   Cache-Control: no-cache, no-store
 
 /manifest-loader.js
