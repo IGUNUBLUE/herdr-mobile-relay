@@ -16,7 +16,7 @@
 
 id = "lerdr.events"
 name = "Lerdr"
-version = "0.26.3"
+version = "0.27.0"
 
 # Herdr 0.7.5 introduced the live-agent facade used for atomic starts and prompts.
 min_herdr_version = "0.7.5"
