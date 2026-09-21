@@ -8,7 +8,6 @@
   "release_version": "0.9.0",
   "revision": "abc123",
   "update": {"state": "current"},
-  "app_deploy": {"state": "idle", "configured": false},
   "capabilities": [
     "attention_classification",
     "clear_activities",

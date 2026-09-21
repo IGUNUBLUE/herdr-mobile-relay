@@ -2,7 +2,7 @@
 
 How relay releases are verified, activated, and rolled back, how phone-driven
 upgrades work, and which Herdr versions the relay supports. Read this before
-upgrading a relay or hosting the phone app separately.
+upgrading a relay.
 
 ## How a release is installed
 
@@ -23,9 +23,10 @@ coverage. Settings distinguishes the installed Herdr client from the running
 server and reports affected feature support instead of treating one mismatch
 as a total connection failure.
 
-A relay deployment can publish the hosted app, but the update screen remains
-incomplete until the new phone bundle initializes and reports its verified build
-identity. Relay-only updates do not claim to have updated the phone.
+The relay serves the phone app itself, so an update swaps the bundle the phone
+loads — but the update screen remains incomplete until the new phone bundle
+initializes and reports its verified build identity. Relay-only updates do not
+claim to have updated the phone.
 
 Phone acknowledgement also requires the integrity-checked stylesheet to have
 loaded. This uses the browser's stylesheet state, not a readiness flag from
@@ -65,17 +66,12 @@ not, open it:
 herdr plugin action invoke setup --plugin lerdr.events
 ```
 
-If your phones load the app from a separately hosted origin — every gateway
-setup, and any tunnel setup that chose an installed app — that app is still
-0.19.1 and cannot talk to the new relay. The phone-driven updater would have
-published it first; a manual upgrade has to: on the deployment-owner computer
-choose **8. Configure App Deployment** and answer **Y** to "Deploy app version
-0.20.0 now?". The menu's status line says so as long as the hosted app is
-behind ("serves 0.19.1, this relay ships 0.20.0 — deploy with 8"). Relays
-that serve the app themselves through a tunnel need nothing more.
+Releases before Tailscale-only could serve the app from a separately hosted
+origin; that app is still 0.19.1 and cannot talk to the new relay. Open the
+app on the relay's own address (`https://<machine>.<tailnet>.ts.net`) instead.
 
-Then choose your connection option to print a fresh bootstrap QR. It pairs one
-phone; print it again (**Choose Phone App and Show QR** in the setup menu) for each
+Then print a fresh bootstrap QR (**1. Tailscale Serve** in the setup menu). It
+pairs one phone; print it again (**2. Show Phone Setup QR**) for each
 additional phone, or use **Settings → Devices → Invite Device** on a paired
 controller to create a reader or controller invitation from the phone.
 Previously paired phones cannot reuse their v0.19.1 key: pair them again with a
@@ -84,34 +80,12 @@ freshly printed link.
 `LERDR_NO_AUTO_SETUP=1` in front of the install command suppresses
 the automatic menu; it exists for unattended upgrades, not for this one.
 
-## The deployment-owner role
-
-The relay-hosted app updates with its relay. For a separately hosted Cloudflare
-Pages app, configure exactly one stable relay as deployment owner with the
-`configure-app-deploy` action. The worker deploys and verifies the target app
-before it installs and restarts the relay; a failed download, compatibility
-check, deployment, or public-origin check leaves the current relay running.
-
-The optional deployment-owner role requires Node.js 22 or newer — Wrangler's own
-floor, and what the action verifies before it records a directory — plus
-Cloudflare credentials on that computer only. The action looks for `node` where
-nvm, fnm, volta, and asdf put it, not only on `PATH`.
-
-A Pages project can only deploy a domain it already serves. When the origin you
-enter is not one of them, and the account has exactly one Pages project, the
-action attaches it for you if `relay.env` carries a `CLOUDFLARE_API_TOKEN` with
-Pages:Edit — the updater pins Wrangler 4.125.0 and skips Wrangler's differential
-asset cache during deployment because that upload path can fail against stale
-Pages cache state. Set `LERDR_APP_DEPLOY_ATTACH_DOMAIN=true` to allow that
-without being asked, or `false` to refuse. Otherwise it names the credential to
-set and offers to take a different origin.
-
 ## Release checks and app reloads
 
 Release checks use the GitHub API. When an unauthenticated request is rate
 limited, they fall back to the public `releases/latest` redirect for the stable
 tag and that tag's Atom commit feed for its revision. Loading a
-newly deployed phone app uses a versioned navigation, so a sleeping browser or
+new phone bundle uses a versioned navigation, so a sleeping browser or
 installed PWA does not reuse a stale document.
 
 ## Herdr version compatibility
@@ -140,8 +114,8 @@ The installed-device suite in `docs/mobile-device-ci.md` checks the executing
 phone build, not only `/version.json`, while preserving real encrypted relay
 credentials and preferences. It uses historical old bundles, a deterministic
 HTTPS fixture, bounded asset faults, and native Home Screen relaunches. A green
-simulator run does not replace the separate physical-device and deployed-origin
-signoff for a user-facing release.
+simulator run does not replace the separate physical-device signoff for a
+user-facing release.
 
 ## Troubleshooting
 

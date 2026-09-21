@@ -10,6 +10,29 @@ project follows [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Removed
+
+- **BREAKING: Tailscale is now the only transport.** Cloudflare tunnels
+  (temporary and stable), the community and self-hosted WebRTC gateways, the
+  hybrid WebRTC path, and the separately hosted app deployment are gone. The
+  phone and the computer must be on the same tailnet; the relay is published
+  with Tailscale Serve on `https://<machine>.<tailnet>.ts.net`. Pairings and
+  per-device credentials are unaffected, but phones previously connecting
+  through a tunnel or gateway must re-pair with the new tailnet setup link.
+  See `docs/tailscale.md` for the requirements and `QUICKSTART.md` for the
+  flow. The setup menu is reduced to Tailscale Serve, the setup QR reprint,
+  and status; `make tailscale-setup` is the checkout entry point.
+- The `lerdr-gateway` binary, the app-deploy update stage
+  (`deploying_app`/`deploy_app_update`), and the `stable-state` command went
+  with their transports. Update progress now tracks relays and the
+  relay-served phone bundle only.
+
+### Changed
+
+- **Tailscale Serve now works on macOS** in addition to Linux: the setup and
+  service installers resolve both the `tailscale` CLI and Tailscale.app, and
+  the background service is a launchd agent.
+
 ## [0.26.3] - 2026-09-21
 
 ### Changed

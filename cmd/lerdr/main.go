@@ -10,17 +10,14 @@ import (
 	"os"
 	"os/signal"
 	"path/filepath"
-	"strings"
 	"syscall"
 
 	"github.com/IGUNUBLUE/lerdr/internal/app"
-	"github.com/IGUNUBLUE/lerdr/internal/appdeploy"
 	"github.com/IGUNUBLUE/lerdr/internal/config"
 	"github.com/IGUNUBLUE/lerdr/internal/eventhook"
 	"github.com/IGUNUBLUE/lerdr/internal/release"
 	"github.com/IGUNUBLUE/lerdr/internal/setuphelper"
 	"github.com/IGUNUBLUE/lerdr/internal/speech"
-	"github.com/IGUNUBLUE/lerdr/internal/stablestate"
 	"github.com/IGUNUBLUE/lerdr/internal/support"
 	relayupdate "github.com/IGUNUBLUE/lerdr/internal/update"
 )
@@ -74,88 +71,7 @@ func run(args []string) (int, error) {
 			return 3, err
 		}
 		return status(err)
-	case "verify-public":
-		verifyFlags := flag.NewFlagSet("verify-public", flag.ContinueOnError)
-		verifyFlags.SetOutput(os.Stderr)
-		webRoot := verifyFlags.String("web-root", "web", "local web release root")
-		origin := verifyFlags.String("origin", "", "public app origin")
-		version := verifyFlags.String("version", "", "expected release version (defaults to the local descriptor)")
-		revision := verifyFlags.String("revision", "", "expected release revision (defaults to local version metadata)")
-		if err := verifyFlags.Parse(args); err != nil {
-			return 2, err
-		}
-		if verifyFlags.NArg() != 0 || *origin == "" {
-			return 2, errors.New("usage: lerdr verify-public --origin ORIGIN [--web-root DIRECTORY] [--version VERSION] [--revision REVISION]")
-		}
-		return status(appdeploy.VerifyPublic(context.Background(), *webRoot, *origin, *version, *revision))
-	case "app-deploy-worker":
-		if len(args) != 1 {
-			return 2, errors.New("usage: lerdr app-deploy-worker JOB.json")
-		}
-		return status(appdeploy.Run(context.Background(), args[0]))
-	case "app-deploy-configured":
-		if len(args) != 0 {
-			return 2, errors.New("app-deploy-configured does not accept arguments")
-		}
-		cfg, err := config.Load()
-		if err != nil {
-			return 1, err
-		}
-		return status(appdeploy.RunConfigured(context.Background(), cfg.RuntimeDir, cfg.WebRoot, version, revision))
-	case "pages-projects":
-		if len(args) < 1 || len(args) > 3 {
-			return 2, errors.New("usage: lerdr pages-projects {list|names|matching ORIGIN|validate NAME ORIGIN}")
-		}
-		projects, err := appdeploy.ParseProjects(os.Stdin)
-		if err != nil {
-			return 1, err
-		}
-		switch args[0] {
-		case "list":
-			if len(args) != 1 {
-				return 2, errors.New("pages-projects list accepts no arguments")
-			}
-			for _, project := range projects {
-				suffix := ""
-				if len(project.Domains) > 0 {
-					suffix = " (" + strings.Join(project.Domains, ", ") + ")"
-				}
-				fmt.Printf("  %s%s\n", project.Name, suffix)
-			}
-		case "names":
-			if len(args) != 1 {
-				return 2, errors.New("pages-projects names accepts no arguments")
-			}
-			for _, project := range projects {
-				fmt.Println(project.Name)
-			}
-		case "matching":
-			if len(args) != 2 {
-				return 2, errors.New("usage: pages-projects matching ORIGIN")
-			}
-			matches, err := appdeploy.MatchingProjects(projects, args[1])
-			if err != nil {
-				return 1, err
-			}
-			for _, project := range matches {
-				fmt.Println(project.Name)
-			}
-		case "validate":
-			if len(args) != 3 {
-				return 2, errors.New("usage: pages-projects validate NAME ORIGIN")
-			}
-			if err := appdeploy.ValidateProject(projects, args[1], args[2]); err != nil {
-				return 1, err
-			}
-		default:
-			return 2, errors.New("unknown pages-projects operation")
-		}
-		return 0, nil
-	case "stable-state":
-		if len(args) == 0 {
-			return 2, errors.New("stable-state requires an operation")
-		}
-		return status(stablestate.Run(args, os.Stdout, os.Stderr))
+
 	case "speech-voices":
 		err := speech.Run(context.Background(), args, os.Stdout, os.Stderr)
 		if errors.Is(err, speech.ErrUsage) {

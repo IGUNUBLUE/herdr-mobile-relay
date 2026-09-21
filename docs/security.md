@@ -8,11 +8,9 @@ this before exposing a relay beyond your own machine.
 
 The relay binds to `127.0.0.1:8375` by default (`LERDR_RELAY_HOST`,
 `LERDR_RELAY_PORT`); its event hook uses loopback UDP 8376
-(`LERDR_RELAY_PLUGIN_PORT`). A Cloudflare tunnel supplies HTTPS/WSS without
-opening an inbound port. On the gateway transport, an outbound connection to the
-gateway replaces the tunnel, and the direct WebRTC path adds one UDP socket,
-guarded by ICE credentials and a pinned DTLS fingerprint exchanged only inside
-the encrypted channel; see [transports.md](transports.md). Tokens use
+(`LERDR_RELAY_PLUGIN_PORT`). Tailscale Serve supplies HTTPS/WSS on the
+machine's tailnet name without opening any inbound port on the public
+internet; see [tailscale.md](tailscale.md). Tokens use
 constant-time comparison, uploads are limited, and launch requests cannot provide
 arbitrary executables or shell commands. Workspace and worktree mutations use
 Herdr's typed API; the phone creates checkouts under Herdr's configured
@@ -23,8 +21,7 @@ development connections.
 
 Runtime data stays in the relay's private config and cache roots. The phone
 stores its relay list locally. Relays never connect to one another, and no
-central service is required: a tunnel reaches the relay directly, and gateway
-mode uses the gateways you selected.
+central service is required: the tailnet route reaches the relay directly.
 
 ## Audit log
 
@@ -49,12 +46,10 @@ with HKDF-SHA-256, and encrypts every subsequent WebSocket message with
 AES-256-GCM. The phone sends encrypted key confirmation before the relay
 registers the connection. Invitation and credential secrets stay in the QR or
 setup URL fragment and phone storage; they are never placed in the WebSocket
-URL or an HTTP header. Cloudflare — or, on the gateway transport, the gateway —
-can still observe connection metadata such as endpoints, timing, and encrypted
-frame sizes, but not relay commands, terminal output, uploads, or
-push-subscription details. Once the direct WebRTC path takes over, application
-frames and their metadata leave the gateway entirely; it still saw the
-rendezvous and the encrypted signaling that set the path up. Tokenless
+URL or an HTTP header. Tailscale's coordination server — like any tailnet
+peer or DERP relay carrying the connection — can still observe connection
+metadata such as endpoints, timing, and encrypted frame sizes, but not relay
+commands, terminal output, uploads, or push-subscription details. Tokenless
 loopback development connections do not add application-layer encryption.
 
 As with any browser E2EE app, this assumes the phone is running trusted app
@@ -73,11 +68,10 @@ than a human-chosen value.
 The relay key bootstraps a first controller credential. That controller can
 create a one-use invitation for another browser, then name, revoke, or reset
 paired devices. An invitation link carries the invitation secret and the
-computer's address: its WSS URL on a direct relay, or, on a gateway relay, the
-gateway list plus the relay id and rendezvous key that answer the gateway's
-challenge. Both are derived one-way from the relay key, so an invited device
-can reach the computer through the gateway - as any holder of a direct URL can
-reach a direct relay - but cannot re-arm or redeem the bootstrap. Each
+computer's WSS address on the tailnet. The invitation secret is derived
+one-way from the relay key, so an invited device can reach the computer —
+as any holder of the address can — but cannot re-arm or redeem the
+bootstrap. Each
 credential has a reader or controller role. The authoritative protocol catalog
 defaults mutations to controller-only; readers can inspect agents,
 conversations, workspaces, and device state but cannot send input, answer
@@ -95,13 +89,8 @@ signal the running relay (`SIGUSR1`, found through `relay.pid` beside
 `relay.env`) before drawing the QR, and the relay mints a fresh ten-minute
 bootstrap invitation without touching the devices already enrolled. Only a
 local process can send that signal, which is the same trust the printed key
-already carries. The quick tunnel is the exception: it serves the app from a
-hostname that changes on every launch, so a phone's enrolled credential is
-stranded under the previous origin and can never be presented again. Each
-tunnel launch therefore starts with an empty device list and one fresh one-use
-bootstrap invitation, still bound to the relay key; that invitation keeps
-refreshing its ten-minute window on every attempt for as long as re-arming is
-enabled. A gateway keeps a stable identity, so its pairings survive restarts.
+already carries. The tailnet hostname is stable across restarts, so enrolled
+devices keep their credentials for the life of the install.
 
 Attachment uploads are staged privately, validated by content and container
 format, and represented to the phone by opaque references. A live upload is
@@ -132,7 +121,7 @@ stops leasing the computer's pane width until verification succeeds.
 ## Health endpoints
 
 - `GET /health` — process liveness; returns `ok`.
-- `GET /healthz` — version, revision, web bundle, instance, inventory state, and
-  the `gateway` registration state on the hybrid transport.
+- `GET /healthz` — version, revision, web bundle, instance, and inventory
+  state.
 - `GET /readyz` — HTTP 200 once the listener and a Herdr inventory are ready,
   HTTP 503 before that.

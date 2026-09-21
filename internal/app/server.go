@@ -25,7 +25,6 @@ import (
 
 	"github.com/IGUNUBLUE/lerdr/internal/activity"
 	"github.com/IGUNUBLUE/lerdr/internal/agentroots"
-	"github.com/IGUNUBLUE/lerdr/internal/appdeploy"
 	"github.com/IGUNUBLUE/lerdr/internal/audit"
 	"github.com/IGUNUBLUE/lerdr/internal/clipboard"
 	"github.com/IGUNUBLUE/lerdr/internal/config"
@@ -115,8 +114,6 @@ type Server struct {
 	paneSizeM        *panesize.Manager
 	dispatcher       *coordinator.Dispatcher
 	updateM          *relayupdate.Manager
-	appDeployM       *appdeploy.Manager
-	hybrid           *hybridTransport
 	uploadM          *upload.Manager
 	deviceAuth       *deviceauth.Store
 	initErr          error
@@ -248,7 +245,6 @@ func New(cfg *config.Config, version, revision string, logger *slog.Logger) *Ser
 		conversationM:       conversationReader,
 		conversationB:       conversationBrowser,
 		updateM:             relayupdate.NewManager(cfg.ReleaseRoot, cfg.RuntimeDir, cfg.HerdrBin, version, revision, healthURL),
-		appDeployM:          appdeploy.NewManager(cfg.RuntimeDir, cfg.WebRoot, version, revision),
 		uploadM:             uploadManager,
 		deviceAuth:          deviceStore,
 		initErr:             deviceStoreErr,
@@ -620,9 +616,6 @@ func (s *Server) Run(ctx context.Context) error {
 		if identity, authenticated := client.Identity(); authenticated && s.pushM != nil {
 			s.pushM.SetViewedPane(identity.DeviceID, nil)
 		}
-		if s.hybrid != nil {
-			s.hybrid.forgetClient(client.ID())
-		}
 		releaseCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		defer cancel()
 		if err := s.paneSizeM.ReleaseClient(releaseCtx, client.ID()); err != nil {
@@ -707,21 +700,10 @@ func (s *Server) Run(ctx context.Context) error {
 			s.hub.Broadcast(map[string]any{"type": "update_status", "update": updateState})
 			s.sendCommandResult(client, inbound.RequestID, "check_update", true, "completed", "", "", map[string]any{"update": updateState})
 		case "install_update":
-			deployAppFirst := s.appDeployM.Required()
-			expectedAppOrigin := ""
-			if deployAppFirst {
-				if originErr := s.appDeployM.ValidateOrigin(inbound.ExpectedOrigin); originErr != nil {
-					s.sendCommandResult(client, inbound.RequestID, "install_update", false, "failed", originErr.Error(), "", map[string]any{"update": s.updateM.State()})
-					break
-				}
-				expectedAppOrigin = inbound.ExpectedOrigin
-			}
 			job, updateState, scheduleErr := s.updateM.Schedule(
 				ctx,
 				inbound.ExpectedVersion,
 				inbound.ExpectedRevision,
-				deployAppFirst,
-				expectedAppOrigin,
 			)
 			if scheduleErr != nil {
 				s.sendCommandResult(client, inbound.RequestID, "install_update", false, "failed", scheduleErr.Error(), "", map[string]any{"update": updateState})
@@ -729,14 +711,6 @@ func (s *Server) Run(ctx context.Context) error {
 			}
 			s.hub.Broadcast(map[string]any{"type": "update_status", "update": updateState})
 			s.sendCommandResult(client, inbound.RequestID, "install_update", true, "scheduled", "", "", map[string]any{"job": job, "update": updateState})
-		case "deploy_app_update":
-			job, deployState, scheduleErr := s.appDeployM.Schedule(ctx, inbound.ExpectedVersion, inbound.ExpectedRevision, inbound.ExpectedOrigin)
-			if scheduleErr != nil {
-				s.sendCommandResult(client, inbound.RequestID, "deploy_app_update", false, "failed", scheduleErr.Error(), "", map[string]any{"app_deploy": deployState})
-				break
-			}
-			s.hub.Broadcast(map[string]any{"type": "app_deploy_status", "app_deploy": deployState})
-			s.sendCommandResult(client, inbound.RequestID, "deploy_app_update", true, "scheduled", "", "", map[string]any{"job": job, "app_deploy": deployState})
 		case "lease_pane_size":
 			columns, rows, leaseErr := s.paneSizeM.Acquire(client.Context(), client.ID(), inbound.PaneID, inbound.Columns, inbound.Rows)
 			if leaseErr != nil {
@@ -1187,8 +1161,6 @@ func (s *Server) Run(ctx context.Context) error {
 			}
 		case "refresh_agents":
 			s.requestAgentRefresh(client)
-		case "webrtc_offer", "webrtc_ice", "webrtc_close":
-			s.handleWebRTCSignal(commandCtx, client, action, inbound.RequestID, msg)
 		default:
 			if err := s.expandPromptAttachmentReferences(action, msg, inbound.Target); err != nil {
 				result := &coordinator.CommandResult{
@@ -1328,7 +1300,6 @@ func (s *Server) Run(ctx context.Context) error {
 			work()
 		}()
 	}
-	s.hybrid = s.startHybridTransport(ctx)
 	startBackground(func() { s.pushM.Run(ctx) })
 	startBackground(func() { s.poller.Run(ctx) })
 	startBackground(func() { s.herdrC.RunCapabilityRefresh(ctx, 30*time.Second) })
@@ -1359,9 +1330,6 @@ func (s *Server) Run(ctx context.Context) error {
 	startBackground(func() { s.writeSupportLoop(ctx) })
 	startBackground(func() { s.watchJobStates(ctx) })
 	startBackground(func() { s.updateCheckLoop(ctx) })
-	if s.hybrid != nil {
-		s.hybrid.run(ctx, startBackground)
-	}
 
 	errCh := make(chan error, 1)
 	go func() {
@@ -1397,9 +1365,6 @@ func (s *Server) Run(ctx context.Context) error {
 		runErr = fmt.Errorf("websocket shutdown: %w", err)
 	}
 	cancelHub()
-	if s.hybrid != nil {
-		s.hybrid.close()
-	}
 	if s.udp != nil {
 		_ = s.udp.Close()
 	}
@@ -1448,12 +1413,6 @@ func (s *Server) effectiveCapabilitiesFor(herdrStatus herdr.ServerStatus) []stri
 	}
 	if herdrStatus.Supports(herdr.FeatureWorkspaceMoveBlock) {
 		capabilities = append(capabilities, "workspace_reorder_block")
-	}
-	if s.appDeployM.State().Configured {
-		capabilities = append(capabilities, "app_deploy")
-	}
-	if s.hybrid != nil && s.hybrid.directEnabled() {
-		capabilities = append(capabilities, "webrtc_direct")
 	}
 	if s.deviceAuth != nil {
 		capabilities = append(capabilities, "device_management")
@@ -2271,13 +2230,6 @@ func (s *Server) handleHealthz(w http.ResponseWriter, r *http.Request) {
 		"revision":        s.revision,
 		"protocol":        protocol.Version,
 	}
-	gateway := s.hybrid.status()
-	resp["gateway"] = gateway
-	resp["gateway_url"] = gateway["url"]
-	resp["gateway_version"] = gateway["version"]
-	resp["gateway_revision"] = gateway["revision"]
-	resp["gateway_available_version"] = s.gatewayAvailableVersion()
-
 	if s.webH != nil {
 		resp["bundle_hash"] = s.webH.BundleHash()
 		resp["bundle_version"] = s.webH.BundleVersion()
@@ -2632,13 +2584,11 @@ func (s *Server) sendConnectionSnapshot(client *transport.ClientConn) {
 		ReleaseVersion:  s.version,
 		Revision:        s.revision,
 		Update:          s.updateM.State(),
-		AppDeploy:       s.appDeployM.State(),
 		Capabilities:    capabilities,
 		HerdrStatus:     herdrStatus,
 		SpeechLanguages: speechLanguages,
 		Inventory:       inventory,
 		AgentProfiles:   s.profiles.Profiles(),
-		Hybrid:          s.hybridDescriptor(),
 	})
 	s.hub.Send(client, map[string]any{
 		"type":   "agents",
@@ -3042,7 +2992,6 @@ func commandResultMessage(result *coordinator.CommandResult) map[string]any {
 
 func (s *Server) watchJobStates(ctx context.Context) {
 	updateState := serializedState(s.updateM.State())
-	deployState := serializedState(s.appDeployM.State())
 	ticker := time.NewTicker(time.Second)
 	defer ticker.Stop()
 	for {
@@ -3054,11 +3003,6 @@ func (s *Server) watchJobStates(ctx context.Context) {
 			if serialized := serializedState(nextUpdate); serialized != updateState {
 				updateState = serialized
 				s.hub.Broadcast(map[string]any{"type": "update_status", "update": nextUpdate})
-			}
-			nextDeploy := s.appDeployM.State()
-			if serialized := serializedState(nextDeploy); serialized != deployState {
-				deployState = serialized
-				s.hub.Broadcast(map[string]any{"type": "app_deploy_status", "app_deploy": nextDeploy})
 			}
 		}
 	}

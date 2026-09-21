@@ -1,7 +1,7 @@
 import type { E2EECodec, E2EEWireFrame } from '../e2ee';
 
 /** Which physical path a transport uses to reach the relay. */
-export type TransportKind = 'websocket' | 'gateway' | 'webrtc';
+export type TransportKind = 'websocket';
 
 /** Stable close reason used by transports that cannot carry WebSocket code 4401. */
 export const DEVICE_UNAUTHORIZED_CODE = 'device_unauthorized';
@@ -13,42 +13,19 @@ export interface TransportStatusDetail {
   reason?: string;
   /**
    * A fatal transport will not succeed on retry with the same configuration
-   * (relay key rejected, unsupported transport). The path manager stops
-   * retrying this path instead of backing off.
+   * (relay key rejected). The store retries it at the slowest cadence instead
+   * of the normal one.
    */
   fatal?: boolean;
-  /**
-   * Gateway refusal code behind a close, when one exists. `unknown_relay` is
-   * the one the store treats specially: it is what a gateway answers while a
-   * relay is restarting, so it must keep the normal reconnect cadence even
-   * though it is fatal for the current attempt.
-   */
+  /** Refusal code behind a close, when one exists. */
   code?: string;
-  /**
-   * Which physical path is carrying traffic now. A hybrid transport reports
-   * `gateway` while relayed and `webrtc` once the direct upgrade takes over,
-   * so the store can lower terminal fidelity on the metered relayed path.
-   */
+  /** Which physical path is carrying traffic now. */
   path?: TransportKind;
-  /**
-   * STUN port the relayed gateway advertises for address discovery, absent when
-   * the gateway has it switched off. Only the port crosses the wire: the path
-   * manager pairs it with the gateway host it dialed itself.
-   */
-  stunPort?: number;
-  /**
-   * Gateway the live session was opened against. Reported for the relayed path
-   * and kept on the direct one, whose signalling used that same gateway, so the
-   * app can name the candidate actually in use out of a configured list.
-   */
-  gatewayUrl?: string;
 }
 
 /**
- * A relay transport carries authenticated application messages. Every
- * implementation owns its own E2EE session: the paths are independent
- * sessions by design, so a path switch behaves like a fast reconnect rather
- * than an in-flight migration.
+ * A relay transport carries authenticated application messages and owns its
+ * own E2EE session.
  */
 export interface RelayTransport {
   readonly kind: TransportKind;
@@ -84,5 +61,5 @@ export interface FrameChannelHandlers {
   onClose(detail?: TransportStatusDetail): void;
 }
 
-/** Factory shape used by the path manager to build a channel on demand. */
+/** Factory shape used to build a channel on demand. */
 export type FrameChannelFactory = (handlers: FrameChannelHandlers, encrypted: boolean) => FrameChannel;

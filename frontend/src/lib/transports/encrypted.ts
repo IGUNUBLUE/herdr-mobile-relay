@@ -24,7 +24,7 @@ export const E2EE_HANDSHAKE_TIMEOUT_MS = 10_000;
 
 export interface EncryptedTransportOptions {
   kind: TransportKind;
-  /** Relay bootstrap/rendezvous key. Empty enables tokenless loopback development. */
+  /** Relay bootstrap key. Empty enables tokenless loopback development. */
   token: string;
   /** Resolves the current credential when this path actually opens. */
   getAuthentication?: () => RelayDeviceCredential | RelayInvitation | undefined;
@@ -50,9 +50,8 @@ export type TransportAuthentication = Pick<
 
 /**
  * Wraps a raw frame channel in the Herdr E2EE session and the JSON message
- * layer. Every path — browser WebSocket, gateway-relayed, WebRTC DataChannel —
- * runs its own independent handshake through this one implementation, so the
- * authorization model and replay protection are identical on all of them.
+ * layer. The WebSocket path runs its handshake through this implementation, so
+ * the authorization model and replay protection live in one place.
  */
 export function createEncryptedTransport(options: EncryptedTransportOptions): RelayTransport {
   const {

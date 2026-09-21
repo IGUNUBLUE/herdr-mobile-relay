@@ -1,5 +1,5 @@
 /// Native shell for the Lerdr web app. The whole product surface —
-/// pairing, E2EE, WebRTC, terminal rendering — lives in the bundled web app;
+/// pairing, E2EE, terminal rendering — lives in the bundled web app;
 /// Rust only supplies what the Android WebView cannot: local notifications,
 /// hardware haptics, camera QR scanning, clipboard, biometric unlock, and (on
 /// desktop) deep links.

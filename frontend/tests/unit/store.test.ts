@@ -1060,7 +1060,6 @@ describe('relay command store', () => {
       type: 'install_update',
       expected_version: '0.8.0',
       expected_revision: 'f'.repeat(40),
-      expected_origin: location.origin,
       protocol: 3,
     });
     socket.message({
@@ -1671,8 +1670,8 @@ describe('relay command store', () => {
     // completing its handshake hears nothing.
     expect(dialing.sent).toEqual([]);
 
-    // The reply doubles as the health signal: an answered ping keeps the socket
-    // past the gateway's five-minute idle reaper.
+    // The reply doubles as the health signal: an answered ping proves the
+    // socket is still alive while the page sits hidden.
     connected.message({ type: 'inventory_status', state: 'ready' });
     await vi.advanceTimersByTimeAsync(120_000);
     expect(connected.sent).toHaveLength(sentOnConnect + 2);
@@ -1960,7 +1959,7 @@ describe('relay command store', () => {
     let attempts = 0;
     let report: (status: TransportStatus, detail?: TransportStatusDetail) => void = () => {};
     transportHijack.current = (_relay, handlers) => ({
-      kind: 'gateway',
+      kind: 'websocket',
       connect: () => {
         attempts += 1;
         report = handlers.onStatus;
@@ -1969,7 +1968,7 @@ describe('relay command store', () => {
       send: () => false,
       close: () => {},
     });
-    relayStore.addRelay({ label: 'Gateway', url: 'wss://gateway.example', token: '' });
+    relayStore.addRelay({ label: 'Fedora', url: 'wss://fedora.example', token: '' });
     const relayId = get(relayStore.relayConfigs)[0].id;
     expect(attempts).toBe(1);
 
@@ -1983,14 +1982,14 @@ describe('relay command store', () => {
     expect(attempts).toBe(2);
   });
 
-  it('stops a multi-gateway relay refused on one gateway from trying the others', async () => {
+  it('stops retrying a relay that refused the device credential', async () => {
     vi.useFakeTimers();
     relayStore.destroy();
     relayStore.relayConfigs.set([]);
     let attempts = 0;
     let report: (status: TransportStatus, detail?: TransportStatusDetail) => void = () => {};
     transportHijack.current = (_relay, handlers) => ({
-      kind: 'gateway',
+      kind: 'websocket',
       connect: () => {
         attempts += 1;
         report = handlers.onStatus;
@@ -2000,18 +1999,15 @@ describe('relay command store', () => {
       close: () => {},
     });
     relayStore.addRelay({
-      label: 'Gateway',
-      url: '',
+      label: 'Fedora',
+      url: 'wss://fedora.example',
       token: '0123456789abcdef0123456789abcdef',
-      transport: 'hybrid',
-      gatewayUrl: 'wss://a.example',
-      gatewayUrls: ['wss://a.example', 'wss://b.example'],
     });
     const relayId = get(relayStore.relayConfigs)[0].id;
     expect(attempts).toBe(1);
 
-    // The credential, not the path, is what the relay refused: walking the
-    // remaining gateways replays the same dead material against the same relay.
+    // The credential, not the path, is what the relay refused: retrying
+    // replays the same dead material against the same relay.
     report('closed', { reason: 'Device credential refused', fatal: true, code: 'device_unauthorized' });
     expect(get(relayStore.connections).get(relayId)?.authRejected).toBe(true);
     await vi.advanceTimersByTimeAsync(120_000);
@@ -2019,39 +2015,6 @@ describe('relay command store', () => {
     relayStore.resetReconnectBackoff();
     relayStore.revalidateConnections();
     expect(attempts).toBe(1);
-  });
-
-  it('keeps the normal cadence when the gateway does not know the relay yet', async () => {
-    vi.useFakeTimers();
-    relayStore.destroy();
-    relayStore.relayConfigs.set([]);
-    let attempts = 0;
-    let report: (status: TransportStatus, detail?: TransportStatusDetail) => void = () => {};
-    transportHijack.current = (_relay, handlers) => ({
-      kind: 'gateway',
-      connect: () => {
-        attempts += 1;
-        report = handlers.onStatus;
-        handlers.onStatus('connecting');
-      },
-      send: () => false,
-      close: () => {},
-    });
-    relayStore.addRelay({
-      label: 'Gateway', url: '', token: '0123456789abcdef0123456789abcdef',
-      transport: 'hybrid', gatewayUrl: 'wss://gw.example',
-    });
-    expect(attempts).toBe(1);
-
-    // `unknown_relay` is what a gateway answers while a relay restarts and its
-    // registration lapses; the phone must be back the moment it re-registers.
-    report('closed', {
-      reason: 'That computer is not connected to the gateway.',
-      fatal: true,
-      code: 'unknown_relay',
-    });
-    await vi.advanceTimersByTimeAsync(1_000);
-    expect(attempts).toBe(2);
   });
 
   it('rereads watched panes as soon as the relay reconnects', async () => {
@@ -2089,7 +2052,7 @@ describe('relay command store', () => {
     expect(sent.some((message) => message.type === 'read_pane' && message.pane_id === 'w1:p1')).toBe(true);
   });
 
-  it('honors terminal refresh while traffic is relayed and caps its history', () => {
+  it('honors the selected terminal refresh and history on the live path', () => {
     relayStore.destroy();
     relayStore.relayConfigs.set([]);
     setTerminalRefreshInterval(100);
@@ -2097,7 +2060,7 @@ describe('relay command store', () => {
     let deliver: (message: Record<string, any>) => void = () => {};
     const sent: Record<string, unknown>[] = [];
     transportHijack.current = (_relay, handlers) => ({
-      kind: 'gateway',
+      kind: 'websocket',
       connect: () => {
         report = handlers.onStatus;
         deliver = handlers.onMessage;
@@ -2109,16 +2072,16 @@ describe('relay command store', () => {
       },
       close: () => {},
     });
-    relayStore.addRelay({ label: 'Gateway', url: '', token: '', transport: 'hybrid', gatewayUrl: 'wss://gw.example' });
+    relayStore.addRelay({ label: 'Fedora', url: 'wss://fedora.example', token: '' });
     const relayId = get(relayStore.relayConfigs)[0].id;
 
-    report('connected', { path: 'gateway' });
+    report('connected', { path: 'websocket' });
     deliver({ type: 'push_config', protocol: 3, capabilities: ['pane_realtime_delta'], agent_profiles: [] });
-    expect(get(relayStore.connections).get(relayId)?.path).toBe('gateway');
+    expect(get(relayStore.connections).get(relayId)?.path).toBe('websocket');
 
     const agent = {
       relay_id: relayId,
-      relay_label: 'Gateway',
+      relay_label: 'Fedora',
       raw_pane_id: 'w1:p1',
       ...exactAgentFields(),
       pane_id: `${relayId}::w1:p1`,
@@ -2131,129 +2094,7 @@ describe('relay command store', () => {
       format: 'ansi',
       content_fingerprint: 'content-1',
     });
-    // Acknowledged deltas make the selected cadence affordable on the metered
-    // path; only scrollback remains capped.
-    expect(sent.at(-1)).toMatchObject({ type: 'watch_pane', interval_ms: 100, lines: 1_000 });
-
-    // Promotion to the direct path keeps the same user-selected cadence.
-    report('connected', { path: 'webrtc' });
-    expect(get(relayStore.connections).get(relayId)?.path).toBe('webrtc');
     expect(sent.at(-1)).toMatchObject({ type: 'watch_pane', interval_ms: 100 });
-  });
-
-  it('records the gateway that answered and drops it on the relay URL path', () => {
-    relayStore.destroy();
-    relayStore.relayConfigs.set([]);
-    let report: (status: TransportStatus, detail?: TransportStatusDetail) => void = () => {};
-    transportHijack.current = (_relay, handlers) => ({
-      kind: 'gateway',
-      connect: () => {
-        report = handlers.onStatus;
-        handlers.onStatus('connecting');
-      },
-      send: () => true,
-      close: () => {},
-    });
-    relayStore.addRelay({
-      label: 'Gateway',
-      url: 'wss://fedora.example',
-      token: '',
-      transport: 'hybrid',
-      gatewayUrl: 'wss://a.example',
-      gatewayUrls: ['wss://a.example', 'wss://b.example'],
-    });
-    const relayId = get(relayStore.relayConfigs)[0].id;
-
-    // The head of the list was skipped, so the answer is the dialed entry.
-    report('connected', { path: 'gateway', gatewayUrl: 'wss://b.example' });
-    expect(get(relayStore.connections).get(relayId)?.activeGatewayUrl).toBe('wss://b.example');
-
-    report('connected', { path: 'webrtc', gatewayUrl: 'wss://b.example' });
-    expect(get(relayStore.connections).get(relayId)?.activeGatewayUrl).toBe('wss://b.example');
-
-    // The legacy relay URL carries no gateway, so nothing may still name one.
-    report('connected', { path: 'websocket' });
-    expect(get(relayStore.connections).get(relayId)?.activeGatewayUrl).toBe('');
-  });
-
-  it('adopts an advertised hybrid descriptor without a QR re-scan', () => {
-    const socket = MockWebSocket.instances.at(-1)!;
-    socket.open();
-    const relayId = get(relayStore.relayConfigs)[0].id;
-    expect(get(relayStore.relayConfigs)[0].transport).toBeUndefined();
-
-    socket.message({
-      type: 'push_config',
-      protocol: 3,
-      capabilities: [],
-      agent_profiles: [],
-      release_version: '0.17.0',
-      update: { state: 'current', upstream_version: '0.17.1' },
-      hybrid: {
-        transport: 'herdr-hybrid-v2',
-        gateway_url: 'wss://gw.example',
-        gateway_urls: [
-          'wss://gw.example',
-          'wss://backup.example',
-          'https://not-a-websocket.example',
-          'wss://backup.example',
-        ],
-        gateway_version: '0.17.0',
-        gateway_revision: 'gateway-revision',
-        gateway_available_version: '0.17.1',
-        relay_id: 'Ccy3nT9AULlAceTEnhTvoQ',
-        direct: true,
-      },
-    });
-
-    const stored = get(relayStore.relayConfigs).find((entry) => entry.id === relayId)!;
-    expect(stored.transport).toBe('hybrid');
-    expect(stored.gatewayUrl).toBe('wss://gw.example');
-    expect(stored.gatewayUrls).toEqual(['wss://gw.example', 'wss://backup.example']);
-    expect(get(relayStore.connections).get(relayId)).toMatchObject({
-      gatewayVersion: '0.17.0',
-      gatewayAvailableVersion: '0.17.1',
-    });
-    // The legacy URL survives so the hybrid path can fall back to it.
-    expect(stored.url).toBe('wss://fedora.example');
-    expect(JSON.parse(localStorage.getItem('lerdr_relays')!)).toContainEqual(
-      expect.objectContaining({
-        transport: 'hybrid',
-        gatewayUrl: 'wss://gw.example',
-        gatewayUrls: ['wss://gw.example', 'wss://backup.example'],
-      }),
-    );
-
-    socket.message({
-      type: 'push_config',
-      protocol: 3,
-      capabilities: [],
-      agent_profiles: [],
-      hybrid: {
-        transport: 'herdr-hybrid-v2',
-        gateway_url: 'wss://backup.example',
-        gateway_urls: ['wss://backup.example', 'wss://gw.example'],
-        relay_id: 'Ccy3nT9AULlAceTEnhTvoQ',
-        direct: true,
-      },
-    });
-    const reordered = get(relayStore.relayConfigs).find((entry) => entry.id === relayId)!;
-    expect(reordered.gatewayUrl).toBe('wss://backup.example');
-    expect(reordered.gatewayUrls).toEqual(['wss://backup.example', 'wss://gw.example']);
-    expect(MockWebSocket.instances).toHaveLength(1);
-  });
-
-  it('ignores a hybrid descriptor that does not name a WebSocket gateway', () => {
-    const socket = MockWebSocket.instances.at(-1)!;
-    socket.open();
-    socket.message({
-      type: 'push_config',
-      protocol: 3,
-      capabilities: [],
-      agent_profiles: [],
-      hybrid: { transport: 'herdr-hybrid-v2', gateway_url: 'https://gw.example' },
-    });
-    expect(get(relayStore.relayConfigs)[0].transport).toBeUndefined();
   });
 
   it('rejects an attachment batch when its relay disconnects before begin confirmation', async () => {
@@ -2823,46 +2664,39 @@ describe('device invitation links', () => {
     vi.restoreAllMocks();
   });
 
-  it('carries the derived gateway rendezvous, never the relay key', async () => {
+  it('carries the direct relay address, never the relay key', async () => {
     relayStore.relayConfigs.set([{
-      id: 'gw-fedora', label: 'Fedora', url: '', token: '0123456789abcdef0123456789abcdef',
-      transport: 'hybrid', gatewayUrl: 'wss://a.example', gatewayUrls: ['wss://a.example', 'wss://b.example'],
+      id: 'fedora', label: 'Fedora', url: 'wss://fedora.tailnet-name.ts.net',
+      token: '0123456789abcdef0123456789abcdef',
     }]);
     const send = vi.spyOn(relayStore, 'sendCommand').mockResolvedValue({
       ok: true, phase: 'confirmed', data: { invitation },
     } as never);
-    const link = await relayStore.createDeviceInvitation({ relayId: 'gw-fedora', name: 'Tablet', role: 'reader' });
-    expect(send).toHaveBeenCalledWith('gw-fedora', { type: 'create_device_invitation', name: 'Tablet', role: 'reader' });
+    const link = await relayStore.createDeviceInvitation({ relayId: 'fedora', name: 'Tablet', role: 'reader' });
+    expect(send).toHaveBeenCalledWith('fedora', { type: 'create_device_invitation', name: 'Tablet', role: 'reader' });
     const params = new URLSearchParams(new URL(link).hash.slice(1));
-    expect(params.get('gateways')).toBe('wss://a.example,wss://b.example');
-    // The Go vector for this relay key: routable id plus the challenge key.
-    expect(params.get('relay_id')).toBe('Ccy3nT9AULlAceTEnhTvoQ');
-    expect(params.get('rendezvous')).toBe('xvT5VptkJHebIfy8b9PSGTJMkdRb-J_P2SXrtNRoLyA');
+    expect(params.get('relay')).toBe('wss://fedora.tailnet-name.ts.net');
     expect(params.get('setup')).toBe('S'.repeat(43));
-    expect(params.has('relay')).toBe(false);
+    expect(params.get('invite')).toBe('C'.repeat(24));
     expect(link).not.toContain('0123456789abcdef0123456789abcdef');
   });
 
-  it('lets an invited controller invite further devices from its own rendezvous', async () => {
+  it('lets an invited controller invite further devices from the same address', async () => {
     relayStore.relayConfigs.set([{
-      id: 'gw-fedora', label: 'Fedora', url: '', token: '', paired: true,
-      transport: 'hybrid', gatewayUrl: 'wss://a.example', gatewayUrls: ['wss://a.example'],
-      gatewayRelayId: 'Ccy3nT9AULlAceTEnhTvoQ', rendezvousKey: 'xvT5VptkJHebIfy8b9PSGTJMkdRb-J_P2SXrtNRoLyA',
+      id: 'fedora', label: 'Fedora', url: 'wss://fedora.tailnet-name.ts.net', token: '', paired: true,
     }]);
     vi.spyOn(relayStore, 'sendCommand').mockResolvedValue({ ok: true, phase: 'confirmed', data: { invitation } } as never);
-    const link = await relayStore.createDeviceInvitation({ relayId: 'gw-fedora', name: 'Tablet', role: 'reader' });
+    const link = await relayStore.createDeviceInvitation({ relayId: 'fedora', name: 'Tablet', role: 'reader' });
     const params = new URLSearchParams(new URL(link).hash.slice(1));
-    expect(params.get('relay_id')).toBe('Ccy3nT9AULlAceTEnhTvoQ');
-    expect(params.get('rendezvous')).toBe('xvT5VptkJHebIfy8b9PSGTJMkdRb-J_P2SXrtNRoLyA');
+    expect(params.get('relay')).toBe('wss://fedora.tailnet-name.ts.net');
   });
 
   it('refuses before minting when the computer has no address to carry', async () => {
     relayStore.relayConfigs.set([{
-      id: 'gw-fedora', label: 'Fedora', url: '', token: '', paired: true,
-      transport: 'hybrid', gatewayUrl: 'wss://a.example', gatewayUrls: ['wss://a.example'],
+      id: 'fedora', label: 'Fedora', url: '', token: '', paired: true,
     }]);
     const send = vi.spyOn(relayStore, 'sendCommand');
-    await expect(relayStore.createDeviceInvitation({ relayId: 'gw-fedora', name: 'Tablet', role: 'reader' }))
+    await expect(relayStore.createDeviceInvitation({ relayId: 'fedora', name: 'Tablet', role: 'reader' }))
       .rejects.toThrow(/no address/);
     expect(send).not.toHaveBeenCalled();
   });

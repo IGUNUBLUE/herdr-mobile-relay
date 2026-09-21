@@ -35,7 +35,6 @@ import {
   assertCredentialPreserved,
   assertInvitationOwnership,
   assertRelayOwnership,
-  assertNoRelayDeploy,
   assertNoRelayInstall,
   assertPhoneUpdateAcknowledged,
   assertPhoneUpdateNotAcknowledged,
@@ -1491,8 +1490,6 @@ test('oracle rejects premature completion and relay installs', async () => {
   assert.throws(() => assertUpgradeDidNotComplete(true, identity, target), /PREMATURE_PHONE_COMPLETION/);
   assert.doesNotThrow(() => assertNoRelayInstall(0));
   assert.throws(() => assertNoRelayInstall(1), /UNEXPECTED_RELAY_INSTALL/);
-  assert.doesNotThrow(() => assertNoRelayDeploy(0));
-  assert.throws(() => assertNoRelayDeploy(1), /UNEXPECTED_RELAY_DEPLOY/);
 });
 
 test('credential evidence rejects fresh enrollment', async () => {

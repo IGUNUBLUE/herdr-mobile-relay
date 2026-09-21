@@ -199,8 +199,7 @@ still reads pane snapshots and resizes the shared PTY, rather than attaching as
 a native Herdr terminal client. Clients sharing a tab still share its size.
 
 Terminal History keeps 100, 500, 1,000, or 10,000 lines in the terminal view.
-1,000 is the default and the ceiling on the gateway-relayed path; direct
-connections can use 10,000. The "older history" notice reports when rows beyond
+1,000 is the default; connections can use 10,000. The "older history" notice reports when rows beyond
 the served window exist. Use **Copy** for the latest response or
 **Conversation History** for clean, searchable earlier turns.
 

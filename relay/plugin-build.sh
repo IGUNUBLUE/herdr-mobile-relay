@@ -137,7 +137,7 @@ validate_migration_source() {
         Linux)
             service_env_path="$(sed -nE 's/^Environment=(LERDR|HERDR)_RELAY_ENV=//p' "$SERVICE_FILE" | tail -1)"
             [ "$service_env_path" = "$source_env" ] &&
-                grep -E '^ExecStart=.*(lerdr|herdr-(mobile-relay|remote))-service\.sh([[:space:]]|$)' \
+                grep -E '^ExecStart=.*(lerdr|herdr-(mobile-relay|remote)|tailscale)-service\.sh([[:space:]]|$)' \
                     "$SERVICE_FILE" >/dev/null || {
                     echo "lerdr: refusing to migrate an unrecognized systemd service" >&2
                     return 1
@@ -145,7 +145,7 @@ validate_migration_source() {
             ;;
         Darwin)
             grep -E '<string>com\.(lerdr|herdr-mobile-relay)\.service</string>' "$SERVICE_FILE" >/dev/null &&
-                grep -E '<string>.*(lerdr|herdr-(mobile-relay|remote))-service\.sh</string>' \
+                grep -E '<string>.*(lerdr|herdr-(mobile-relay|remote)|tailscale)-service\.sh</string>' \
                     "$SERVICE_FILE" >/dev/null || {
                     echo "lerdr: refusing to migrate an unrecognized launchd service" >&2
                     return 1
@@ -158,13 +158,13 @@ recognized_service_definition() {
     case "$PLATFORM" in
         Linux)
             grep -E '^Environment=(LERDR|HERDR)_RELAY_ENV=/.+' "$SERVICE_FILE" >/dev/null &&
-                grep -E '^ExecStart=.*(lerdr|herdr-(mobile-relay|remote))-service\.sh([[:space:]]|$)' \
+                grep -E '^ExecStart=.*(lerdr|herdr-(mobile-relay|remote)|tailscale)-service\.sh([[:space:]]|$)' \
                     "$SERVICE_FILE" >/dev/null
             ;;
         Darwin)
             grep -E '<string>com\.(lerdr|herdr-mobile-relay)\.service</string>' "$SERVICE_FILE" >/dev/null &&
                 grep -E '<key>(LERDR|HERDR)_RELAY_ENV</key>' "$SERVICE_FILE" >/dev/null &&
-                grep -E '<string>.*(lerdr|herdr-(mobile-relay|remote))-service\.sh</string>' \
+                grep -E '<string>.*(lerdr|herdr-(mobile-relay|remote)|tailscale)-service\.sh</string>' \
                     "$SERVICE_FILE" >/dev/null
             ;;
         *) return 1 ;;
@@ -288,7 +288,6 @@ rewrite_path_prefix() {
 migrate_source_config() {
     local source_env="$1"
     local source_root
-    local cloudflared_config
 
     source_root="$(dirname "$source_env")"
     if [ "$(canonical_file_path "$source_env")" = "$(canonical_file_path "$TARGET_ENV")" ]; then
@@ -302,22 +301,7 @@ migrate_source_config() {
     copy_migration_entry "$source_root/push" push
     copy_migration_entry "$source_root/phone-app-origin" phone-app-origin
     copy_migration_entry "$source_root/phone-app-origin-configured" phone-app-origin-configured
-    copy_migration_entry "$source_root/stable-setup.json" stable-setup.json
-    copy_migration_entry "$source_root/cloudflared" cloudflared
     copy_migration_entry "$source_root/update-state.json" update-state.json
-    copy_migration_entry "$source_root/app-deploy-state.json" app-deploy-state.json
-    rewrite_path_prefix "$TARGET_CONFIG_ROOT/stable-setup.json" \
-        "$source_env" "$TARGET_ENV"
-    rewrite_path_prefix "$TARGET_CONFIG_ROOT/stable-setup.json" \
-        "$source_root" "$TARGET_CONFIG_ROOT"
-    rewrite_path_prefix "$TARGET_CONFIG_ROOT/cloudflared/config.yml" \
-        "$source_root" "$TARGET_CONFIG_ROOT"
-
-    cloudflared_config="$(env_file_value "$TARGET_ENV" CLOUDFLARED_CONFIG)"
-    if [ "$cloudflared_config" = "$source_root/cloudflared/config.yml" ]; then
-        set_env_value_atomic "$TARGET_ENV" CLOUDFLARED_CONFIG \
-            "$TARGET_CONFIG_ROOT/cloudflared/config.yml"
-    fi
     chmod 600 "$TARGET_ENV"
 }
 
@@ -408,9 +392,12 @@ rollback_plugin_migration() {
 
     if [ "$recover_broken_service" = true ] &&
        [ "$service_cutover_started" = true ]; then
-        # A rolled-back current is the pre-rename bundle: it still ships the
-        # old wrapper name and only understands HERDR_RELAY_ENV.
-        rollback_wrapper="$INSTALL_ROOT/current/relay/lerdr-service.sh"
+        # A rolled-back current is an earlier bundle: it may still ship the
+        # pre-Tailscale wrapper name and only understand HERDR_RELAY_ENV.
+        rollback_wrapper="$INSTALL_ROOT/current/relay/tailscale-service.sh"
+        if [ ! -x "$rollback_wrapper" ]; then
+            rollback_wrapper="$INSTALL_ROOT/current/relay/lerdr-service.sh"
+        fi
         rollback_env_key=LERDR_RELAY_ENV
         rollback_label=com.lerdr.service
         if [ ! -x "$rollback_wrapper" ]; then
@@ -581,7 +568,7 @@ WEB_HASH=$(sed -n 's/^[[:space:]]*"web_hash":[[:space:]]*"\([^"]*\)".*/\1/p' "$M
 }
 
 # Store the repository credential separately; the service receives only its
-# path, so the relay, cloudflared, and agent subprocesses never inherit it.
+# path, so the relay and agent subprocesses never inherit it.
 if [ -n "$INSTALL_TOKEN" ]; then
     GH_TOKEN="$INSTALL_TOKEN" ensure_relay_env "$TARGET_ENV"
 fi
@@ -590,7 +577,7 @@ unset INSTALL_TOKEN
 # Cut over an existing service to the new release root. A unit still carrying
 # its pre-rename name is copied to the lerdr name first; the old file comes out
 # only after the replacement is written and reloaded.
-SERVICE_WRAPPER="$INSTALL_ROOT/current/relay/lerdr-service.sh"
+SERVICE_WRAPPER="$INSTALL_ROOT/current/relay/tailscale-service.sh"
 service_restarted=false
 restarted_unit=
 case "$PLATFORM" in

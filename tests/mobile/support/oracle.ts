@@ -345,10 +345,6 @@ export function assertNoRelayInstall(count: number): void {
   if (count !== 0) throw oracleError('UNEXPECTED_RELAY_INSTALL', `${count} relay install commands were recorded`);
 }
 
-export function assertNoRelayDeploy(count: number): void {
-  if (count !== 0) throw oracleError('UNEXPECTED_RELAY_DEPLOY', `${count} relay deploy commands were recorded`);
-}
-
 export function assertBoundedReloads(count: number, maximum = 2): void {
   if (!Number.isInteger(count) || count < 0 || count > maximum) {
     throw oracleError('RELOAD_BOUND_EXCEEDED', `${count} logical reloads exceed ${maximum}`);

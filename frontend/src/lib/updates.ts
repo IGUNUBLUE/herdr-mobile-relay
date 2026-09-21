@@ -1,7 +1,7 @@
 import { get, writable } from 'svelte/store';
 import { APP_ASSET_VERSION, APP_BUILD_ID, APP_VERSION } from './config';
 import { isNativeShell } from './native';
-import type { AppDeploymentStatus, AppUpdateStatus, RelayConnectionView, RelayUpdateStatus } from './types';
+import type { AppUpdateStatus, RelayConnectionView, RelayUpdateStatus } from './types';
 
 const APP_UPDATE_INTERVAL_MS = 24 * 60 * 60 * 1_000;
 const APP_RECHECK_INTERVAL_MS = 60 * 1_000;
@@ -11,7 +11,6 @@ const APP_RELOAD_TARGET_KEY = 'lerdr_app_reload_target';
 const APP_RELOAD_ATTEMPTS_KEY = 'lerdr_app_reload_attempts';
 const MAX_AUTOMATIC_RELOAD_ATTEMPTS = 2;
 const sessionStartedRelayIds = new Set<string>();
-const APP_DEPLOY_SELF_UPDATE_MIN_VERSION = '0.13.3';
 export const MANAGED_UPDATE_COMMAND = 'LERDR_NO_AUTO_SETUP=1 herdr plugin install IGUNUBLUE/lerdr --yes';
 export const CHECKOUT_UPDATE_COMMAND = 'git pull --ff-only && make service-install';
 const RELAY_UPDATE_STATES = new Set([
@@ -21,7 +20,6 @@ const RELAY_UPDATE_STATES = new Set([
   'blocked',
   'scheduled',
   'preparing',
-  'deploying_app',
   'installing',
   'restarting',
   'succeeded',
@@ -35,15 +33,13 @@ export interface PhoneAppTarget {
   build: string;
 }
 
-export type PhoneUpdateState = 'publishing' | 'loading' | 'loaded' | 'failed';
+export type PhoneUpdateState = 'loading' | 'loaded' | 'failed';
 
 export interface UpdateProgressPlan {
   targetVersion: string;
   relayIds: string[];
   startedRelayIds: string[];
   relayStartedAt: Record<string, number>;
-  /** Deployment owner only; this is deliberately not the phone item. */
-  appRelayId: string;
   phoneAppRequired: boolean;
   phoneTarget: PhoneAppTarget | null;
   phoneState: PhoneUpdateState;
@@ -92,17 +88,9 @@ export function newerVersion(candidate: string, current: string): boolean {
   return false;
 }
 export function relayNeedsManualBootstrap(
-  connection: Pick<RelayConnectionView, 'appDeploy' | 'capabilities' | 'releaseVersion' | 'update'>,
-  failure = '',
+  connection: Pick<RelayConnectionView, 'capabilities' | 'releaseVersion' | 'update'>,
 ): boolean {
-  if (!connection.capabilities.includes('self_update')) return true;
-  const legacyVersion = newerVersion(APP_DEPLOY_SELF_UPDATE_MIN_VERSION, connection.releaseVersion);
-  if (!legacyVersion) return false;
-  if (connection.appDeploy.configured) return true;
-  const error = (failure || connection.update.error || connection.appDeploy.reason).toLowerCase();
-  return (error.includes('deploy target app before relay')
-    && error.includes('app deployment origin'))
-    || error.includes('no https app deployment origin is configured');
+  return !connection.capabilities.includes('self_update');
 }
 
 
@@ -176,26 +164,6 @@ export function normalizeRelayUpdate(
     mode: String(update.mode || '').slice(0, 20),
     reason: String(update.reason || '').slice(0, 500),
     error: String(update.error || '').slice(0, 500),
-  };
-}
-
-export function normalizeAppDeployment(value: unknown): AppDeploymentStatus {
-  const deployment = value && typeof value === 'object' ? value as Record<string, unknown> : {};
-  const state = ['idle', 'scheduled', 'deploying', 'succeeded', 'failed'].includes(String(deployment.state))
-    ? String(deployment.state) as AppDeploymentStatus['state']
-    : 'idle';
-  return {
-    configured: deployment.configured === true,
-    origin: String(deployment.origin || '').slice(0, 300),
-    project: String(deployment.project || '').slice(0, 80),
-    branch: String(deployment.branch || '').slice(0, 120),
-    revision: String(deployment.revision || '').slice(0, 40),
-    reason: String(deployment.reason || '').slice(0, 500),
-    state,
-    target_version: String(deployment.target_version || '').slice(0, 32),
-    target_revision: String(deployment.target_revision || '').slice(0, 40),
-    checked_at: Number.isFinite(Number(deployment.checked_at)) ? Number(deployment.checked_at) : 0,
-    error: String(deployment.error || '').slice(0, 500),
   };
 }
 
@@ -405,8 +373,8 @@ export function normalizeReloadedAppUrl(currentUrl: string): string | null {
   const url = new URL(currentUrl);
   const buildEntry = /^\/builds\/[A-Za-z0-9._-]+\/(?:index\.html)?$/.test(url.pathname);
   if (!url.searchParams.has('lerdr_reload') && !buildEntry) return null;
-  // Cloudflare Pages and relay-hosted apps both preserve the old /index.html
-  // contract while routing the document to a digest-specific entry. Replace
+  // A relay-hosted app preserves the old /index.html contract while routing
+  // the document to a digest-specific entry. Replace
   // that implementation path so it cannot become a second PWA route or leak a
   // reload marker into the installed app's address.
   if (url.pathname !== '/index.html' && url.pathname !== '/' && !buildEntry) return null;
@@ -655,7 +623,6 @@ function normalizeUpdateProgress(value: unknown): UpdateProgressPlan | null {
       .filter(([relayId]) => relayIds.includes(relayId))
       .map(([relayId, error]) => [relayId, String(error).slice(0, 500)]),
   );
-  const appRelayId = relayIds.includes(legacyAppRelayId) ? legacyAppRelayId : '';
   const rawPhoneTarget = candidate.phoneTarget && typeof candidate.phoneTarget === 'object'
     ? candidate.phoneTarget as Record<string, unknown>
     : {};
@@ -673,7 +640,7 @@ function normalizeUpdateProgress(value: unknown): UpdateProgressPlan | null {
     }
     : null;
   const rawPhoneState = String(candidate.phoneState || 'loading');
-  const phoneState: PhoneUpdateState = ['publishing', 'loading', 'loaded', 'failed'].includes(rawPhoneState)
+  const phoneState: PhoneUpdateState = ['loading', 'loaded', 'failed'].includes(rawPhoneState)
     ? rawPhoneState as PhoneUpdateState
     : 'loading';
   return {
@@ -681,7 +648,6 @@ function normalizeUpdateProgress(value: unknown): UpdateProgressPlan | null {
     relayIds,
     startedRelayIds,
     relayStartedAt,
-    appRelayId,
     phoneAppRequired,
     phoneTarget,
     phoneState,
@@ -714,7 +680,6 @@ function newUpdateProgress(
   targetVersion: string,
   relayIds: string[],
   startedRelayId: string,
-  appRelayId = '',
   options: NewUpdateProgressOptions = {},
 ): UpdateProgressPlan | null {
   const now = Date.now();
@@ -723,10 +688,9 @@ function newUpdateProgress(
     relayIds,
     startedRelayIds: startedRelayId ? [startedRelayId] : [],
     relayStartedAt: startedRelayId ? { [startedRelayId]: now } : {},
-    appRelayId,
     phoneAppRequired: options.phoneAppRequired === true,
     phoneTarget: options.phoneTarget || null,
-    phoneState: options.phoneState || (options.phoneAppRequired ? 'publishing' : 'loaded'),
+    phoneState: options.phoneState || (options.phoneAppRequired ? 'loading' : 'loaded'),
     phoneAcknowledged: false,
     phoneReloadAttempts: 0,
     phoneError: '',
@@ -739,10 +703,9 @@ export function beginUpdateProgress(
   targetVersion: string,
   relayIds: string[],
   startedRelayId: string,
-  appRelayId = '',
   options: NewUpdateProgressOptions = {},
 ): void {
-  const plan = newUpdateProgress(targetVersion, relayIds, startedRelayId, appRelayId, options);
+  const plan = newUpdateProgress(targetVersion, relayIds, startedRelayId, options);
   if (!plan) return;
   if (startedRelayId) sessionStartedRelayIds.add(startedRelayId);
   saveUpdateProgress(plan);
@@ -756,7 +719,6 @@ export function queueUpdateProgressForReload(
   const plan = newUpdateProgress(
     targetVersion,
     relayIds,
-    '',
     '',
     {
       phoneAppRequired: true,
@@ -841,12 +803,6 @@ export function acknowledgePhoneUpdate(): boolean {
     // The acknowledgement remains useful in memory when storage is blocked.
   }
   return true;
-}
-
-export function markPhoneUpdatePublishing(): void {
-  const plan = get(updateProgressPlan);
-  if (!plan?.phoneAppRequired) return;
-  saveUpdateProgress({ ...plan, phoneState: 'publishing', phoneError: '' });
 }
 
 export function markPhoneUpdateLoading(): void {

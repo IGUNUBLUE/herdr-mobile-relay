@@ -12,8 +12,8 @@ APK — can only load and stay connected while the phone is on the same tailnet;
 there is no public URL and no fallback path. If Tailscale is off on either
 side, the app cannot reach the relay at all.
 
-Linux and macOS on the computer; the phone side works with any Tailscale
-client.
+It is also the only transport Lerdr supports: Linux and macOS on the computer;
+the phone side works with any Tailscale client.
 
 ## Requirements — this computer
 
@@ -24,7 +24,7 @@ client.
 | MagicDNS enabled on the tailnet | Provides the `machine.tailnet.ts.net` name the app connects to. On by default for new tailnets — check https://login.tailscale.com/admin/dns or follow [the MagicDNS guide](https://tailscale.com/kb/1081/magicdns). |
 | HTTPS Certificates enabled on the tailnet | One toggle at https://login.tailscale.com/admin/dns → *HTTPS Certificates* — see [Enabling HTTPS](https://tailscale.com/kb/1153/enabling-https). Without it Serve cannot issue the `*.ts.net` certificate. |
 | Serve approved for this node | The first `tailscale serve` on a machine prints a one-time approval link (`https://login.tailscale.com/f/serve?node=…`) and waits until you open it while logged into the admin console. Background: [Tailscale Serve](https://tailscale.com/kb/1242/tailscale-serve). |
-| The relay running locally | Via Quick Start, or the systemd user service below. |
+| The relay running locally | Via the setup menu, or the background user service below. |
 
 ## Requirements — the phone
 
@@ -46,7 +46,7 @@ VPN connected.
 
 ## Setup
 
-From a checkout or the plugin setup menu (**t. Tailscale Serve**):
+From a checkout, or from the plugin setup menu (**1. Tailscale Serve**):
 
 ```bash
 make tailscale-setup          # configure serve, verify HTTPS, print the QR
@@ -111,14 +111,8 @@ relay/tailscale-serve.sh link   # reprint the setup QR without changing anything
 
 ## Not on a tailnet?
 
-Every transport is a hard requirement — the phone app cannot reach the relay
-without one of them — but Tailscale is the only one that needs a VPN client on
-the phone. If that is not an option, pick another path from the setup menu and
-follow its doc instead:
-
-- **Community WebRTC Gateway** or a temporary tunnel — no accounts at all;
-  see [transports.md](transports.md).
-- **Stable Cloudflare tunnel** — a permanent hostname without any phone-side
-  VPN; see [cloudflare-tunnel.md](cloudflare-tunnel.md).
-- **Your own gateway** — a small VPS you control; see
-  [gateway-self-hosting.md](gateway-self-hosting.md).
+Tailscale is the only transport Lerdr supports, so the phone needs the VPN
+client. If it is not installed yet, the [Tailscale download
+page](https://tailscale.com/download) has the client for every platform and a
+free personal plan covers this use case. Install it on the computer and the
+phone, sign both into the same tailnet, and come back here.

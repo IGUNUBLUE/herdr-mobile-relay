@@ -76,9 +76,9 @@ export function initializeDeviceSecurity(): () => void {
   const networkConnection = (navigator as Navigator & { connection?: EventTarget }).connection;
   const revalidateAfterResume = () => {
     if (document.visibilityState !== 'visible') return;
-    // Preserve a healthy direct WebRTC session across sleep. A response keeps
-    // it alive without gateway traffic; a stale path gets two seconds before
-    // the normal reconnect creates a fresh gateway-assisted direct session.
+    // Preserve a healthy session across sleep. A response keeps it alive; a
+    // stale path gets two seconds before the normal reconnect dials a fresh
+    // one.
     relayStore.resetReconnectBackoff();
     relayStore.revalidateConnections(RESUME_HEALTH_TIMEOUT_MS);
   };

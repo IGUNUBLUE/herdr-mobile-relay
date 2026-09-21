@@ -3,38 +3,21 @@ include .env
 export
 endif
 
-WEB_PROJECT ?= herdr-0cv
-WEB_ORIGIN ?= https://$(WEB_PROJECT).pages.dev
-ifeq ($(origin WEB_PROJECT),file)
-ifeq ($(WEB_PROJECT),herdr-mobile-relay)
-$(warning WEB_PROJECT=herdr-mobile-relay is the retired default; using herdr-0cv)
-WEB_PROJECT := herdr-0cv
-endif
-endif
-WEB_BRANCH ?= main
-WRANGLER_VERSION ?= 4.125.0
 PATH := /opt/homebrew/bin:/usr/local/bin:/home/linuxbrew/.linuxbrew/bin:$(HOME)/.local/bin:$(PATH)
 export PATH
 
-.PHONY: help setup setup-link app-deploy-setup rotate-token quick-start dev-tunnel stable-setup stable-teardown gateway check go-check backend-check shell-check production-path-audit cross-build release-bundle-check frontend-check frontend-browser frontend-browser-release frontend-browser-attention-release relay-plugin service-install service-uninstall service-status service-logs speech-voices web-bundle-check web-release web-release-check web-deploy web-preview mobile-ci-check mobile-retention-check mobile-composite-check mobile-cache-recovery mobile-ci-run mobile-android mobile-ios
+.PHONY: help setup-link rotate-token check go-check backend-check shell-check production-path-audit cross-build release-bundle-check frontend-check frontend-browser frontend-browser-release frontend-browser-attention-release relay-plugin service-install service-uninstall speech-voices web-bundle-check web-release web-release-check mobile-ci-check mobile-retention-check mobile-composite-check mobile-cache-recovery mobile-ci-run mobile-android mobile-ios tailscale-setup tailscale-teardown tailscale-status tailscale-service-install icons android-apk android-apk-split android-dev android-init
 
 help:
 	@echo "Common targets:"
-	@echo "  make quick-start                First run: install missing tools and start the phone app"
-	@echo "  make dev-tunnel                Build and tunnel an isolated frontend for development"
-	@echo "  make stable-setup               Provision/resume a stable tunnel, service, and verified QR"
-	@echo "  make stable-teardown            Remove only resources recorded by the stable wizard"
-	@echo "  make setup                      Prepare config and check prerequisites without installing"
-	@echo "  make web-deploy                 Deploy ./web to Cloudflare Pages and verify the public bundle"
-	@echo "    WEB_ORIGIN=https://...        Public origin to verify after deployment"
+	@echo "  make tailscale-setup            Publish the relay on your tailnet and print the setup QR"
+	@echo "  make tailscale-status           Show tailscale serve config and endpoint health"
+	@echo "  make tailscale-teardown         Stop serving the relay on the tailnet"
+	@echo "  make tailscale-service-install  Install/start the relay as a background service"
+	@echo "  make setup-link                 Reprint the phone setup link and QR code"
+	@echo "  make rotate-token               Replace the relay token and print a new setup link"
 	@echo "  make web-release                Replace ./web with a verified frontend release build"
 	@echo "  make service-install            Install/start the relay service for this platform"
-	@echo "  make setup-link                 Print the phone setup link and QR code for a stable relay"
-	@echo "  make app-deploy-setup           Authorize this relay to deploy a separate Pages app"
-	@echo "    APP_URL=app.example.com       One-time installed-PWA origin override"
-	@echo "  make rotate-token               Replace the relay token and print a new setup link"
-	@echo "  make service-status             Show relay service status"
-	@echo "  make service-logs               Tail relay service logs"
 	@echo "  make service-uninstall          Stop/remove the relay service"
 	@echo "  make speech-voices              Cache the neural voices that read responses aloud"
 	@echo "  make mobile-ci-check            Check the host-only installed-PWA harness"
@@ -42,36 +25,16 @@ help:
 	@echo "  make mobile-ci-run MOBILE_ARGS=...  Run a configured device scenario"
 	@echo "  make mobile-android MOBILE_ARGS=... Run the installed Android suite"
 	@echo "  make mobile-ios MOBILE_ARGS=...    Run the installed iOS suite"
-	@echo "  make gateway                    Build the self-hostable blind gateway binary"
 	@echo "  make check                      Run backend and frontend checks"
 
-setup:
-	relay/setup.sh
-
 setup-link:
-	LERDR_PHONE_APP_URL="$(APP_URL)" HERDR_PHONE_APP_URL="$(APP_URL)" relay/setup-link.sh $(HOST)
-
-app-deploy-setup:
-	relay/configure-app-deploy.sh
+	relay/tailscale-serve.sh link
 
 rotate-token:
 	relay/rotate-token.sh
 
-quick-start:
-	relay/setup.sh --install-missing
-	relay/start.sh
-
-dev-tunnel:
-	relay/dev-tunnel.sh
-
 speech-voices:
 	relay/speech-voices.sh
-
-stable-setup:
-	relay/stable-setup.sh
-
-stable-teardown:
-	relay/stable-teardown.sh
 
 tailscale-setup:
 	relay/tailscale-serve.sh start
@@ -132,21 +95,6 @@ android-init:
 	sed -i 's/android:launchMode="singleTask"/android:launchMode="singleTask"\n            android:windowSoftInputMode="adjustResize"/' \
 	  src-tauri/gen/android/app/src/main/AndroidManifest.xml
 
-# The blind gateway is deployed separately from the relay bundle: one static
-# binary a user can self-host.
-gateway:
-	@mkdir -p bin
-	CGO_ENABLED=0 go build -trimpath -o bin/lerdr-gateway ./cmd/lerdr-gateway
-
-# The NAT-behaviour matrix runs the relay, the gateway and a phone in Linux
-# network namespaces behind simulated NATs. It is deliberately outside `check`:
-# it needs root, and it skips instead of failing wherever it cannot have it.
-.PHONY: nat-matrix
-nat-matrix:
-	@echo "▸ Needs root: network namespaces, veth pairs and nftables rules are privileged."
-	@echo "  Without it the suite skips with the reason; run 'sudo -E make nat-matrix' to run it."
-	LERDR_NAT_MATRIX=1 HERDR_NAT_MATRIX=1 go test ./tests/blackbox/ -run TestNATMatrix -count=1 -v -timeout 20m
-
 # `web-release-check` proves `frontend/dist` and `web/` are byte-identical and
 # then browser-tests `web/`, so running the same suite against `dist` here only
 # doubles the slowest gate. `make frontend-browser` stays for iterating on a
@@ -167,12 +115,10 @@ shell-check:
 	@for script in install.sh scripts/*.sh; do sh -n "$$script" || exit; done
 	sh tests/test_install.sh
 	bash tests/test_common.sh
-	bash tests/test_gateway_deploy.sh
 	bash tests/test_plugin_build.sh
 	sh tests/test_release_scripts.sh
 	bash tests/test_uninstall.sh
 	bash tests/test_speech_voices.sh
-	tests/test_stable_setup.sh
 
 production-path-audit:
 	@if rg -n '(^|[;&|][[:space:]]*)(python3?|uv)([[:space:]]|$$)' relay --glob '*.sh' --glob '*.command'; then \
@@ -188,7 +134,7 @@ cross-build:
 	@tmp="$$(mktemp -d)"; trap 'rm -rf "$$tmp"' EXIT; \
 	for target in linux/amd64 linux/arm64 darwin/amd64 darwin/arm64; do \
 		os="$${target%/*}"; arch="$${target#*/}"; \
-		for command in ./cmd/lerdr ./cmd/lerdr-gateway; do \
+		for command in ./cmd/lerdr; do \
 			CGO_ENABLED=0 GOOS="$$os" GOARCH="$$arch" go build -trimpath \
 				-o "$$tmp/$$(basename $$command)-$$os-$$arch" "$$command" || exit; \
 		done; \
@@ -230,16 +176,14 @@ relay-plugin:
 	herdr plugin link .
 
 service-install:
-	relay/service.sh install
+	relay/install-tailscale-service.sh
 
 service-uninstall:
-	relay/service.sh uninstall
-
-service-status:
-	relay/service.sh status
-
-service-logs:
-	relay/service.sh logs
+	@if [ "$$(uname -s)" = "Darwin" ]; then \
+		bash relay/uninstall-service.sh; \
+	else \
+		bash relay/uninstall-systemd-user-service.sh; \
+	fi
 
 web-bundle-check:
 	bun frontend/scripts/validate-build.mjs web
@@ -257,13 +201,6 @@ web-release-check: web-bundle-check
 	@diff -qr frontend/dist web
 	$(MAKE) frontend-browser-release
 	$(MAKE) frontend-browser-attention-release
-
-web-deploy: web-bundle-check
-	npx --yes wrangler@$(WRANGLER_VERSION) pages deploy web --project-name "$(WEB_PROJECT)" --branch "$(WEB_BRANCH)" --skip-caching
-	go run ./cmd/lerdr verify-public --web-root web --origin "$(WEB_ORIGIN)"
-
-web-preview:
-	npx --yes wrangler@$(WRANGLER_VERSION) pages dev web
 
 mobile-ci-check: mobile-retention-check mobile-composite-check
 	bun install --frozen-lockfile --cwd frontend

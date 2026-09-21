@@ -27,38 +27,18 @@ func TestNewerVersion(t *testing.T) {
 	}
 }
 
-func TestUpdateWorkerLaunchForwardsAppDeploymentConfiguration(t *testing.T) {
+func TestUpdateWorkerLaunchForwardsRelayEnvironment(t *testing.T) {
 	values := map[string]string{
-		"LERDR_APP_DEPLOY_ORIGIN":        "https://app.example.test",
-		"HERDR_APP_DEPLOY_ORIGIN":        "https://app.example.test",
-		"LERDR_CLOUDFLARE_PAGES_PROJECT": "relay-app",
-		"HERDR_CLOUDFLARE_PAGES_PROJECT": "relay-app",
-		"LERDR_CLOUDFLARE_PAGES_BRANCH":  "main",
-		"HERDR_CLOUDFLARE_PAGES_BRANCH":  "main",
-		"LERDR_APP_DEPLOY_NPX":           "/opt/node/bin/npx",
-		"HERDR_APP_DEPLOY_NPX":           "/opt/node/bin/npx",
-		"LERDR_APP_DEPLOY_NODE_DIR":      "/opt/node/bin",
-		"HERDR_APP_DEPLOY_NODE_DIR":      "/opt/node/bin",
-		"LERDR_RELAY_ENV":                "/home/cv/.config/lerdr/relay.env",
-		"HERDR_RELAY_ENV":                "/home/cv/.config/lerdr/relay.env",
-		"HERDR_PLUGIN_CONFIG_DIR":        "/home/cv/.config/lerdr",
-		"CLOUDFLARE_API_TOKEN":           "must-not-be-forwarded",
+		"LERDR_RELAY_ENV":         "/home/cv/.config/lerdr/relay.env",
+		"HERDR_RELAY_ENV":         "/home/cv/.config/lerdr/relay.env",
+		"HERDR_PLUGIN_CONFIG_DIR": "/home/cv/.config/lerdr",
+		"CLOUDFLARE_API_TOKEN":    "must-not-be-forwarded",
 	}
 	lookup := func(key string) (string, bool) {
 		value, found := values[key]
 		return value, found
 	}
 	assignments := []string{
-		"LERDR_APP_DEPLOY_ORIGIN=https://app.example.test",
-		"HERDR_APP_DEPLOY_ORIGIN=https://app.example.test",
-		"LERDR_CLOUDFLARE_PAGES_PROJECT=relay-app",
-		"HERDR_CLOUDFLARE_PAGES_PROJECT=relay-app",
-		"LERDR_CLOUDFLARE_PAGES_BRANCH=main",
-		"HERDR_CLOUDFLARE_PAGES_BRANCH=main",
-		"LERDR_APP_DEPLOY_NPX=/opt/node/bin/npx",
-		"HERDR_APP_DEPLOY_NPX=/opt/node/bin/npx",
-		"LERDR_APP_DEPLOY_NODE_DIR=/opt/node/bin",
-		"HERDR_APP_DEPLOY_NODE_DIR=/opt/node/bin",
 		"LERDR_RELAY_ENV=/home/cv/.config/lerdr/relay.env",
 		"HERDR_RELAY_ENV=/home/cv/.config/lerdr/relay.env",
 		"HERDR_PLUGIN_CONFIG_DIR=/home/cv/.config/lerdr",
@@ -193,8 +173,6 @@ func TestManagerReconcilesStaleAvailableStateFromPreviousRuntime(t *testing.T) {
 		context.Background(),
 		"0.10.1",
 		nextTestRevision,
-		false,
-		"",
 	); err == nil || scheduled.State != "current" {
 		t.Fatalf("same-version schedule result = %#v, error = %v", scheduled, err)
 	}
@@ -405,8 +383,6 @@ func TestManagerSchedulesExactHerdrPluginJob(t *testing.T) {
 		context.Background(),
 		"1.2.4",
 		nextTestRevision,
-		true,
-		"https://app.example.test",
 	)
 	if err != nil {
 		t.Fatal(err)
@@ -421,9 +397,7 @@ func TestManagerSchedulesExactHerdrPluginJob(t *testing.T) {
 	if job.HerdrBin != herdrBin ||
 		job.TargetVersion != "1.2.4" ||
 		job.TargetRevision != nextTestRevision ||
-		job.ReleaseRoot != releaseRoot ||
-		!job.DeployAppFirst ||
-		job.ExpectedAppOrigin != "https://app.example.test" {
+		job.ReleaseRoot != releaseRoot {
 		t.Fatalf("job = %#v", job)
 	}
 }

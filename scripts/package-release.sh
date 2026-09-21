@@ -72,16 +72,12 @@ for TARGET in linux/amd64 linux/arm64 darwin/amd64 darwin/arm64; do
     cp "$REPO_DIR/README.md" "$STAGE/README.md"
     for WRAPPER in \
         common.sh \
-        lerdr-service.sh \
-        install-service.sh \
-        install-systemd-user-service.sh \
+        install-tailscale-service.sh \
         plugin-on-event.sh \
-        service.sh \
+        rotate-token.sh \
         setup-link.sh \
-        setup.sh \
-        stable-setup.sh \
-        stable-teardown.sh \
-        start.sh \
+        tailscale-serve.sh \
+        tailscale-service.sh \
         uninstall.sh \
         uninstall-service.sh \
         uninstall-systemd-user-service.sh; do

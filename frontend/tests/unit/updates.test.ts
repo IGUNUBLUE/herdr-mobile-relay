@@ -13,7 +13,6 @@ import {
   clearUpdateProgress,
   newerBundle,
   newerVersion,
-  normalizeAppDeployment,
   normalizeReloadedAppUrl,
   normalizeRelayUpdate,
   markUpdateProgressRelayStarted,
@@ -67,35 +66,15 @@ describe('release updates', () => {
     expect(newerBundle({ version: '0.8.0', assets: 4, build: 'same' }, { version: '0.8.0', assets: 4, build: 'same' })).toBe(false);
     expect(newerBundle({ version: '0.7.0', assets: 99 }, { version: '0.8.0', assets: 0 })).toBe(false);
   });
-  it('routes legacy app deployment owners through the one-time Terminal bootstrap', () => {
+  it('routes relays without self-update support through the one-time Terminal bootstrap', () => {
     const connection = {
-      capabilities: ['self_update', 'app_deploy'],
+      capabilities: [] as string[],
       releaseVersion: '0.13.2',
-      appDeploy: normalizeAppDeployment({ configured: true }),
       update: normalizeRelayUpdate({ state: 'available' }),
     };
-    connection.capabilities = [];
-    connection.releaseVersion = '0.13.3';
     expect(relayNeedsManualBootstrap(connection)).toBe(true);
-    connection.capabilities = ['self_update', 'app_deploy'];
-    connection.releaseVersion = '0.13.2';
-
-
-    expect(relayNeedsManualBootstrap(connection)).toBe(true);
-    connection.releaseVersion = '0.13.3';
+    connection.capabilities = ['self_update'];
     expect(relayNeedsManualBootstrap(connection)).toBe(false);
-    connection.releaseVersion = '0.13.2';
-    connection.appDeploy = normalizeAppDeployment({
-      configured: false,
-      reason: 'No HTTPS app deployment origin is configured',
-    });
-    expect(relayNeedsManualBootstrap(connection)).toBe(true);
-    connection.appDeploy = normalizeAppDeployment({ configured: false });
-    expect(relayNeedsManualBootstrap(
-      connection,
-      'deploy target app before relay: No HTTPS app deployment origin is configured',
-    )).toBe(true);
-    expect(relayNeedsManualBootstrap(connection, 'Release signature did not match')).toBe(false);
   });
 
 
@@ -119,7 +98,7 @@ describe('release updates', () => {
       can_install: true,
     });
     expect(normalizeRelayUpdate({ state: 'preparing' }).state).toBe('preparing');
-    expect(normalizeRelayUpdate({ state: 'deploying_app' }).state).toBe('deploying_app');
+    expect(normalizeRelayUpdate({ state: 'deploying_app' }).state).toBe('unsupported');
     expect(normalizeRelayUpdate({ state: 'anything' }).state).toBe('unsupported');
   });
 
@@ -228,23 +207,6 @@ describe('release updates', () => {
     expect(normalizeReloadedAppUrl('https://app.example.test/index.html#settings')).toBeNull();
   });
 
-  it('normalizes app deployment metadata without exposing unknown fields', () => {
-    expect(normalizeAppDeployment({
-      configured: true,
-      origin: 'https://app.example.test',
-      project: 'herdr-app',
-      branch: 'main',
-      revision: 'f'.repeat(40),
-      state: 'deploying',
-      secret: 'do-not-copy',
-    })).toEqual(expect.objectContaining({
-      configured: true,
-      origin: 'https://app.example.test',
-      state: 'deploying',
-    }));
-    expect(normalizeAppDeployment({ state: 'anything' }).state).toBe('idle');
-  });
-
   it('keeps relay update targets across a deliberate reconnect', () => {
     rememberPendingRelayUpdate('fedora', { version: '0.8.0', revision: 'a'.repeat(40) });
     expect(pendingRelayUpdate('fedora')).toEqual({
@@ -261,7 +223,6 @@ describe('release updates', () => {
       relayIds: ['alpha'],
       startedRelayIds: [],
       relayStartedAt: {},
-      appRelayId: '',
       startedAt: Date.now(),
     }));
     restoreUpdateProgress();
@@ -274,23 +235,22 @@ describe('release updates', () => {
     expect(acknowledgePhoneUpdate()).toBe(false);
   });
 
-  it('tracks the phone independently from its deployment owner', () => {
-    beginUpdateProgress('1.2.3', ['fedora', 'mac'], 'fedora', 'fedora', {
+  it('tracks the phone reload independently from relay updates', () => {
+    beginUpdateProgress('1.2.3', ['fedora', 'mac'], 'fedora', {
       phoneAppRequired: true,
       phoneTarget: { version: '1.2.3', assets: 7, build: 'new-build' },
-      phoneState: 'publishing',
+      phoneState: 'loading',
     });
     expect(get(updateProgressPlan)).toMatchObject({
-      appRelayId: 'fedora',
       phoneAppRequired: true,
       phoneTarget: { version: '1.2.3', assets: 7, build: 'new-build' },
-      phoneState: 'publishing',
+      phoneState: 'loading',
       phoneAcknowledged: false,
     });
 
     updateProgressPlan.set(null);
     restoreUpdateProgress();
-    expect(get(updateProgressPlan)).toMatchObject({ phoneAppRequired: true, phoneState: 'publishing' });
+    expect(get(updateProgressPlan)).toMatchObject({ phoneAppRequired: true, phoneState: 'loading' });
 
     beginUpdateProgress('1.2.3', ['fedora'], 'fedora');
     expect(get(updateProgressPlan)).toMatchObject({ phoneAppRequired: false, phoneTarget: null });
@@ -354,13 +314,12 @@ describe('release updates', () => {
   });
 
   it('persists fleet update progress across reloads with per-relay start times', () => {
-    beginUpdateProgress('1.2.3', ['fedora', 'mac'], 'fedora', 'fedora');
+    beginUpdateProgress('1.2.3', ['fedora', 'mac'], 'fedora');
     const first = get(updateProgressPlan)!;
     expect(first).toMatchObject({
       targetVersion: '1.2.3',
       relayIds: ['fedora', 'mac'],
       startedRelayIds: ['fedora'],
-      appRelayId: 'fedora',
       errors: {},
     });
     expect(first.relayStartedAt.fedora).toEqual(expect.any(Number));
@@ -531,7 +490,6 @@ describe('release updates', () => {
       relayIds: [],
       startedRelayIds: [],
       relayStartedAt: {},
-      appRelayId: '',
       phoneAppRequired: true,
       phoneTarget: { version: '1.2.3', assets: 12, build: 'target-build' },
       phoneState: 'loading',

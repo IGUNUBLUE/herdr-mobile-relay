@@ -15,10 +15,9 @@ import type {
 export const UNAUTHORIZED_CLOSE_CODE = 4401;
 
 /**
- * The original direct browser WebSocket path: the phone reaches the relay over
- * whatever URL the relay published (a Cloudflare tunnel, a LAN address). The
- * encrypted session rides the legacy JSON text envelope so relays that predate
- * the binary codec keep working unchanged.
+ * The direct browser WebSocket path: the phone reaches the relay over the URL
+ * the relay published (its Tailscale Serve hostname). The encrypted session
+ * rides the JSON text envelope.
  */
 export function createWebSocketTransport(
   relay: RelayConfig,

@@ -138,12 +138,10 @@ func Verify(root, expectedTarget string) (Manifest, error) {
 		"LICENSE",
 		"README.md",
 		"relay/common.sh",
-		"relay/lerdr-service.sh",
 		"relay/plugin-on-event.sh",
 		"relay/setup-link.sh",
-		"relay/stable-setup.sh",
-		"relay/stable-teardown.sh",
-		"relay/start.sh",
+		"relay/tailscale-serve.sh",
+		"relay/tailscale-service.sh",
 	} {
 		if !listed[required] {
 			return Manifest{}, fmt.Errorf("release manifest is missing %s", required)
@@ -219,7 +217,7 @@ func Build(root, version, revision, target string) (Manifest, error) {
 	if err != nil {
 		return Manifest{}, err
 	}
-	// This release supports both encrypted WebSocket and hybrid v2 paths. It
+	// This release supports the encrypted WebSocket path only. It
 	// intentionally does not claim compatibility with the retired E2EE v1.
 	manifest := Manifest{
 		Schema:   ManifestSchema,
@@ -228,11 +226,9 @@ func Build(root, version, revision, target string) (Manifest, error) {
 		Target:   target,
 		AppTransports: []string{
 			relayprotocol.EncryptedWebSocketSubprotocol,
-			relayprotocol.HybridTransportCapability,
 		},
 		RelayTransports: []string{
 			relayprotocol.EncryptedWebSocketSubprotocol,
-			relayprotocol.HybridTransportCapability,
 		},
 		Files: files,
 	}

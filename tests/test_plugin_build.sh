@@ -24,7 +24,7 @@ FRESH_REPO_RECORD="$WORK_DIR/fresh-installer-repository"
 RESTART_LOG="$WORK_DIR/restarts"
 SETUP_RECORD="$WORK_DIR/setup-invocations"
 mkdir -p "$OLD_RELEASE/relay" "$NEW_RELEASE/relay" "$SOURCE_CONFIG/device-auth" \
-    "$SOURCE_CONFIG/push" "$SOURCE_CONFIG/cloudflared" \
+    "$SOURCE_CONFIG/push" \
     "$TARGET_CONFIG/push" "$(dirname "$UNIT_FILE")" "$FAKE_BIN"
 canonical_dir() {
     CDPATH='' cd "$1" && pwd -P
@@ -32,19 +32,14 @@ canonical_dir() {
 OLD_RELEASE=$(canonical_dir "$OLD_RELEASE")
 NEW_RELEASE=$(canonical_dir "$NEW_RELEASE")
 
-printf "HERDR_RELAY_TOKEN='source-token'\nHERDR_RELAY_INSTANCE_ID='source-instance'\nHERDR_RELAY_PORT='18375'\nCLOUDFLARED_CONFIG='%s/cloudflared/config.yml'\n" \
-    "$SOURCE_CONFIG" > "$SOURCE_ENV"
+printf "HERDR_RELAY_TOKEN='source-token'\nHERDR_RELAY_INSTANCE_ID='source-instance'\nHERDR_RELAY_PORT='18375'\n" \
+    > "$SOURCE_ENV"
 printf '{"schema_version":1,"credentials":[{"credential_id":"source-credential"}]}\n' \
     > "$SOURCE_CONFIG/device-auth/devices.json"
 printf 'source-subscriptions\n' > "$SOURCE_CONFIG/push/subscriptions.json"
 printf 'source-origin\n' > "$SOURCE_CONFIG/phone-app-origin"
 printf 'source-configured-origin\n' > "$SOURCE_CONFIG/phone-app-origin-configured"
 printf 'source-update\n' > "$SOURCE_CONFIG/update-state.json"
-printf 'source-app-deploy\n' > "$SOURCE_CONFIG/app-deploy-state.json"
-printf '{"owner":"herdr-mobile-relay-stable-setup-v1","env_file":"%s/.env","config_path":"%s/cloudflared/config.yml"}\n' \
-    "$SOURCE_CONFIG" "$SOURCE_CONFIG" > "$SOURCE_CONFIG/stable-setup.json"
-printf 'credentials-file: %s/cloudflared/tunnel-credentials.json\n' \
-    "$SOURCE_CONFIG" > "$SOURCE_CONFIG/cloudflared/config.yml"
 printf "HERDR_RELAY_TOKEN='target-token'\nHERDR_GITHUB_TOKEN_FILE='%s/github-token'\n" \
     "$TARGET_CONFIG" > "$TARGET_CONFIG/relay.env"
 printf 'target-subscriptions\n' > "$TARGET_CONFIG/push/subscriptions.json"
@@ -76,9 +71,9 @@ EOF
 chmod 700 "$NEW_RELEASE/lerdr"
 cp "$NEW_RELEASE/lerdr" "$OLD_RELEASE/lerdr"
 printf '#!/bin/sh\nexit 0\n' > "$OLD_RELEASE/relay/lerdr-service.sh"
-printf '#!/bin/sh\nexit 0\n' > "$NEW_RELEASE/relay/lerdr-service.sh"
+printf '#!/bin/sh\nexit 0\n' > "$NEW_RELEASE/relay/tailscale-service.sh"
 chmod 700 "$OLD_RELEASE/relay/lerdr-service.sh" \
-    "$NEW_RELEASE/relay/lerdr-service.sh"
+    "$NEW_RELEASE/relay/tailscale-service.sh"
 ln -s "releases/0.8.6-old" "$RELEASE_ROOT/current"
 
 cat > "$UNIT_FILE" <<EOF
@@ -228,7 +223,7 @@ test "$(readlink -f "$RELEASE_ROOT/current")" = "$NEW_RELEASE"
 # The release comes from the repository the plugin was installed from, so a
 # private canary or a fork never downloads this project's bundle.
 test "$(cat "$REPO_RECORD")" = 0cv/lerdr-dev
-grep -Fx "ExecStart=$RELEASE_ROOT/current/relay/lerdr-service.sh" "$UNIT_FILE" >/dev/null
+grep -Fx "ExecStart=$RELEASE_ROOT/current/relay/tailscale-service.sh" "$UNIT_FILE" >/dev/null
 grep -Fx "WorkingDirectory=$RELEASE_ROOT/current" "$UNIT_FILE" >/dev/null
 grep -Fx "Environment=LERDR_RELAY_ENV=$TARGET_CONFIG/relay.env" "$UNIT_FILE" >/dev/null
 grep -F source-token "$TARGET_CONFIG/relay.env" >/dev/null
@@ -237,13 +232,8 @@ grep -F "LERDR_GITHUB_TOKEN_FILE='$TARGET_CONFIG/github-token'" "$TARGET_CONFIG/
 grep -F source-credential "$TARGET_CONFIG/device-auth/devices.json" >/dev/null
 test "$(cat "$TARGET_CONFIG/push/subscriptions.json")" = source-subscriptions
 test "$(cat "$TARGET_CONFIG/update-state.json")" = source-update
-test "$(cat "$TARGET_CONFIG/app-deploy-state.json")" = source-app-deploy
 test "$(cat "$TARGET_CONFIG/phone-app-origin")" = source-origin
 test "$(cat "$TARGET_CONFIG/phone-app-origin-configured")" = source-configured-origin
-grep -F "$TARGET_CONFIG/relay.env" "$TARGET_CONFIG/stable-setup.json" >/dev/null
-grep -F "$TARGET_CONFIG/cloudflared/config.yml" "$TARGET_CONFIG/stable-setup.json" >/dev/null
-grep -F "$TARGET_CONFIG/cloudflared/tunnel-credentials.json" \
-    "$TARGET_CONFIG/cloudflared/config.yml" >/dev/null
 test ! -e "$SOURCE_CONFIG/.lerdr-installation"
 test ! -e "$REPO_DIR/relay/.lerdr-installation"
 test "$(cat "$RESTART_LOG")" = "restart"
@@ -289,7 +279,7 @@ fi
 grep -F "recovering broken service paths from persistent plugin config" \
     "$WORK_DIR/recovery-output" >/dev/null
 test "$(readlink -f "$RELEASE_ROOT/current")" = "$NEW_RELEASE"
-grep -Fx "ExecStart=$RELEASE_ROOT/current/relay/lerdr-service.sh" \
+grep -Fx "ExecStart=$RELEASE_ROOT/current/relay/tailscale-service.sh" \
     "$UNIT_FILE" >/dev/null
 grep -Fx "WorkingDirectory=$RELEASE_ROOT/current" "$UNIT_FILE" >/dev/null
 grep -Fx "Environment=LERDR_RELAY_ENV=$TARGET_CONFIG/relay.env" "$UNIT_FILE" >/dev/null
@@ -339,7 +329,7 @@ FRESH_RELEASE="$FRESH_ROOT/releases/$TEST_VERSION-new"
 mkdir -p "$FRESH_RELEASE/relay" "$FRESH_CONFIG"
 cp "$NEW_RELEASE/release-manifest.json" "$FRESH_RELEASE/"
 cp "$NEW_RELEASE/lerdr" "$FRESH_RELEASE/"
-cp "$NEW_RELEASE/relay/lerdr-service.sh" "$FRESH_RELEASE/relay/"
+cp "$NEW_RELEASE/relay/tailscale-service.sh" "$FRESH_RELEASE/relay/"
 FRESH_INSTALLER="$WORK_DIR/fresh-install.sh"
 cat > "$FRESH_INSTALLER" <<EOF
 #!/bin/sh
@@ -413,7 +403,7 @@ if [ -e "$SETUP_RECORD" ]; then
 fi
 
 rm -f "$FRESH_ROOT/current" "$RESTART_LOG"
-printf "HERDR_GATEWAY_URL='wss://gw.example.test'\n" >> "$FRESH_CONFIG/relay.env"
+printf "LERDR_RELAY_PORT='18376'\n" >> "$FRESH_CONFIG/relay.env"
 if ! run_fresh_build env; then
     cat "$WORK_DIR/fresh-output" >&2
     exit 1

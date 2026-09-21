@@ -1,14 +1,16 @@
 # Lerdr Quick Start
 
-Connect one Linux or macOS computer to your phone through a temporary Cloudflare
-tunnel, through a gateway that needs no Cloudflare account (see **Skip
-Cloudflare**), or — on Linux — through **Tailscale Serve** when both devices are
-already on your tailnet (zero third parties; follow
-[docs/tailscale.md](docs/tailscale.md) — it has its own requirements on both
-devices). One of these transports is required: without it the phone app cannot
-reach the relay at all. You need Herdr 0.7.5 or newer, Git, and `curl`. Herdr 0.9.0 is recommended for the complete live JSON inventory and
-workspace-management surface, but it is not the relay's minimum supported
-version.
+Connect one Linux or macOS computer to your phone over your tailnet. Tailscale
+is the only transport Lerdr supports and it is a hard requirement on both ends:
+the phone app — PWA or Android APK — cannot load or reach the relay unless both
+devices are on the same tailnet. Follow
+[docs/tailscale.md](docs/tailscale.md) first; it lists the requirements on the
+computer (Tailscale, MagicDNS, HTTPS certificates, Serve approval) and on the
+phone (the Tailscale app, same tailnet, VPN on).
+
+You need Herdr 0.7.5 or newer, Git, and `curl`. Herdr 0.9.0 is recommended for
+the complete live JSON inventory and workspace-management surface, but it is
+not the relay's minimum supported version.
 
 The relay shows the installed Herdr client separately from the running server
 version and protocol. If those differ, Settings reports the affected feature
@@ -20,8 +22,7 @@ rather than treating the whole connection as unavailable.
 herdr plugin install IGUNUBLUE/lerdr
 ```
 
-Choose **Temporary Cloudflare Tunnel** when the setup menu opens. If it does
-not:
+The setup menu opens after the install finishes. If it does not:
 
 ```bash
 herdr plugin action invoke setup --plugin lerdr.events
@@ -33,17 +34,9 @@ verified relay bundle; it does not require Python, Node.js, a Go toolchain, or
 
 ## 2. Pair the Phone
 
-Both paths print the QR once they know which origin serves the phone app.
-
-On the tunnel path, wait for the temporary tunnel, then choose:
-
-- **This temporary relay** for a simple one-computer trial.
-- **An existing installed Lerdr app** to add this computer to an app you already
-  use.
-
-On the gateway path the QR follows registration, and the app origin has to be an
-installed Lerdr app — a gateway carries relay traffic only. It reuses a recorded
-or `LERDR_PHONE_APP_URL` origin, and asks for one when neither exists.
+Choose **1. Tailscale Serve**. The setup publishes the relay on this machine's
+tailnet HTTPS name (`https://<machine>.<tailnet>.ts.net`), waits for the
+endpoint to answer, and prints the private setup QR.
 
 Scan the QR or open the complete HTTPS setup link. Keep it private: it contains
 the one-use bootstrap invitation in the URL fragment, which is never sent in
@@ -52,8 +45,8 @@ tabs retain it without redeeming it and direct you to the installed app, which
 prevents a disposable Safari tab from consuming the invitation. Each printed
 link pairs one phone within ten minutes; print it again for the next phone.
 
-Keep the Quick Start pane open. Ctrl-C stops the relay, and on the tunnel path
-the next run creates a new hostname and setup link.
+Pairings survive relay restarts: the tailnet hostname is stable, so enrolled
+devices stay valid across upgrades and reboots.
 
 ## 3. Try It
 
@@ -73,50 +66,42 @@ If a relay was updated after a failed Piper runtime extraction, reinstall only
 the cached engine with `relay/speech-voices.sh --reinstall-runtime`. The
 downloaded voices remain in place.
 
-## Skip Cloudflare
+## Run It in the Background
 
-Choose **Community WebRTC Gateway** in the setup menu. It checks the project's
-published gateways, saves the ordered list, then starts the relay and prints its
-QR. No account, no domain, no `cloudflared`. The gateways are run by the
-project: free, shared, best-effort.
-
-A gateway carries relay traffic only, so the phone app lives elsewhere: point
-`LERDR_PHONE_APP_URL` at an installed Lerdr app, or host one with
-`make web-deploy`.
-
-A gateway cannot read your traffic — it copies frames that are already encrypted
-between the phone and the relay — and right after connecting both sides try to
-cut it out of the path with a direct WebRTC connection.
-
-[docs/transports.md](docs/transports.md) explains every choice and its settings;
-[docs/gateway-self-hosting.md](docs/gateway-self-hosting.md) covers running your
-own gateway.
-
-## Make It Permanent
-
-Add a domain to Cloudflare, then run:
+Install the relay as a user service — systemd on Linux, launchd on macOS.
+From a plugin install:
 
 ```bash
-herdr plugin action invoke install-service --plugin lerdr.events
+~/.local/share/lerdr/current/relay/install-tailscale-service.sh
 ```
 
-The wizard creates or resumes a dedicated tunnel, installs a background user
-service, verifies the public endpoint, and prints the stable QR. Repeat it on
-each computer with a different hostname and add every QR to the same phone app.
+From a checkout:
 
-[docs/cloudflare-tunnel.md](docs/cloudflare-tunnel.md) has the rest: hostname
-changes, the full action list, teardown, and uninstall.
+```bash
+make tailscale-service-install
+```
+
+`tailscaled` owns the tailnet listener and persists the serve configuration
+across reboots, so the unit supervises only the relay. Repeat on each computer
+and add every QR to the same phone app.
+
+[docs/tailscale.md](docs/tailscale.md) has the rest: status, teardown,
+re-printing the QR, and uninstall.
 
 ## Troubleshooting
 
-- **Port 8375 is busy:** stop the previous Quick Start or installed service.
-- **Temporary URL fails:** rerun Quick Start for a fresh hostname.
-- **Gateway registration times out:** check `LERDR_GATEWAY_URL` and outbound
-  HTTPS access; `curl -s localhost:8375/healthz` reports `gateway.registered`.
-- **App still shows the previous release after the relay updates:** open Settings,
-  choose **Check for Updates**, then **Load Update**. A separately hosted app
-  must be published by its configured deployment-owner relay first.
-- **Need the stable QR again:** invoke `setup-link`.
-- **Need relay log filtering:** see [Cloudflare tunnel logging](docs/cloudflare-tunnel.md#relay-logging).
+- **Port 8375 is busy:** stop the previous relay instance or installed service.
+- **`tailscale serve` waits on an approval link:** open the printed
+  `https://login.tailscale.com/f/serve?node=…` URL while signed into the admin
+  console — it is a one-time per-node approval.
+- **The phone cannot open the setup link:** confirm the Tailscale app is on,
+  signed into the same tailnet, and that MagicDNS resolves
+  `<machine>.<tailnet>.ts.net` on the phone (`tailscale status` on the
+  computer lists the tailnet name).
+- **App still shows the previous release after the relay updates:** open
+  Settings, choose **Check for Updates**, then **Load Update**.
+- **Need the setup QR again:** invoke `setup-link`, or choose **2. Show Phone
+  Setup QR** in the setup menu.
+- **Relay status:** `herdr plugin action invoke status --plugin lerdr.events`.
 
 [README.md](README.md) indexes the rest of the documentation.

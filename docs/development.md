@@ -15,12 +15,24 @@ maintained independently.
 ```bash
 git clone https://github.com/IGUNUBLUE/lerdr.git
 cd lerdr
-make dev-tunnel
+go build -o bin/lerdr ./cmd/lerdr
+bin/lerdr serve
 ```
 
-`make dev-tunnel` builds the current Go source and frontend, uses isolated ports
-and state under `relay/.dev/`, and opens a temporary tunnel. It never uses the
-installed production relay.
+The relay binds `127.0.0.1:8375` and serves the committed `web/` bundle
+(`LERDR_WEB_ROOT=frontend/dist` points it at a fresh build). Without a relay
+key, loopback connections are tokenless — open `http://localhost:8375` in a
+browser and develop directly.
+
+To reach it from a phone, run the real transport against the dev binary:
+
+```bash
+LERDR_RELAY_BIN=bin/lerdr make tailscale-setup
+```
+
+That publishes the running dev relay on this machine's tailnet HTTPS name and
+prints the pairing QR, exactly like the installed plugin flow. See
+[tailscale.md](tailscale.md) for the Tailscale requirements.
 
 ## Common targets
 
@@ -30,7 +42,7 @@ make backend-check     # format, vet, tests, race detector, shell checks
 make web-release       # replace committed web/ with a verified frontend build
 make web-release-check # compare and browser-test the shipped web/ bundle
 make relay-plugin      # link this checkout as a Herdr plugin
-make stable-setup      # run the stable tunnel wizard with the installed relay
+make tailscale-setup   # publish the relay on the tailnet and print the QR
 ```
 
 ## Testing a release candidate
@@ -60,11 +72,6 @@ Playwright's official container via podman (Chromium runs natively — its dnf
 dependencies are nspr nss dbus-libs atk at-spi2-atk cups-libs at-spi2-core
 libXcomposite libXdamage libXext libXfixes libXrandr mesa-libgbm cairo pango
 alsa-lib, per passportxyz/passport's fedora-install-playwright-deps.sh).
-Publishing the hosted web app (`make web-deploy`,
-`make web-preview`) shells out to `npx wrangler`, which requires Node.js 22 or
-newer on that computer only; CI and the relay's deploy action are exercised on
-Node.js 26. `make web-deploy` then runs the public bundle verifier against
-`WEB_ORIGIN` (the Pages domain by default; override it for a custom domain).
 Packaged users need no toolchain at all.
 
 ### WebKit tests on Fedora
@@ -141,14 +148,14 @@ uncaught exception or rejected promise appears in a bottom **App error** banner;
 tap it to dismiss it and allow a later error to be shown. Phones usually have
 no accessible console, so include that text in a bug report.
 
-For local `make dev-tunnel` diagnosis, set `HERDR_DEV_RUNTIME=1` before the
-build. This enables Svelte's development runtime so invariant failures include
-their data and indexes in the on-device banner. Release builds leave it off.
+For local diagnosis, set `HERDR_DEV_RUNTIME=1` before the frontend build. This
+enables Svelte's development runtime so invariant failures include their data
+and indexes in the on-device banner. Release builds leave it off.
 
 ## Troubleshooting local runs
 
-- **Port is busy:** `make dev-tunnel` uses 18375, Quick Start and the installed
-  service use 8375; stop whatever already holds the one you need.
+- **Port is busy:** a checkout run and the installed service both default to
+  8375 (`LERDR_RELAY_PORT`); stop whatever already holds it.
 - **Herdr is not running:** start it with `herdr`, then retry the operation.
 - **Agents are unavailable:** inspect `/healthz`; after a Herdr protocol update,
   run `herdr server live-handoff` and wait for the next relay poll.

@@ -534,7 +534,6 @@ type scriptedRelay struct {
 	listener     net.Listener
 	mu           sync.Mutex
 	installCount int
-	deployCount  int
 	connections  atomic.Int64
 }
 
@@ -631,11 +630,6 @@ func (r *scriptedRelay) handle(client *transport.ClientConn, raw map[string]any,
 		r.hub.Send(client, map[string]any{"type": "update_status", "update": r.updateState("installing")})
 		r.hub.Send(client, map[string]any{"type": "update_status", "update": r.updateState("succeeded")})
 		r.commandResult(client, inbound.RequestID, inbound.Type, true, map[string]any{"update": r.updateState("succeeded")})
-	case "deploy_app_update":
-		r.mu.Lock()
-		r.deployCount++
-		r.mu.Unlock()
-		r.commandResult(client, inbound.RequestID, inbound.Type, true, map[string]any{"app_deploy": map[string]any{"state": "succeeded", "target_version": r.target}})
 	case "create_device_invitation":
 		identity, _ := client.Identity()
 		locale := inbound.Locale
@@ -701,14 +695,13 @@ func (r *scriptedRelay) commandResultError(client *transport.ClientConn, request
 
 func (r *scriptedRelay) snapshot() map[string]any {
 	r.mu.Lock()
-	installCount, deployCount := r.installCount, r.deployCount
+	installCount := r.installCount
 	r.mu.Unlock()
 	snapshot := r.evidence.snapshot()
 	snapshot["name"] = r.name
 	snapshot["url"] = r.url
 	snapshot["connections"] = r.connections.Load()
 	snapshot["install_update_count"] = installCount
-	snapshot["deploy_app_update_count"] = deployCount
 	return snapshot
 }
 

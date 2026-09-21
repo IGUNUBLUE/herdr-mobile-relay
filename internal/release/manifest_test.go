@@ -14,17 +14,15 @@ func testRelease(t *testing.T) string {
 	t.Helper()
 	root := t.TempDir()
 	for name, contents := range map[string]string{
-		"lerdr":                    "binary",
-		"web/index.html":           "<html></html>",
-		"LICENSE":                  "license",
-		"README.md":                "readme",
-		"relay/common.sh":          "#!/bin/sh\n",
-		"relay/lerdr-service.sh":   "#!/bin/sh\n",
-		"relay/plugin-on-event.sh": "#!/bin/sh\n",
-		"relay/setup-link.sh":      "#!/bin/sh\n",
-		"relay/stable-setup.sh":    "#!/bin/sh\n",
-		"relay/stable-teardown.sh": "#!/bin/sh\n",
-		"relay/start.sh":           "#!/bin/sh\n",
+		"lerdr":                      "binary",
+		"web/index.html":             "<html></html>",
+		"LICENSE":                    "license",
+		"README.md":                  "readme",
+		"relay/common.sh":            "#!/bin/sh\n",
+		"relay/plugin-on-event.sh":   "#!/bin/sh\n",
+		"relay/setup-link.sh":        "#!/bin/sh\n",
+		"relay/tailscale-serve.sh":   "#!/bin/sh\n",
+		"relay/tailscale-service.sh": "#!/bin/sh\n",
 	} {
 		path := filepath.Join(root, filepath.FromSlash(name))
 		if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
@@ -50,11 +48,10 @@ func TestBuildAndVerifyManifest(t *testing.T) {
 	if manifest.WebHash == "" {
 		t.Fatal("web hash is empty")
 	}
-	bridge := []string{
+	transports := []string{
 		relayprotocol.EncryptedWebSocketSubprotocol,
-		relayprotocol.HybridTransportCapability,
 	}
-	if !slices.Equal(manifest.AppTransports, bridge) || !slices.Equal(manifest.RelayTransports, bridge) {
+	if !slices.Equal(manifest.AppTransports, transports) || !slices.Equal(manifest.RelayTransports, transports) {
 		t.Fatalf("transport capabilities = app %v, relay %v", manifest.AppTransports, manifest.RelayTransports)
 	}
 	verified, err := Verify(root, "linux/amd64")
