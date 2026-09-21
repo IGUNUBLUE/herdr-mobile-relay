@@ -1,0 +1,13 @@
+Lerdr
+Copyright (C) 2026 Christophe Vidal and Lerdr contributors
+
+Lerdr began as a fork of Herdr Mobile Relay
+(https://github.com/0cv/herdr-mobile-relay), created by Christophe Vidal.
+The relay architecture, end-to-end pairing model, Herdr plugin packaging,
+verified-release flow, and the phone UI foundation are upstream's work,
+used and extended here under the GNU Affero General Public License v3.0
+or later (see LICENSE).
+
+Upstream project: https://github.com/0cv/herdr-mobile-relay
+Upstream releases through v0.21.3 are part of this repository's history
+and changelog.

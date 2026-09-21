@@ -59,11 +59,19 @@ controller or read-only reader, mutations default to controller-only.
 
 Lerdr began as a fork of
 [`0cv/herdr-mobile-relay`](https://github.com/0cv/herdr-mobile-relay) by
-Christophe Vidal — thank you for the relay architecture, the end-to-end
-pairing model, and the phone UI this project builds on. It has since diverged
-(Tauri 2 Android shell, Tailscale Serve transport, native notifications,
-haptics and biometrics, signed APK releases) and is maintained independently;
-the AGPL license below carries the upstream copyright forward.
+**Christophe Vidal** — thank you for the relay architecture, the end-to-end
+pairing model, the plugin packaging and verified-release flow, and the phone
+UI this project builds on. The changelog's history through v0.21.3 is
+upstream's work as well.
+
+Lerdr has since diverged — Tauri 2 Android shell, signed APK releases,
+Tailscale Serve transport, native notifications, haptics, and biometrics —
+and is maintained independently. If you only need the web-app relay without
+the Android shell, upstream may serve you better; please consider starring
+and contributing to both projects.
+
+The AGPL license below carries the upstream copyright forward; see
+[NOTICE](NOTICE) for attribution details.
 
 ## License
 
