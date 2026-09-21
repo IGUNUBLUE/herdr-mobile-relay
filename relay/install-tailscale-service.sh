@@ -50,27 +50,27 @@ install_systemd() {
         exit 1
     fi
 
-    RELAY_BIN="$(relay_binary)"
     ensure_relay_env "$ENV_FILE"
 
     RELEASE_ROOT="$(relay_release_root)"
+    SERVICE_WRAPPER="$RELEASE_ROOT/current/relay/tailscale-service.sh"
     WORK_DIR="$RELEASE_ROOT/current"
+    if [ ! -x "$SERVICE_WRAPPER" ]; then
+        SERVICE_WRAPPER="$SCRIPT_DIR/tailscale-service.sh"
+        chmod +x "$SERVICE_WRAPPER"
+    fi
     if [ ! -d "$WORK_DIR" ]; then
         WORK_DIR="$SCRIPT_DIR/.."
     fi
     # systemd rejects non-normalized paths such as ".../relay/..".
     WORK_DIR="$(cd "$WORK_DIR" && pwd -P)"
 
-    # The service PATH is static, so mirror the foreground wrapper's per-agent
-    # bin discovery at install time; new agents installed later can be added
-    # through HERDR_BIN or an explicit Environment edit in the unit.
-    SERVICE_PATH="/opt/homebrew/bin:/usr/local/bin:/home/linuxbrew/.linuxbrew/bin:$HOME/.local/bin:/usr/bin:/bin:/usr/sbin:/sbin"
-    for agent_bin in "$HOME"/.[!.]*/bin; do
-        [ -d "$agent_bin" ] && SERVICE_PATH="$SERVICE_PATH:$agent_bin"
-    done
-
     mkdir -p "$UNIT_DIR"
 
+    # ExecStart runs the service wrapper, not the binary directly: the wrapper
+    # sources the env file, fixes PATH (including per-agent bin dirs), resolves
+    # the relay binary, and is the shape plugin-build.sh validates when it
+    # cuts a service over to a newer release.
     cat > "$UNIT_FILE" <<EOF
 [Unit]
 Description=Lerdr (Tailscale transport)
@@ -81,16 +81,8 @@ Wants=network-online.target
 Type=simple
 WorkingDirectory=$WORK_DIR
 Environment=LERDR_RELAY_ENV=$ENV_FILE
-# The binary uses LERDR_RELAY_ENV only to locate its runtime directory; the
-# relay key itself must come from the env file, like the foreground wrappers
-# source it before exec. EnvironmentFile is the systemd-native equivalent.
 EnvironmentFile=$ENV_FILE
-Environment=LERDR_RELAY_HOST=127.0.0.1
-Environment=LERDR_RELAY_PORT=$PORT
-Environment=HERDR_RELAY_HOST=127.0.0.1
-Environment=HERDR_RELAY_PORT=$PORT
-Environment=PATH=$SERVICE_PATH
-ExecStart=$RELAY_BIN serve
+ExecStart=$SERVICE_WRAPPER
 Restart=on-failure
 RestartSec=10
 
