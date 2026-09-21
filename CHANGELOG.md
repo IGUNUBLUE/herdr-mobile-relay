@@ -5,6 +5,39 @@ project follows [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.26.3] - 2026-09-21
+
+### Changed
+
+- **Smaller, faster-starting Android build**: the release `.so` is
+  stripped with thin LTO and size-optimized codegen, the bundled app
+  loads the real entry page instead of a redirect stub, and the APK
+  drops unused resources and non-English locales.
+
+### Fixed
+
+- **Relay CPU and latency under watching clients**: pane reads no longer
+  serialize on a shared dead connection, the watch path stops
+  cloning+sorting the whole agent inventory per tick, and frame
+  fingerprints hash fields directly instead of marshal-then-hash.
+- **Outbound transport overhead**: the per-client send buffer no longer
+  copies every message, occupancy metrics take one lock instead of
+  three, message kind is read before marshal instead of re-parsing the
+  payload, and stale full pane frames coalesce in the queue.
+- **Per-update render churn on the phone**: connection publishes keep
+  stable object identity for unchanged relays, agent merges preserve
+  identity when nothing changed, workspace grouping is computed once
+  per publish instead of per consumer, and pane deltas scan line
+  boundaries with native indexOf.
+- **Per-keystroke work**: history search no longer re-renders markdown
+  on every keypress, prompt drafts save after a 300 ms idle instead of
+  writing localStorage per key, and the composer stops reading computed
+  style per keystroke.
+- **Smaller hot paths**: adaptive AgentList tick, rAF-coalesced pane
+  measurement, push-open waits on the agent subscription instead of a
+  10 Hz poll, and the native shell stops polling its own bundled
+  version.json.
+
 ## [0.26.2] - 2026-09-20
 
 ### Fixed

@@ -1,23 +1,23 @@
 {
   "schema": 1,
-  "version": "0.26.2",
-  "assets": 401,
-  "build": "1022f191fd54aa826ca042f688a5805a4fc48ab79e6a0bce092902f40539a8f2",
-  "entry": "/builds/0.26.2-401-1022f191fd54aa82/index.html",
+  "version": "0.26.3",
+  "assets": 402,
+  "build": "e7e4fc0ddf82ac600d531bab85cf0c86118a429abd86bd50c8050ea6d83fa135",
+  "entry": "/builds/0.26.3-402-e7e4fc0ddf82ac60/index.html",
   "files": {
     "entry": {
-      "path": "builds/0.26.2-401-1022f191fd54aa82/index.html",
-      "sha256": "4950a85468fd2c6007a8936b13df9d0a194caafd545063b18e7b0290855dedf8",
-      "integrity": "sha256-SVCoVGj9LGAHqJNrE9+dChlMqv1UUGOxjnsCkIVd7fg=",
-      "brotli_sha256": "8763f8562d9db430ea787c447be82ac027e5aa8f903550976613b2596847f73c",
-      "brotli_integrity": "sha256-h2P4Vi2dtDDqeHxEe+gqwCflqo+QNVCXZhOyWWhH9zw="
+      "path": "builds/0.26.3-402-e7e4fc0ddf82ac60/index.html",
+      "sha256": "3be139cf440d3fc8fcea2ce62d8ee0ad8ad65476f500a2e4c021d337c49f8abb",
+      "integrity": "sha256-O+E5z0QNP8j86izmLY7grYrWVHb1AKLkwCHTN8Sfirs=",
+      "brotli_sha256": "a2efc4144625394c17d82aa2b1814ea491194b2e14da846eeaa9becb99f795e6",
+      "brotli_integrity": "sha256-ou/EFEYlOUwX2CqisYFOpJEZSy4U2oRu6qm+y5n3leY="
     },
     "javascript": {
-      "path": "assets/app-64f98e3c936d14dfd5146a73d1aed39417824fb97fefd780a41f9d35dfe02c80.js",
-      "sha256": "64f98e3c936d14dfd5146a73d1aed39417824fb97fefd780a41f9d35dfe02c80",
-      "integrity": "sha256-ZPmOPJNtFN/VFGpz0a7TlBeCT7l/79eApB+dNd/gLIA=",
-      "brotli_sha256": "62682ac35f5695e0f61926d9a41c644f0e9172a8baeea8dd5c015725455dbc58",
-      "brotli_integrity": "sha256-Ymgqw19WleD2GSbZpBxkTw6Rcqi67qjdXAFXJUVdvFg="
+      "path": "assets/app-9d899489d6f06fdf727ed825c096aa3f3d28d3fde11ba455636a73b9318908ce.js",
+      "sha256": "9d899489d6f06fdf727ed825c096aa3f3d28d3fde11ba455636a73b9318908ce",
+      "integrity": "sha256-nYmUidbwb99yftglwJaqPz0o0/3hG6RVY2pzuTGJCM4=",
+      "brotli_sha256": "b9f88c330af6436d9975442b11fac4dc0c53d36c2f45f0a1231583472a32c4dd",
+      "brotli_integrity": "sha256-ufiMMwr2Q22ZdUQrEfrE3AxT02wvRfChIxWDRyoyxN0="
     },
     "stylesheet": {
       "path": "assets/app-7409b748c6f7b297ef3382d7e2a059a4764b87fd0b005abc870082744e8afd80.css",
