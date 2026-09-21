@@ -1,18 +1,28 @@
 <script module lang="ts">
   export type AgentLogoKind = 'claude' | 'codex' | 'devin' | 'generic' | 'hermes' | 'kimi' | 'omp' | 'opencode' | 'pi' | 'qoder';
 
+  // agentMeta calls hasAgentLogo and AgentLogo re-derives the kind for the
+  // same name, so the normalize is memoized on the input string.
+  const logoKindCache = new Map<string, AgentLogoKind>();
+
   export function agentLogoKind(value: string): AgentLogoKind {
+    const cached = logoKindCache.get(value);
+    if (cached) return cached;
     const normalized = value.trim().toLowerCase().replace(/[_-]+/g, ' ').replace(/\s+/g, ' ');
-    if (['claude', 'claude code', 'claudecode'].includes(normalized)) return 'claude';
-    if (['devin', 'devin ai'].includes(normalized)) return 'devin';
-    if (['codex', 'codex cli'].includes(normalized)) return 'codex';
-    if (['open code', 'opencode'].includes(normalized)) return 'opencode';
-    if (['pi', 'pi coding agent'].includes(normalized)) return 'pi';
-    if (['oh my pi', 'omp'].includes(normalized)) return 'omp';
-    if (['kimi', 'kimi cli', 'kimi code', 'kimi code cli'].includes(normalized)) return 'kimi';
-    if (['qoder', 'qoder cli', 'qodercli'].includes(normalized)) return 'qoder';
-    if (['hermes', 'hermes agent', 'hermesagent'].includes(normalized)) return 'hermes';
-    return 'generic';
+    let kind: AgentLogoKind = 'generic';
+    if (['claude', 'claude code', 'claudecode'].includes(normalized)) kind = 'claude';
+    else if (['devin', 'devin ai'].includes(normalized)) kind = 'devin';
+    else if (['codex', 'codex cli'].includes(normalized)) kind = 'codex';
+    else if (['open code', 'opencode'].includes(normalized)) kind = 'opencode';
+    else if (['pi', 'pi coding agent'].includes(normalized)) kind = 'pi';
+    else if (['oh my pi', 'omp'].includes(normalized)) kind = 'omp';
+    else if (['kimi', 'kimi cli', 'kimi code', 'kimi code cli'].includes(normalized)) kind = 'kimi';
+    else if (['qoder', 'qoder cli', 'qodercli'].includes(normalized)) kind = 'qoder';
+    else if (['hermes', 'hermes agent', 'hermesagent'].includes(normalized)) kind = 'hermes';
+    // Free-form agent names are unbounded in theory; reset rather than grow.
+    if (logoKindCache.size >= 128) logoKindCache.clear();
+    logoKindCache.set(value, kind);
+    return kind;
   }
 
   export function hasAgentLogo(value: string | undefined): boolean {

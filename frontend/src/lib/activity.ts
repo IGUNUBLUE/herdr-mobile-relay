@@ -1,17 +1,29 @@
 import type { Activity } from './types';
 
-export function activityMatchesSearch(activity: Partial<Activity>, query: string): boolean {
-  if (!query) return true;
+// Activity objects are replaced, never mutated, so the searchable text can be
+// memoized on the object itself — otherwise every keystroke re-joins and
+// re-lowercases all retained entries.
+const activityHaystackCache = new WeakMap<Partial<Activity>, string>();
+
+function activityHaystack(activity: Partial<Activity>): string {
+  const cached = activityHaystackCache.get(activity);
+  if (cached !== undefined) return cached;
   const details = activity.details && typeof activity.details === 'object' ? Object.values(activity.details) : [];
-  return [
+  const haystack = [
     activity.summary, activity.kind, activity.status, activity.relay_label,
     activity.project, activity.session, activity.agent, activity.host,
     activity.pane_id, activity.request_id, activity.extract, ...details,
   ]
     .filter(Boolean)
     .join(' ')
-    .toLowerCase()
-    .includes(query.toLowerCase());
+    .toLowerCase();
+  activityHaystackCache.set(activity, haystack);
+  return haystack;
+}
+
+export function activityMatchesSearch(activity: Partial<Activity>, query: string): boolean {
+  if (!query) return true;
+  return activityHaystack(activity).includes(query.toLowerCase());
 }
 
 export function activityForNotification<T extends Pick<Activity, 'details'>>(

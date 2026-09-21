@@ -199,27 +199,27 @@ func (c *socketAPIClient) readPane(
 		"format":     format,
 		"strip_ansi": format != "ansi",
 	}
-	c.mu.Lock()
-	defer c.mu.Unlock()
-
+	// Reads dial fresh per attempt like requestUnary rather than taking c.mu:
+	// Herdr closes the socket after each response so the shared conn buys
+	// nothing, and serializing reads lets one slow pane read delay every
+	// watcher's probe behind it. One retry on any error preserves the
+	// previous read-then-retry behavior for callers and capability probes.
+	var result struct {
+		Read struct {
+			Text      string `json:"text"`
+			Truncated bool   `json:"truncated"`
+		} `json:"read"`
+	}
 	var lastErr error
 	for range 2 {
-		if err := c.connect(ctx); err != nil {
-			lastErr = err
-			break
-		}
-		response, _, err := c.requestConnected(ctx, "pane.read", params)
-		if err == nil && response.Result.Type != "pane_read" {
-			err = fmt.Errorf("Herdr socket API returned %q for pane.read", response.Result.Type)
-		}
+		err := c.requestResult(ctx, "pane.read", params, "pane_read", &result)
 		if err == nil {
 			return PaneRead{
-				Content:   []byte(response.Result.Read.Text),
-				Truncated: response.Result.Read.Truncated,
+				Content:   []byte(result.Read.Text),
+				Truncated: result.Read.Truncated,
 			}, nil
 		}
 		lastErr = err
-		_ = c.closeLocked()
 	}
 	return PaneRead{}, lastErr
 }

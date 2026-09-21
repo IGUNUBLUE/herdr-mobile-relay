@@ -11,7 +11,7 @@ import (
 	"time"
 )
 
-func TestReadPaneReusesSocketAPIConnection(t *testing.T) {
+func TestReadPaneDialsFreshPerCall(t *testing.T) {
 	socketPath := filepath.Join(t.TempDir(), "herdr.sock")
 	listener, err := net.Listen("unix", socketPath)
 	if err != nil {
@@ -19,17 +19,16 @@ func TestReadPaneReusesSocketAPIConnection(t *testing.T) {
 	}
 	defer listener.Close()
 
+	// The real server closes the socket after each response, so reads dial
+	// fresh per call: each accepted connection serves exactly one request.
 	serverResult := make(chan error, 1)
 	go func() {
-		conn, acceptErr := listener.Accept()
-		if acceptErr != nil {
-			serverResult <- acceptErr
-			return
-		}
-		defer conn.Close()
-		decoder := json.NewDecoder(conn)
-		encoder := json.NewEncoder(conn)
 		for index := 1; index <= 2; index++ {
+			conn, acceptErr := listener.Accept()
+			if acceptErr != nil {
+				serverResult <- acceptErr
+				return
+			}
 			var request struct {
 				ID     string `json:"id"`
 				Method string `json:"method"`
@@ -40,13 +39,17 @@ func TestReadPaneReusesSocketAPIConnection(t *testing.T) {
 					Format string `json:"format"`
 				} `json:"params"`
 			}
+			decoder := json.NewDecoder(conn)
+			encoder := json.NewEncoder(conn)
 			if decodeErr := decoder.Decode(&request); decodeErr != nil {
+				conn.Close()
 				serverResult <- decodeErr
 				return
 			}
 			if request.Method != "pane.read" || request.Params.PaneID != "w1:p1" ||
 				request.Params.Source != "recent_unwrapped" || request.Params.Lines != 80 ||
 				request.Params.Format != "ansi" {
+				conn.Close()
 				serverResult <- fmt.Errorf("unexpected request: %+v", request)
 				return
 			}
@@ -61,9 +64,11 @@ func TestReadPaneReusesSocketAPIConnection(t *testing.T) {
 				},
 			}
 			if encodeErr := encoder.Encode(response); encodeErr != nil {
+				conn.Close()
 				serverResult <- encodeErr
 				return
 			}
+			conn.Close()
 		}
 		serverResult <- nil
 	}()

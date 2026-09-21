@@ -481,8 +481,33 @@
 
   const PULL_THRESHOLD = 72;
 
+  // Second-grain ages only exist while a working agent is under ~90s old
+  // (liveAge); the rest of the time minute-grain labels survive a 30s tick.
+  const RELATIVE_TICK_FAST_MS = 1_000;
+  const RELATIVE_TICK_SLOW_MS = 30_000;
+  const SECOND_GRAIN_LIMIT_S = 90;
+
   onMount(() => {
-    const timer = setInterval(() => { relativeNow = Date.now(); }, 1_000);
+    let tickTimer: ReturnType<typeof setTimeout> | undefined;
+    const scheduleRelativeTick = () => {
+      const needsFast = document.visibilityState !== 'hidden'
+        && workingAgents.some((agent) =>
+          Math.max(0, Math.floor((Date.now() - agentLastActiveAt(agent)) / 1_000)) < SECOND_GRAIN_LIMIT_S);
+      tickTimer = setTimeout(() => {
+        if (document.visibilityState !== 'hidden') relativeNow = Date.now();
+        scheduleRelativeTick();
+      }, needsFast ? RELATIVE_TICK_FAST_MS : RELATIVE_TICK_SLOW_MS);
+    };
+    scheduleRelativeTick();
+    // Catch the labels up the moment the page returns instead of waiting out
+    // a slow tick that was scheduled while hidden.
+    const syncVisibility = () => {
+      if (document.visibilityState === 'hidden') return;
+      relativeNow = Date.now();
+      if (tickTimer) clearTimeout(tickTimer);
+      scheduleRelativeTick();
+    };
+    document.addEventListener('visibilitychange', syncVisibility);
     let pullStartY = -1;
     const touchStart = (event: TouchEvent) => {
       pullStartY = window.scrollY <= 0 && !pullRefreshing ? event.touches[0].clientY : -1;
@@ -516,7 +541,8 @@
     listElement.addEventListener('touchend', touchEnd);
     listElement.addEventListener('touchcancel', touchEnd);
     return () => {
-      clearInterval(timer);
+      if (tickTimer) clearTimeout(tickTimer);
+      document.removeEventListener('visibilitychange', syncVisibility);
       listElement.removeEventListener('touchstart', touchStart);
       listElement.removeEventListener('touchmove', touchMove);
       listElement.removeEventListener('touchend', touchEnd);

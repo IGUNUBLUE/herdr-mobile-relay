@@ -3054,10 +3054,16 @@ class RelayStore {
     this.toast.set({ id: ++this.toastId, message, error });
   }
 
+  private connectionsSnapshot = new Map<string, RelayConnection>();
+
   private emitConnections(): void {
-    this.connections.set(new Map(
-      [...this.connectionsValue].map(([relayId, connection]) => [relayId, { ...connection }]),
-    ));
+    const next = new Map<string, RelayConnection>();
+    for (const [relayId, connection] of this.connectionsValue) {
+      const previous = this.connectionsSnapshot.get(relayId);
+      next.set(relayId, previous && sameConnectionSnapshot(previous, connection) ? previous : { ...connection });
+    }
+    this.connectionsSnapshot = next;
+    this.connections.set(new Map(next));
     // Every status change funnels through here, so this is the one place the
     // keepalive has to be told that a relay came up or went away.
     this.syncKeepalive();
@@ -3072,6 +3078,28 @@ function clearChangedRelayPreviews(before: RelayConfig[], after: RelayConfig[]):
   }
 }
 
+// Emitted connection objects share nested state with the live connection, so
+// an in-place mutation of a nested field (update.state, inventory…) is already
+// visible through the last snapshot. Field-level === therefore catches every
+// change that matters — a reassigned field — while letting an emit reuse the
+// previous object for relays nothing changed on. Internal plumbing fields are
+// excluded: they churn without an emit (per-message timestamps, armed timers)
+// and are not part of the view contract, so letting them force a fresh
+// identity would defeat the reuse. New internal fields fail safe — they can
+// only cause extra identity churn, never a stale view.
+const connectionInternalKeys = new Set<keyof RelayConnection>([
+  'lastMessageAt', 'healthTimer', 'reconnectTimer', 'updateRestartTimer',
+  'closed', 'connectingSince', 'directoryGeneration', 'transport',
+]);
+
+function sameConnectionSnapshot(emitted: RelayConnection, live: RelayConnection): boolean {
+  for (const key of Object.keys(emitted) as (keyof RelayConnection)[]) {
+    if (connectionInternalKeys.has(key)) continue;
+    if (emitted[key] !== live[key]) return false;
+  }
+  return true;
+}
+
 function relayConnectionIdentityChanged(before: RelayConfig, after: RelayConfig): boolean {
   return before.url !== after.url
     || before.token !== after.token
@@ -3084,12 +3112,14 @@ function relayConnectionIdentityChanged(before: RelayConfig, after: RelayConfig)
 
 function applyPaneDelta(previous: string, value: unknown): string | null {
   if (!Array.isArray(value)) return null;
+  // indexOf scans for newlines natively instead of a per-char JS loop — on
+  // large scrollbacks this is the difference between a measurable stall and
+  // free bookkeeping per delta.
   const boundaries = [0];
-  for (let index = 0; index < previous.length; index += 1) {
-    if (previous.charCodeAt(index) === 10) boundaries.push(index + 1);
+  for (let index = previous.indexOf('\n'); index !== -1; index = previous.indexOf('\n', index + 1)) {
+    boundaries.push(index + 1);
   }
-  if (boundaries.at(-1) !== previous.length) boundaries.push(previous.length);
-  else boundaries.push(previous.length);
+  boundaries.push(previous.length);
 
   const chunks: string[] = [];
   for (const candidate of value) {

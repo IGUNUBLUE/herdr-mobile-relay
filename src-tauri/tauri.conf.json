@@ -7,7 +7,7 @@
     "devUrl": "http://localhost:5173",
     "frontendDist": "../frontend/dist",
     "beforeDevCommand": { "script": "bun run dev", "cwd": "../frontend" },
-    "beforeBuildCommand": { "script": "bun run build", "cwd": "../frontend" }
+    "beforeBuildCommand": { "script": "bun run build && bun scripts/tauri-entry.mjs", "cwd": "../frontend" }
   },
   "app": {
     "withGlobalTauri": true,

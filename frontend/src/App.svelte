@@ -576,15 +576,35 @@
       const result = await relayStore.sendCommand(relayId, { type: 'push_open_ref', event_ref: eventRef });
       const target = parsePushOpenTarget(result.data?.target, relayId);
       if (!target) throw new Error('Invalid notification target');
-      const findAgent = () => get(relayStore.agents).find(agent =>
+      const findAgent = (agents: Agent[]) => agents.find(agent =>
         agent.relay_id === relayId && targetRefMatchesAgent(target, agent),
       );
-      let agent = findAgent();
-      const deadline = Date.now() + 5_000;
-      while (!agent && Date.now() < deadline) {
+      let agent: Agent | null = findAgent(get(relayStore.agents)) || null;
+      if (!agent) {
+        // One refresh plus a publish-driven wait — the target either exists
+        // already or arrives with the snapshot this refresh triggers, so a
+        // 10 Hz repoll loop only burns IPC round-trips.
         relayStore.requestAgents();
-        await new Promise(resolve => setTimeout(resolve, 100));
-        agent = findAgent();
+        agent = await new Promise<Agent | null>((resolve) => {
+          let settled = false;
+          const cleanup: { timer?: ReturnType<typeof setTimeout>; stop?: () => void } = {};
+          const finish = (value: Agent | null) => {
+            if (settled) return;
+            settled = true;
+            if (cleanup.timer) clearTimeout(cleanup.timer);
+            cleanup.stop?.();
+            resolve(value);
+          };
+          cleanup.stop = relayStore.agents.subscribe((agents) => {
+            const found = findAgent(agents);
+            if (found) finish(found);
+          });
+          if (settled) {
+            cleanup.stop();
+            return;
+          }
+          cleanup.timer = setTimeout(() => finish(null), 5_000);
+        });
       }
       const current = get(currentView);
       if (current.view !== 'push' || current.eventRef !== eventRef) return;

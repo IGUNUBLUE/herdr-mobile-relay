@@ -27,7 +27,8 @@
   } from '$lib/speech';
   import { fencedCodeText } from '$lib/markdown';
   import { securityState } from '$lib/security';
-  import { clearPromptDraft, loadPromptDraft, savePromptDraft } from '$lib/prompt-drafts';
+  import { clearPromptDraft, flushPromptDrafts, loadPromptDraft, schedulePromptDraftSave } from '$lib/prompt-drafts';
+  import { interfaceSize } from '$lib/preferences';
   import { relayStore } from '$lib/store';
   import type { AttachmentBatchController, AttachmentBatchSnapshot, AttachmentRef } from '$lib/attachments';
   import type { Agent, ConversationEntry, ConversationPage, OmoTodoState } from '$lib/types';
@@ -56,6 +57,9 @@
   let errorCode = $state('');
   let errorRetryable = $state(false);
   let query = $state('');
+  // The transcript filter and the markdown highlighter read the debounced
+  // copy: one keystroke must not re-parse every loaded message.
+  let searchQuery = $state('');
   let mode = $state<'conversation' | 'activity'>('conversation');
   let listElement = $state<HTMLElement>(null!);
   let streamElement = $state<HTMLElement>(null!);
@@ -118,7 +122,7 @@
         ? 'Needs inspection — switch to Terminal'
         : 'Type a reply…');
   const visibleEntries = $derived.by(() => {
-    const needle = query.trim().toLocaleLowerCase();
+    const needle = searchQuery.trim().toLocaleLowerCase();
     if (!needle) return modeEntries;
     return modeEntries.filter((entry) => `${entry.text} ${(entry.tools || []).map((tool) => `${tool.name} ${tool.input || ''} ${tool.output || ''}`).join(' ')}`.toLocaleLowerCase().includes(needle));
   });
@@ -219,10 +223,23 @@
   });
 
   $effect(() => {
-    const value = composer;
+    const value = query;
+    const timer = setTimeout(() => { searchQuery = value; }, 250);
+    return () => clearTimeout(timer);
+  });
+
+  $effect(() => {
+    const resizeFor = [composer, $interfaceSize];
     void tick().then(() => {
-      if (value === composer) resizeComposer();
+      if (resizeFor[0] === composer && resizeFor[1] === $interfaceSize) resizeComposer();
     });
+  });
+
+  // --composer-max-height is rem-based and only moves with the interface-size
+  // setting; invalidate the resolved pixel cap when that setting changes.
+  $effect(() => {
+    void $interfaceSize;
+    composerMaxHeight = 0;
   });
 
   // A streamed turn can be committed after the resize notification that
@@ -301,7 +318,7 @@
   // The same per-agent draft store TerminalView uses, so a reply drafted here
   // survives switching views or panes and continues in the terminal composer.
   $effect(() => {
-    savePromptDraft(agent, composer);
+    schedulePromptDraftSave(agent, composer);
   });
 
   function pinListToBottom(element: HTMLElement): void {
@@ -537,13 +554,19 @@
   }
 
 
+  // Resolved once per interface-size change; getComputedStyle forces a style
+  // pass and must not run on every keystroke.
+  let composerMaxHeight = 0;
+
   function resizeComposer() {
     if (!composerElement) return;
     composerElement.style.height = 'auto';
-    const maxHeight = Number.parseFloat(getComputedStyle(composerElement).maxHeight);
+    if (!composerMaxHeight) {
+      composerMaxHeight = Number.parseFloat(getComputedStyle(composerElement).maxHeight);
+    }
     const contentHeight = composerElement.scrollHeight;
-    const capped = Number.isFinite(maxHeight) && contentHeight > maxHeight;
-    composerElement.style.height = `${capped ? maxHeight : contentHeight}px`;
+    const capped = Number.isFinite(composerMaxHeight) && contentHeight > composerMaxHeight;
+    composerElement.style.height = `${capped ? composerMaxHeight : contentHeight}px`;
     composerElement.style.overflowY = capped ? 'auto' : 'hidden';
   }
 
@@ -704,6 +727,7 @@
     attachmentUnsubscribe?.();
     void attachmentController?.cancel();
     cancelHistoryRequests();
+    flushPromptDrafts();
   });
 
   function paste(event: ClipboardEvent) {
@@ -795,8 +819,8 @@
     {#if emptyHistoryText}
       <div class="empty-state" role="status">{emptyHistoryText}</div>
     {/if}
-    {#if query.trim() && !visibleEntries.length && entries.length}
-      <div class="empty-state" role="status">No loaded turns match “{query.trim()}”.</div>
+    {#if searchQuery.trim() && !visibleEntries.length && entries.length}
+      <div class="empty-state" role="status">No loaded turns match “{searchQuery.trim()}”.</div>
     {/if}
     <section
       class="conversation-list"
@@ -859,7 +883,7 @@
                 {/if}
               </span>
             </header>
-            <ConversationMessage messageId={entry.id} text={entry.text} tools={entry.tools} highlight={query.trim()} />
+            <ConversationMessage messageId={entry.id} text={entry.text} tools={entry.tools} highlight={searchQuery.trim()} />
             {#if entry.truncated}<small>Long turn truncated by the relay.</small>{/if}
           </article>
         {/each}

@@ -5,6 +5,7 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/base64"
+	"encoding/binary"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -2601,12 +2602,11 @@ func (s *Server) currentPaneRevision(ctx context.Context, paneID string) (int64,
 }
 
 func (s *Server) agentInfo(paneID string) (agent, cwd string) {
-	for _, a := range s.state.Snapshot() {
-		if a.PaneID == paneID {
-			return a.Agent, a.Cwd
-		}
+	a, ok := s.state.Agent(paneID)
+	if !ok {
+		return "", ""
 	}
-	return "", ""
+	return a.Agent, a.Cwd
 }
 
 func (s *Server) sendConnectionSnapshot(client *transport.ClientConn) {
@@ -2880,25 +2880,54 @@ func paneFingerprint(content string) string {
 }
 
 func paneFrameFingerprint(response map[string]any) string {
-	state := []any{
-		response["content"],
-		response["format"],
-		response["truncated"],
-		response["viewport_only"],
-		response["viewport_rows"],
-		response["resize_settling"],
-		response["attention_kind"],
-		response["prompt"],
-		response["command"],
-		response["options"],
-		response["interaction"],
-		response["question_layout"],
+	sum := sha256.New()
+	var size [8]byte
+	writeField := func(value any) {
+		var tag byte
+		var data []byte
+		switch v := value.(type) {
+		case nil:
+		case string:
+			tag = 1
+			data = []byte(v)
+		case bool:
+			tag = 2
+			data = []byte{0}
+			if v {
+				data[0] = 1
+			}
+		default:
+			tag = 3
+			encoded, err := json.Marshal(v)
+			if err != nil {
+				data = []byte(fmt.Sprint(v))
+			} else {
+				data = encoded
+			}
+		}
+		sum.Write([]byte{tag})
+		binary.LittleEndian.PutUint64(size[:], uint64(len(data)))
+		sum.Write(size[:])
+		sum.Write(data)
 	}
-	encoded, err := json.Marshal(state)
-	if err != nil {
-		return paneFingerprint(fmt.Sprint(state...))
+	for _, key := range []string{
+		"content",
+		"format",
+		"truncated",
+		"viewport_only",
+		"viewport_rows",
+		"resize_settling",
+		"attention_kind",
+		"prompt",
+		"command",
+		"options",
+		"interaction",
+		"question_layout",
+	} {
+		writeField(response[key])
 	}
-	return paneFingerprint(string(encoded))
+	digest := sum.Sum(nil)
+	return fmt.Sprintf("%x", digest[:8])
 }
 
 func unchangedPaneResponse(message, response map[string]any) map[string]any {

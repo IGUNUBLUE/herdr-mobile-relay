@@ -36,14 +36,11 @@
   const diffPointers = new Map<number, { x: number; y: number }>();
   let diffPinch: { distance: number; zoom: number } | null = null;
 
-  const filteredEntries = $derived((tree?.entries || []).filter((entry) => {
-    const needle = query.trim().toLocaleLowerCase();
-    return !needle || entry.path.toLocaleLowerCase().includes(needle);
-  }));
-  const filteredChanges = $derived((git?.files || []).filter((entry) => {
-    const needle = query.trim().toLocaleLowerCase();
-    return !needle || `${entry.path} ${entry.original_path || ''}`.toLocaleLowerCase().includes(needle);
-  }));
+  const needle = $derived(query.trim().toLocaleLowerCase());
+  const filteredEntries = $derived((tree?.entries || []).filter((entry) =>
+    !needle || entry.path.toLocaleLowerCase().includes(needle)));
+  const filteredChanges = $derived((git?.files || []).filter((entry) =>
+    !needle || `${entry.path} ${entry.original_path || ''}`.toLocaleLowerCase().includes(needle)));
 
   $effect(() => {
     if (open && dialog && !dialog.open) dialog.showModal();
