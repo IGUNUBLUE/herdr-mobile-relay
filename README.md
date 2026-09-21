@@ -29,6 +29,14 @@ as a signed Android APK and as an installable PWA everywhere else.
 
 ## What you get
 
+| Agents | Terminal | Settings |
+| --- | --- | --- |
+| <img src="images/home.jpeg" width="240" alt="Agent list: a needs-input approval card pinned above the workspace cards"> | <img src="images/terminal.jpeg" width="240" alt="Terminal view of an agent awaiting approval, with Yes and No buttons and the key toolbar"> | <img src="images/settings.jpeg" width="240" alt="Settings: relay connection fields, paired relay status, default view and theme pickers"> |
+
+The Android app renders this same UI in its native shell — the screenshots
+above are the PWA at a phone viewport. Regenerate them with
+`bun scripts/capture-screenshots.ts` from `frontend/`.
+
 - Monitor and control agents across several computers, grouped by status and
   workspace, with agents that need input pinned on top.
 - Answer approvals and plan questions from Codex, Claude Code, Devin, Hermes,
