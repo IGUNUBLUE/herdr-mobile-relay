@@ -18,7 +18,7 @@ export const identity = (candidate) => ({ version: candidate ? '0.21.0' : '0.20.
   webHash: candidate ? 'new-web' : 'old-web', descriptor: true });
 export const state = { active_release: 'old', app_url: origin, requests: [], faults: [], relays: ['alpha','beta'].map(name => ({
   name, invitation_auth_count: 1, credential_auth_count: 1, credential_pseudonyms: [name + '-credential'], connections: 1,
-  install_update_count: 0, deploy_app_update_count: 0 })) };
+  install_update_count: 0 })) };
 export const info = { app_url: origin, relay_urls: ['wss://fixture.test:52102','wss://fixture.test:52103'],
   setup_urls: [origin + '/setup/alpha', origin + '/setup/beta'], control_url: 'http://fixture.invalid', control_secret: 'private',
   ca_certificate: '', old_release: 'old', candidate_release: 'candidate' };

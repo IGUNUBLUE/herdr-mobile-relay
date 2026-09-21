@@ -11,7 +11,6 @@ import {
   assertCredentialPreserved,
   assertPhoneUpdateAcknowledged,
   assertPhoneUpdateNotAcknowledged,
-  assertNoRelayDeploy,
   assertNoRelayInstall,
   assertOldIdentity,
   assertInvitationOwnership,
@@ -53,7 +52,6 @@ interface FixtureRelayState {
   credential_pseudonyms: string[];
   connections: number;
   install_update_count: number;
-  deploy_app_update_count: number;
 }
 
 interface FixtureRequest {
@@ -531,7 +529,6 @@ async function runUpgradeScenario(
   assertPreferencePreserved(beforePreference, afterPreference);
   for (const relay of finalState.relays) {
     assertNoRelayInstall(relay.install_update_count);
-    assertNoRelayDeploy(relay.deploy_app_update_count);
   }
   if (suite === 'release') {
     setStage('lifecycle');
@@ -575,7 +572,6 @@ async function runUpgradeScenario(
     assertPreferencePreserved(beforePreference, { key: beforePreference.key, value: await platform.preferenceValue() });
     for (const relay of finalState.relays) {
       assertNoRelayInstall(relay.install_update_count);
-      assertNoRelayDeploy(relay.deploy_app_update_count);
     }
   }
   const reloadCount = Math.max(0, upgradeNavigationCount - 1);

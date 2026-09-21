@@ -78,12 +78,10 @@ printf '%s\n' license > "$RELEASE_DIR/LICENSE"
 printf '%s\n' readme > "$RELEASE_DIR/README.md"
 for WRAPPER in \
     common.sh \
-    lerdr-service.sh \
+    tailscale-service.sh \
     plugin-on-event.sh \
     setup-link.sh \
-    stable-setup.sh \
-    stable-teardown.sh \
-    start.sh; do
+    tailscale-serve.sh; do
     printf '%s\n' '#!/bin/sh' > "$RELEASE_DIR/relay/$WRAPPER"
 done
 

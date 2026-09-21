@@ -72,11 +72,28 @@ fi
 PORT="${LERDR_RELAY_PORT:-${HERDR_RELAY_PORT:-8375}}"
 if HEALTH="$(curl -fsS --max-time 3 "http://127.0.0.1:$PORT/healthz" 2>/dev/null)"; then
     echo "  Relay health: $HEALTH"
-    echo ""
-    echo "  Sanitized support snapshot:"
-    "$(relay_binary)" support || true
 else
     echo "  Relay health: not reachable on 127.0.0.1:$PORT — is the relay running?"
 fi
+
+echo ""
+TAILSCALE_BIN="${LERDR_TAILSCALE_BIN:-${HERDR_TAILSCALE_BIN:-}}"
+if [ -z "$TAILSCALE_BIN" ] && command -v tailscale >/dev/null 2>&1; then
+    TAILSCALE_BIN="$(command -v tailscale)"
+fi
+if [ -z "$TAILSCALE_BIN" ] && [ -x "/Applications/Tailscale.app/Contents/MacOS/Tailscale" ]; then
+    TAILSCALE_BIN="/Applications/Tailscale.app/Contents/MacOS/Tailscale"
+fi
+if [ -n "$TAILSCALE_BIN" ]; then
+    echo "  Tailscale serve:"
+    "$TAILSCALE_BIN" serve status 2>/dev/null | sed 's/^/    /' ||
+        echo "    unavailable"
+else
+    echo "  Tailscale:    CLI not found — install Tailscale to expose the relay"
+fi
+
+echo ""
+echo "  Sanitized support snapshot:"
+"$(relay_binary)" support 2>/dev/null || true
 
 pause_before_close

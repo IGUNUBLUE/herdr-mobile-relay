@@ -11,10 +11,9 @@ if [ -n "$SERVICE_ENV" ]; then
     export LERDR_RELAY_ENV="$SERVICE_ENV"
 fi
 
-if ! "$SCRIPT_DIR/setup-link.sh"; then
+if ! "$SCRIPT_DIR/tailscale-serve.sh" link; then
     echo ""
-    echo "No stable phone setup link could be generated. Run Stable Tunnel setup"
-    echo "first, or rerun Quick Start for a new temporary link."
+    echo "No phone setup link could be generated. Run Tailscale Serve setup first."
     pause_before_close
     exit 1
 fi

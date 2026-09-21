@@ -56,14 +56,14 @@ esac
 if [ -n "$RESTARTED" ]; then
     echo "✓ Restarted the background service with the new token."
 else
-    echo "  No background service found. Restart the relay (or rerun make quick-start)"
-    echo "  to apply the new token."
+    echo "  No background service found. Restart the relay (or rerun Tailscale"
+    echo "  Serve setup) to apply the new token."
 fi
 echo ""
 
-# Re-add the relay on each phone with the new token. setup-link fails cleanly
-# when no stable hostname is configured (quick-tunnel-only installs).
-if ! "$SCRIPT_DIR/setup-link.sh"; then
+# Re-add the relay on each phone with the new token. tailscale-serve.sh link
+# fails cleanly when Serve is not configured yet.
+if ! "$SCRIPT_DIR/tailscale-serve.sh" link; then
     echo ""
-    echo "  For quick tunnels, rerun make quick-start and scan the new QR code."
+    echo "  Run Tailscale Serve setup first, then reprint the QR code."
 fi

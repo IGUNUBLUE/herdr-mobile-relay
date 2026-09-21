@@ -1,6 +1,10 @@
 #!/bin/bash
 set -euo pipefail
 
+# Prints the private phone setup link and QR for the Tailscale transport. The
+# single argument is this machine's tailnet name; tailscale-serve.sh passes it
+# after configuring Serve, and `link` callers get it from tailscale_fqdn.
+
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 
 export PATH="/opt/homebrew/bin:/usr/local/bin:/home/linuxbrew/.linuxbrew/bin:$HOME/.local/bin:/usr/bin:/bin:/usr/sbin:/sbin:$PATH"
@@ -15,73 +19,34 @@ load_relay_env "$ENV_FILE"
 
 relay_binary >/dev/null
 if [ -z "${HERDR_RELAY_TOKEN:-}" ]; then
-    echo "✗ No relay token in $ENV_FILE. Run make setup first."
+    echo "✗ No relay token in $ENV_FILE. Run Tailscale Serve setup first."
     exit 1
 fi
 
-# A gateway-configured relay has no tunnel hostname and no cloudflared config:
-# the phone finds it through the gateway, so the link only needs the app origin.
-GATEWAY_URL="$(gateway_url "$ENV_FILE")"
-if [ -n "$GATEWAY_URL" ]; then
-    HOST_LABEL="$(host_label)"
-    SETUP_FRAGMENT="$(build_transport_setup_fragment "$HERDR_RELAY_TOKEN" "$HOST_LABEL")"
-    PHONE_APP_BASE="$(gateway_phone_app_base_url "$ENV_FILE")"
-    record_phone_app_origin "$PHONE_APP_BASE" "$ENV_FILE"
-
-    ARMED=0
-    arm_setup_link "$ENV_FILE" || ARMED=$?
-    echo "🐑 Lerdr phone setup"
-    echo ""
-    print_phone_setup "$PHONE_APP_BASE/#$SETUP_FRAGMENT"
-    echo ""
-    print_setup_link_arming "$ARMED"
-    echo "  Gateway: $GATEWAY_URL"
-    echo "  The relay must be running for the link to work:"
-    echo "  make service-status"
-    exit 0
-fi
-
-# The stable hostname: explicit argument wins, otherwise the first ingress
-# hostname in the cloudflared config the background service uses.
-TUNNEL_HOST="${1:-}"
-TUNNEL_HOST="${TUNNEL_HOST#https://}"
-TUNNEL_HOST="${TUNNEL_HOST#wss://}"
-TUNNEL_HOST="${TUNNEL_HOST%%/*}"
-if [ -z "$TUNNEL_HOST" ]; then
-    CONFIG="${CLOUDFLARED_CONFIG:-$(cloudflared_config_default)}"
-    if [ ! -r "$CONFIG" ]; then
-        echo "✗ Cannot determine this relay's hostname: $CONFIG is missing."
-        echo "  Follow the README's Stable Hostnames section first, or pass the"
-        echo "  hostname directly: make setup-link HOST=relay-mac.yourdomain.com"
-        exit 1
-    fi
-    TUNNEL_HOST="$(sed -nE 's/^[[:space:]]*-?[[:space:]]*hostname:[[:space:]]*([^[:space:]#]+).*/\1/p' "$CONFIG" | head -1)"
-    if [ -z "$TUNNEL_HOST" ]; then
-        echo "✗ No ingress hostname found in $CONFIG."
-        echo "  Pass the hostname directly: make setup-link HOST=relay-mac.yourdomain.com"
-        exit 1
-    fi
+TAILNET_HOST="${1:-}"
+TAILNET_HOST="${TAILNET_HOST#https://}"
+TAILNET_HOST="${TAILNET_HOST#wss://}"
+TAILNET_HOST="${TAILNET_HOST%%/*}"
+if [ -z "$TAILNET_HOST" ]; then
+    echo "✗ Cannot determine this relay's tailnet name."
+    echo "  Run relay/tailscale-serve.sh start first, or pass the name directly:"
+    echo "  relay/setup-link.sh host.tail1234.ts.net"
+    exit 1
 fi
 
 HOST_LABEL="$(host_label)"
-RELAY_URL="wss://$TUNNEL_HOST"
+RELAY_URL="wss://$TAILNET_HOST"
 SETUP_FRAGMENT="$(build_setup_fragment "$HERDR_RELAY_TOKEN" "$HOST_LABEL" "$RELAY_URL")"
-PHONE_APP_FALLBACK="https://$TUNNEL_HOST"
-PHONE_APP_BASE="$(choose_phone_app_base_url "$PHONE_APP_FALLBACK" "$ENV_FILE" stable)"
-record_phone_app_origin "$PHONE_APP_BASE" "$ENV_FILE"
-PHONE_URL="$PHONE_APP_BASE/#$SETUP_FRAGMENT"
-DIRECT_URL="$PHONE_APP_FALLBACK/#$SETUP_FRAGMENT"
+# The relay serves the app itself on the tailnet name, so the app base and the
+# relay URL share one origin.
+PHONE_APP_BASE="${LERDR_PHONE_APP_URL:-${HERDR_PHONE_APP_URL:-https://$TAILNET_HOST}}"
+
 ARMED=0
 arm_setup_link "$ENV_FILE" || ARMED=$?
 echo "🐑 Lerdr phone setup"
 echo ""
-print_phone_setup "$PHONE_URL"
-if [ "$PHONE_URL" != "$DIRECT_URL" ]; then
-    echo ""
-    echo "  Direct browser fallback:"
-    print_phone_setup_url "$DIRECT_URL"
-fi
+print_phone_setup "$PHONE_APP_BASE/#$SETUP_FRAGMENT"
 echo ""
 print_setup_link_arming "$ARMED"
-echo "  The relay and tunnel must be running for the link to work:"
-echo "  make service-status"
+echo "  The relay and tailscale serve must be running for the link to work:"
+echo "  relay/tailscale-serve.sh status"

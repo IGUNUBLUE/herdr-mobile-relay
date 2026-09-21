@@ -205,7 +205,7 @@ jobs:
           path: |
             dist/release/lerdr_*.apk
             dist/android/lerdr_*-unsigned.apk
-          retention-days: 7
+          retention-days: 1
           if-no-files-found: error
 
   publish:

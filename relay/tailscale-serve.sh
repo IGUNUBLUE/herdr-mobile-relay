@@ -150,7 +150,7 @@ case "$COMMAND" in
 
         if ! curl -fsS --max-time 3 "http://127.0.0.1:$PORT/healthz" >/dev/null 2>&1; then
             echo "▸ The relay is not answering on 127.0.0.1:$PORT yet."
-            echo "  Start it first (quick start or the background service), then rerun"
+            echo "  Start it first (setup menu or the background service), then rerun"
             echo "  this command for the HTTPS check and a freshly armed QR."
         elif ! wait_for_https "$FQDN"; then
             echo "✗ https://$FQDN did not become healthy within 30s."
