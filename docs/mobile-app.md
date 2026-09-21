@@ -54,22 +54,6 @@ setup and want to know what every screen and control is for.
   Speak button.
 - Detect Codex, Claude Code, OpenCode, Qoder CLI, Pi, Oh My Pi, and Kimi.
 
-| Agents | Native Resize |
-| --- | --- |
-| <img src="../images/home.jpeg" alt="Mobile list of Herdr agents" width="392"> | <img src="../images/native_mobile_resolution.jpeg" alt="OMP terminal rendered at native mobile width" width="392"> |
-
-| Plan Questions | Notifications |
-| --- | --- |
-| <img src="../images/agent_plan.jpeg" alt="Structured plan question navigation" width="392"> | <img src="../images/notifications.jpg" alt="Blocked-agent notification" width="392"> |
-
-| Git Inspection | Native Conversations |
-| --- | --- |
-| <img src="../images/git-history.jpeg" alt="Read-only mobile Git diff with diff-aware colors and zoom controls" width="392"> | <img src="../images/conversations.jpeg" alt="Mobile native conversation history rendered from the agent transcript" width="392"> |
-
-| Terminal | Read Aloud |
-| --- | --- |
-| <img src="../images/terminal.jpeg" alt="Mobile terminal with Copy, Speak, attachments, and terminal keys" width="392"> | <img src="../images/speech.jpeg" alt="Speech settings with the language choice and the relay's cached voices" width="392"> |
-
 ## Paired devices
 
 A controller opens **Settings → Devices → Invite Device** to create a ten-minute,
@@ -78,10 +62,6 @@ share either privately. The first browser that completes the encrypted
 handshake consumes the invitation. Create a separate invitation for every
 additional controller or reader, or print the setup link again on the
 computer: every print arms the relay's bootstrap for one more phone.
-
-| Invite a device | Paired devices |
-| --- | --- |
-| <img src="../images/devices-invite.jpeg" alt="Invite Device dialog choosing a name and the reader role" width="392"> | <img src="../images/devices.jpeg" alt="Paired devices with rename, revoke, forget, and reset controls" width="392"> |
 
 An uncaught phone-side error appears in a bottom **App error** banner because
 mobile browsers often provide no useful console. Copy or photograph its text
