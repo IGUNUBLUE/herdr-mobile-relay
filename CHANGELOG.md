@@ -5,6 +5,28 @@ project follows [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.26.1] - 2026-09-20
+
+### Changed
+
+- **New app icon**: the launcher, web install, and notification badge now
+  use an iguana mascot instead of the interim beacon mark, and the CI
+  pipeline regenerates launcher assets so Android builds no longer fall
+  back to the stock Tauri icon.
+
+### Fixed
+
+- **Terminal no longer flashes on streaming output**: each pane delta used
+  to rebuild the whole visible window as one HTML string and swap it in
+  via `{@html}`, repainting every row. Rows are now rendered through a
+  keyed list that patches only changed lines, unchanged rows reuse their
+  measured heights, and repeated renders of stable scrollback lines are
+  served from a bounded cache instead of re-parsing ANSI per frame.
+- **Watched panes recover when a frame ack is lost**: the relay's pane
+  watch gated new frames on a `pane_applied` acknowledgement with no
+  timeout, so one lost ack silenced updates until the client
+  re-subscribed. Pending frames now expire and the delta chain resyncs.
+
 ## [0.26.0] - 2026-09-20
 
 ### Changed
