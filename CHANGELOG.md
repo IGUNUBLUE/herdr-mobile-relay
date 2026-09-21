@@ -5,6 +5,17 @@ project follows [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.26.2] - 2026-09-20
+
+### Fixed
+
+- **Red crash banner on stale agent state**: a `null` agent reaching
+  target resolution crashed with `Cannot read properties of null
+  (reading 'relay_id')` and surfaced the error overlay — and in the
+  pane-delta path could skip the frame ack. Target resolution now
+  treats a missing agent as "no target": commands reject with a
+  controlled error and read/watch calls return early.
+
 ## [0.26.1] - 2026-09-20
 
 ### Changed
