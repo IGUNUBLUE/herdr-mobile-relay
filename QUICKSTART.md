@@ -3,9 +3,10 @@
 Connect one Linux or macOS computer to your phone through a temporary Cloudflare
 tunnel, through a gateway that needs no Cloudflare account (see **Skip
 Cloudflare**), or — on Linux — through **Tailscale Serve** when both devices are
-already on your tailnet (zero third parties; see
-[docs/tailscale.md](docs/tailscale.md)). You need Herdr 0.7.5 or newer, Git, and
-`curl`. Herdr 0.9.0 is recommended for the complete live JSON inventory and
+already on your tailnet (zero third parties; follow
+[docs/tailscale.md](docs/tailscale.md) — it has its own requirements on both
+devices). One of these transports is required: without it the phone app cannot
+reach the relay at all. You need Herdr 0.7.5 or newer, Git, and `curl`. Herdr 0.9.0 is recommended for the complete live JSON inventory and
 workspace-management surface, but it is not the relay's minimum supported
 version.
 

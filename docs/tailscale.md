@@ -7,6 +7,11 @@ only third party is Tailscale's coordination server, which sees the same
 metadata any tailnet connection produces and never sees plaintext (the relay's
 E2EE applies on top of WireGuard).
 
+This transport is a hard requirement on both ends. The app — PWA or Android
+APK — can only load and stay connected while the phone is on the same tailnet;
+there is no public URL and no fallback path. If Tailscale is off on either
+side, the app cannot reach the relay at all.
+
 Linux only for now. The phone side works with any Tailscale client, but the
 relay-side scripts have only been exercised against Linux `tailscaled`.
 
@@ -15,19 +20,29 @@ relay-side scripts have only been exercised against Linux `tailscaled`.
 | Requirement | Why |
 | --- | --- |
 | Linux | The scripts are Linux-only today; other platforms report an explicit error. |
-| Tailscale installed and logged in (`tailscale status` works) | `tailscaled` terminates tailnet TLS locally. |
-| MagicDNS enabled on the tailnet | Provides the `machine.tailnet.ts.net` name the app connects to. On by default for new tailnets — check https://login.tailscale.com/admin/dns. |
-| HTTPS Certificates enabled on the tailnet | One toggle at https://login.tailscale.com/admin/dns → *HTTPS Certificates*. Without it Serve cannot issue the `*.ts.net` certificate. |
-| Serve approved for this node | The first `tailscale serve` on a machine prints a one-time approval link (`https://login.tailscale.com/f/serve?node=…`) and waits until you open it while logged into the admin console. |
+| Tailscale installed and logged in (`tailscale status` works) | `tailscaled` terminates tailnet TLS locally. Follow [Install Tailscale on Linux](https://tailscale.com/kb/1031/install-linux). |
+| MagicDNS enabled on the tailnet | Provides the `machine.tailnet.ts.net` name the app connects to. On by default for new tailnets — check https://login.tailscale.com/admin/dns or follow [the MagicDNS guide](https://tailscale.com/kb/1081/magicdns). |
+| HTTPS Certificates enabled on the tailnet | One toggle at https://login.tailscale.com/admin/dns → *HTTPS Certificates* — see [Enabling HTTPS](https://tailscale.com/kb/1153/enabling-https). Without it Serve cannot issue the `*.ts.net` certificate. |
+| Serve approved for this node | The first `tailscale serve` on a machine prints a one-time approval link (`https://login.tailscale.com/f/serve?node=…`) and waits until you open it while logged into the admin console. Background: [Tailscale Serve](https://tailscale.com/kb/1242/tailscale-serve). |
 | The relay running locally | Via Quick Start, or the systemd user service below. |
 
 ## Requirements — the phone
 
 | Requirement | Why |
 | --- | --- |
-| Android or iOS with the Tailscale app | Any recent client works; the app is a normal HTTPS web app. |
-| Signed into the **same tailnet** and connected | `https://<machine>.<tailnet>.ts.net` only resolves and routes inside the tailnet. The app cannot be reached when Tailscale is off. |
+| Android or iOS with the Tailscale app | Any recent client works; the app is a normal HTTPS web app. Install guides: [Android](https://tailscale.com/kb/1177/install-android) · [iOS](https://tailscale.com/kb/1095/install-ios). |
+| Signed into the **same tailnet** and connected | `https://<machine>.<tailnet>.ts.net` only resolves and routes inside the tailnet. The app cannot be reached when Tailscale is off — keep the VPN on. |
 | Chrome (Android) or Safari (iOS) | Needed for Add to Home Screen and the service worker the app relies on. |
+
+## Verify before you start
+
+```bash
+tailscale status         # this machine is logged in and tailscaled is up
+tailscale serve status   # empty, or already proxying to 127.0.0.1:8375
+```
+
+On the phone: open the Tailscale app, confirm the same tailnet, and keep the
+VPN connected.
 
 ## Setup
 
@@ -92,3 +107,17 @@ relay/tailscale-serve.sh link   # reprint the setup QR without changing anything
   stops and shows the existing config instead of replacing it.
 - Reader/controller roles, revocations, push allowlists, and audit logging are
   unchanged — this transport swaps who carries the bytes, not what they mean.
+
+## Not on a tailnet?
+
+Every transport is a hard requirement — the phone app cannot reach the relay
+without one of them — but Tailscale is the only one that needs a VPN client on
+the phone. If that is not an option, pick another path from the setup menu and
+follow its doc instead:
+
+- **Community WebRTC Gateway** or a temporary tunnel — no accounts at all;
+  see [transports.md](transports.md).
+- **Stable Cloudflare tunnel** — a permanent hostname without any phone-side
+  VPN; see [cloudflare-tunnel.md](cloudflare-tunnel.md).
+- **Your own gateway** — a small VPS you control; see
+  [gateway-self-hosting.md](gateway-self-hosting.md).
