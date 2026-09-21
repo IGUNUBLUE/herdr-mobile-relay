@@ -24,7 +24,6 @@ import {
   shouldDeferPairingConnection,
   shouldRetainSetupFragment,
 } from './config';
-import { gatewayRendezvous } from './gateway-credentials';
 import { SLASH_COMMAND_MAX_ENTRIES } from './slash-command-limits';
 import {
   BrowserDeviceCredentialStore,
@@ -82,7 +81,6 @@ import {
 } from './preferences';
 import {
   clearPendingRelayUpdate,
-  normalizeAppDeployment,
   normalizeRelayUpdate,
   observeAppUpstreamVersion,
   rememberPendingRelayUpdate,
@@ -130,16 +128,14 @@ const PANE_READ_RETRY_MS = 35_000;
 // (wake, focus, online, network change) arrives. A healthy dial finishes its
 // two handshakes in a couple of seconds; one that predates the event usually
 // started before the radio was up, was blackholed, and would otherwise sit
-// out the full handshake timeout plus backoff — the "dozens of seconds before
-// streaming resumes after sleep" a phone sees in gateway mode.
+// out the full handshake timeout plus backoff.
 const STALE_CONNECTING_MS = 5_000;
 const PAIRING_DEFERRED_MESSAGE = 'Add Lerdr to the iPhone or iPad Home Screen, then open it there to finish pairing.';
-// Proof-of-life cadence for every connected relay. The gateway reaps a quiet
-// phone connection after five minutes and never pings one, so a hidden but
-// still-running page loses its socket silently and pays a full re-dial (TLS +
-// WS + hello + E2EE) on focus. Two minutes sits well under that reaper and is
-// coarser than the once-a-minute floor an intensively throttled background
-// timer gets, so it still fires wherever the platform keeps the page running.
+// Proof-of-life cadence for every connected relay. A hidden but still-running
+// page whose socket lapses silently pays a full re-dial (TLS + WS + hello +
+// E2EE) on focus. Two minutes is coarser than the once-a-minute floor an
+// intensively throttled background timer gets, so it still fires wherever the
+// platform keeps the page running.
 const KEEPALIVE_INTERVAL_MS = 120_000;
 // After this long hidden, holding the connection open stops being worth the
 // radio wakeups: the keepalive stops and the connection is left to lapse.
@@ -147,20 +143,14 @@ const KEEPALIVE_INTERVAL_MS = 120_000;
 const HIDDEN_KEEPALIVE_MAX_MS = 60 * 60_000;
 // With the keepalive running, a healthy connection is never silent for longer
 // than its cadence plus slack. A longer gap means the page was frozen, and a
-// frozen page cannot have kept its path: the remote side's ICE consent lapses
-// in about thirty seconds and the gateway reaper fires at five minutes. So a
-// stale connection is a corpse, and probing it only delays the dial.
+// frozen page cannot have kept its socket. So a stale connection is a corpse,
+// and probing it only delays the dial.
 //
 // The slack has to cover an intensively throttled hidden tab, where a
 // two-minute interval can drift onto the next once-a-minute wakeup and the
 // reply still has to arrive: three minutes is boundary-tight and would
-// occasionally redial a healthy connection. Four still sits a full minute
-// under the reaper, so nothing a live connection does can reach it.
+// occasionally redial a healthy connection.
 const FRESH_PROOF_MS = 240_000;
-// Gateway-relayed traffic is metered project bandwidth. Cap scrollback while
-// honoring the user's refresh rate; acknowledged deltas keep idle frames off
-// the wire and make the selected cadence affordable during normal output.
-const RELAYED_HISTORY_LINES = 1_000;
 const INVENTORY_REQUIRED_COMMANDS: Record<string, true> = {
   answer_question: true,
   navigate_question: true,
@@ -642,12 +632,6 @@ class RelayStore {
     this.emitConnections();
   }
   private relayForSetup(relays: RelayConfig[], setup: Omit<RelayConfig, 'id'>): RelayConfig | undefined {
-    if (setup.transport === 'hybrid') {
-      const gateways = setup.gatewayUrls ?? [setup.gatewayUrl ?? ''];
-      return relays.find((relay) => relay.transport === 'hybrid'
-        && relay.label === setup.label
-        && (relay.gatewayUrls ?? [relay.gatewayUrl ?? '']).some((gateway) => gateways.includes(gateway)));
-    }
     return relays.find((relay) => relay.url === setup.url);
   }
   private shouldSaveInvitation(relayId: string, invitation: Omit<RelayInvitation, 'kind'>): boolean {
@@ -714,12 +698,9 @@ class RelayStore {
 
   addRelay(input: Partial<RelayConfig>): void {
     const next = normalizeRelayConfig(input);
-    // A hybrid relay is addressed by its gateway, not by a relay URL.
-    if (!next.url && !next.gatewayUrl) return;
+    if (!next.url) return;
     const relays = get(this.relayConfigs);
-    const existing = relays.find((relay) => (next.url
-      ? relay.url === next.url
-      : relay.gatewayUrl === next.gatewayUrl && relay.token === next.token));
+    const existing = relays.find((relay) => relay.url === next.url);
     // Re-adding or editing an entry must not forget that this relay was paired:
     // the flag is what keeps a credential-less invitation relay off the
     // plaintext path.
@@ -845,7 +826,6 @@ class RelayStore {
       transport: null,
       status: 'connecting',
       path: '',
-      activeGatewayUrl: '',
       reconnectTimer: null,
       healthTimer: null,
       updateRestartTimer: null,
@@ -872,7 +852,6 @@ class RelayStore {
       releaseVersion: '',
       revision: '',
       update: normalizeRelayUpdate(null),
-      appDeploy: normalizeAppDeployment(null),
       inventory: normalizeAgentInventory(null),
       pushStatus: '',
       vapidPublicKey: '',
@@ -921,9 +900,6 @@ class RelayStore {
     if (status === 'connected') {
       const previousPath = connection.path;
       connection.path = detail?.path || connection.transport?.kind || 'websocket';
-      // Which candidate answered matters with a list: the app names it rather
-      // than the configured head, which may be a gateway that was skipped.
-      connection.activeGatewayUrl = connection.path === 'websocket' ? '' : detail?.gatewayUrl || '';
       this.markConnectionReady(relay.id, connection);
       if (!previousPath) {
         // First ready of a fresh session: the relay dropped its watches with
@@ -934,9 +910,6 @@ class RelayStore {
           if (watched.relay_id === relay.id) this.readPane(watched);
         }
       }
-      // A path switch changes the relayed-fidelity budget, so panes have to be
-      // rewatched at the interval the new path can afford.
-      if (previousPath && previousPath !== connection.path) this.restartPaneWatches();
       return;
     }
     if (status === 'connecting') {
@@ -949,7 +922,7 @@ class RelayStore {
     connection.status = 'disconnected';
     this.rejectPendingOperations(relay.id, detail?.reason || 'Relay disconnected');
     // The relay refuses this device's credential. Keep it until a confirmed,
-    // newer invitation replaces it: gateway close reasons are not authenticated.
+    // newer invitation replaces it: close reasons are not authenticated.
     if (detail?.code === 'device_unauthorized') {
       clearConversationPreviewsForRelay(relay.id);
       connection.authRejected = true;
@@ -961,11 +934,9 @@ class RelayStore {
       return;
     }
     this.emitConnections();
-    // A fatal close would previously never retry, which stranded phones until
-    // a manual reload. `unknown_relay` is a restarting relay nine times out of
-    // ten — its registration lapses during every update — so it keeps the
-    // normal cadence; every other fatal failure retries at the slowest one.
-    const slow = detail?.fatal && detail.code !== 'unknown_relay';
+    // A fatal close cannot succeed on retry with the same configuration, so
+    // it retries at the slowest cadence instead of the normal one.
+    const slow = detail?.fatal;
     this.scheduleReconnect(relay, connection, slow ? RECONNECT_MAX_DELAY_MS : 0);
   }
 
@@ -1017,45 +988,6 @@ class RelayStore {
       }
       if (connection.status === 'disconnected') this.connectRelay(connection.relay);
     }
-  }
-
-  /**
-   * Bridge-window migration. A relay reached over its legacy WSS URL announces
-   * that it also speaks the hybrid transport; the app records its selected
-   * gateway first and the remaining cold fallbacks. The legacy relay URL is
-   * kept, and the live connection is never interrupted — no QR re-scan or
-   * reconnect merely because the relay selected a different gateway.
-   */
-  private adoptHybridDescriptor(connection: RelayConnection, descriptor: unknown): void {
-    if (!descriptor || typeof descriptor !== 'object') return;
-    const advertised = descriptor as Record<string, unknown>;
-    const gatewayUrl = String(advertised.gateway_url || '').trim();
-    if (!gatewayUrl.startsWith('wss://') && !gatewayUrl.startsWith('ws://')) return;
-    connection.gatewayVersion = String(advertised.gateway_version || '').slice(0, 32);
-    connection.gatewayAvailableVersion = String(
-      advertised.gateway_available_version || connection.gatewayAvailableVersion || '',
-    ).slice(0, 32);
-    const gatewayUrls = Array.isArray(advertised.gateway_urls)
-      ? advertised.gateway_urls as string[]
-      : [];
-    const relay = connection.relay;
-    const upgraded = normalizeRelayConfig({
-      ...relay,
-      transport: 'hybrid',
-      gatewayUrl,
-      gatewayUrls,
-    });
-    const currentGateways = relay.gatewayUrls ?? (relay.gatewayUrl ? [relay.gatewayUrl] : []);
-    const nextGateways = upgraded.gatewayUrls ?? (upgraded.gatewayUrl ? [upgraded.gatewayUrl] : []);
-    if (
-      relay.transport === 'hybrid'
-      && relay.gatewayUrl === upgraded.gatewayUrl
-      && currentGateways.join() === nextGateways.join()
-    ) return;
-    connection.relay = upgraded;
-    const relays = get(this.relayConfigs).map((entry) => (entry.id === relay.id ? upgraded : entry));
-    this.relayConfigs.set(relays);
-    saveRelayConfigs(relays);
   }
 
   disconnectRelay(id: string): void {
@@ -1174,8 +1106,8 @@ class RelayStore {
    * Sends one proof-of-life frame per connected relay and arms the health
    * timer for the reply. `refresh_agents` is the ping: every deployed relay
    * answers it with a small inventory snapshot, the reply doubles as the
-   * health signal, and traffic in either direction resets the gateway's idle
-   * clock. A dedicated ping type would need protocol versioning and
+   * health signal, and traffic in either direction keeps the connection fresh.
+   * A dedicated ping type would need protocol versioning and
    * capability gating to save a handful of bytes every two minutes.
    */
   private sendKeepalive(): void {
@@ -1291,16 +1223,13 @@ class RelayStore {
         connection.revision,
       );
       observeAppUpstreamVersion(connection.update.upstream_version);
-      connection.gatewayAvailableVersion = connection.update.available_version || connection.releaseVersion;
       this.syncUpdateRestartReconnect(relayId, connection);
       connection.herdrStatus = normalizeHerdrStatus(message.herdr_status);
-      connection.appDeploy = normalizeAppDeployment(message.app_deploy);
       connection.inventory = normalizeAgentInventory(message.inventory, 'ready');
       connection.capabilities = Array.isArray(message.capabilities) ? message.capabilities.filter(Boolean) : [];
       connection.speechLanguages = (Array.isArray(message.speech_languages) ? message.speech_languages : [])
         .filter(isSpeechLanguage);
       adoptRelaySpeech(connection.speechLanguages);
-      this.adoptHybridDescriptor(connection, message.hybrid);
       const attentionCapable = connection.capabilities.includes('attention_classification');
       this.agentsValue = this.agentsValue.map((agent) =>
         agent.relay_id === relayId ? normalizeAgentAttention(agent, attentionCapable) : agent,
@@ -1355,17 +1284,9 @@ class RelayStore {
       );
       observeAppUpstreamVersion(connection.update.upstream_version);
       this.syncUpdateRestartReconnect(relayId, connection);
-      if (connection.update.available_version) {
-        connection.gatewayAvailableVersion = connection.update.available_version;
-      }
       if (['failed', 'rolled_back'].includes(connection.update.state)) {
         clearPendingRelayUpdate(relayId);
       }
-      this.emitConnections();
-      return;
-    }
-    if (message.type === 'app_deploy_status' && connection) {
-      connection.appDeploy = normalizeAppDeployment(message.app_deploy);
       this.emitConnections();
       return;
     }
@@ -1889,7 +1810,6 @@ class RelayStore {
     }
     // Resolved before the relay mints anything, so a failure here leaves no
     // orphaned one-use invitation behind.
-    const rendezvous = relay.url ? null : await gatewayRendezvous(relay);
     const result = await this.sendCommand(intent.relayId, {
       type: 'create_device_invitation',
       name: intent.name,
@@ -1914,15 +1834,7 @@ class RelayStore {
       invite_expires: String(expiresAt),
       label: relay.label,
     });
-    if (rendezvous) {
-      // The invited device reaches this computer through its gateways with
-      // the derived rendezvous, never with the relay key itself.
-      params.set('gateways', (relay.gatewayUrls ?? [relay.gatewayUrl ?? '']).join(','));
-      params.set('relay_id', rendezvous.relayId);
-      params.set('rendezvous', rendezvous.rendezvousKey);
-    } else {
-      params.set('relay', relay.url);
-    }
+    params.set('relay', relay.url);
     const link = new URL(location.href);
     link.hash = params.toString();
     return link.toString();
@@ -2200,7 +2112,6 @@ class RelayStore {
         type: 'install_update',
         expected_version: update.available_version,
         expected_revision: update.target_revision,
-        expected_origin: location.origin,
       }, 30_000, true);
       if (result.data?.update && connection === this.connectionsValue.get(relayId)) {
         connection.update = normalizeRelayUpdate(
@@ -2228,26 +2139,6 @@ class RelayStore {
     }
   }
 
-
-  async deployAppUpdate(relayId: string, expectedVersion: string): Promise<void> {
-    const connection = this.connectionsValue.get(relayId);
-    if (!connection?.capabilities.includes('app_deploy') || !connection.appDeploy.configured) {
-      throw new CommandError(connection?.appDeploy.reason || 'This relay cannot deploy the phone app');
-    }
-    if (!connection.appDeploy.revision || connection.releaseVersion !== expectedVersion) {
-      throw new CommandError('Update this deployment relay to the upstream release first');
-    }
-    const result = await this.sendCommand(relayId, {
-      type: 'deploy_app_update',
-      expected_version: connection.releaseVersion,
-      expected_revision: connection.appDeploy.revision,
-      expected_origin: location.origin,
-    }, 30_000);
-    if (result.data?.app_deploy && connection === this.connectionsValue.get(relayId)) {
-      connection.appDeploy = normalizeAppDeployment(result.data.app_deploy);
-      this.emitConnections();
-    }
-  }
 
   private handleActionReceipt(relayId: string, message: Record<string, unknown>): void {
     const receipt = parseActionReceipt(message);
@@ -2434,16 +2325,11 @@ class RelayStore {
     return normalizeConversationPage(result.data);
   }
 
-  /**
-   * Terminal history the active path can afford. Gateway-relayed traffic is
-   * metered project bandwidth, so it caps scrollback; every path honors the
-   * user's selected refresh interval.
-   */
-  private paneBudget(relayId: string): { lines: number; intervalMs: number } {
+  /** Terminal history and cadence the user selected for pane reads. */
+  private paneBudget(): { lines: number; intervalMs: number } {
     const lines = get(terminalHistoryLines);
     const intervalMs = get(terminalRefreshInterval);
-    if (this.connectionsValue.get(relayId)?.path !== 'gateway') return { lines, intervalMs };
-    return { lines: Math.min(lines, RELAYED_HISTORY_LINES), intervalMs };
+    return { lines, intervalMs };
   }
 
   readPane(agent: Agent, force = false): void {
@@ -2457,7 +2343,7 @@ class RelayStore {
     const sent = this.sendRaw(agent.relay_id, {
       type: 'read_pane',
       pane_id: agent.raw_pane_id,
-      lines: this.paneBudget(agent.relay_id).lines,
+      lines: this.paneBudget().lines,
       format: 'ansi',
       content_fingerprint: force ? '' : this.paneContentFingerprints.get(agent.pane_id) || '',
       ...identity,
@@ -2499,7 +2385,7 @@ class RelayStore {
     const identity = this.agentTargetPayload(agent);
     const readKey = identity && targetStoreKey(identity.target);
     if (!contentFingerprint || !identity || !readKey || this.pendingPaneReads.has(readKey)) return;
-    const budget = this.paneBudget(agent.relay_id);
+    const budget = this.paneBudget();
     const sent = this.sendRaw(agent.relay_id, {
       type: 'watch_pane',
       pane_id: agent.raw_pane_id,
@@ -3101,13 +2987,7 @@ function sameConnectionSnapshot(emitted: RelayConnection, live: RelayConnection)
 }
 
 function relayConnectionIdentityChanged(before: RelayConfig, after: RelayConfig): boolean {
-  return before.url !== after.url
-    || before.token !== after.token
-    || before.transport !== after.transport
-    || before.gatewayUrl !== after.gatewayUrl
-    || (before.gatewayUrls || []).join('\u0000') !== (after.gatewayUrls || []).join('\u0000')
-    || before.gatewayRelayId !== after.gatewayRelayId
-    || before.rendezvousKey !== after.rendezvousKey;
+  return before.url !== after.url || before.token !== after.token;
 }
 
 function applyPaneDelta(previous: string, value: unknown): string | null {

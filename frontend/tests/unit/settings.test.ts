@@ -10,24 +10,8 @@ import {
   TERMINAL_REFRESH_KEY,
 } from '$lib/config';
 import { relayStore } from '$lib/store';
-import type { RelayTransport, TransportHandlers, TransportStatus, TransportStatusDetail } from '$lib/transports';
-import type { RelayConfig } from '$lib/types';
 import { appUpdateStatus, MANAGED_UPDATE_COMMAND } from '$lib/updates';
 import { defaultAgentView, paneAgentViewOverrides } from '$lib/preferences';
-
-type TransportFactory = (relay: RelayConfig, handlers: TransportHandlers) => RelayTransport;
-
-/** Lets one test drive a relayed or direct path the mock socket cannot produce. */
-const transportHijack = vi.hoisted(() => ({ current: null as TransportFactory | null }));
-
-vi.mock('$lib/transports', async (importOriginal) => {
-  const actual = await importOriginal() as { createRelayTransport: TransportFactory };
-  return {
-    ...actual,
-    createRelayTransport: (relay: RelayConfig, handlers: TransportHandlers) =>
-      (transportHijack.current ?? actual.createRelayTransport)(relay, handlers),
-  };
-});
 
 class MockWebSocket {
   static OPEN = 1;
@@ -58,7 +42,6 @@ describe('settings relay status', () => {
   const serviceWorkerDescriptor = Object.getOwnPropertyDescriptor(navigator, 'serviceWorker');
 
   beforeEach(() => {
-    transportHijack.current = null;
     MockWebSocket.instances = [];
     vi.stubGlobal('WebSocket', MockWebSocket);
     vi.stubGlobal('Notification', { permission: 'granted', requestPermission: vi.fn().mockResolvedValue('granted') });
@@ -83,7 +66,6 @@ describe('settings relay status', () => {
   });
 
   afterEach(() => {
-    transportHijack.current = null;
     relayStore.destroy();
     relayStore.relayConfigs.set([]);
     defaultAgentView.set('terminal');
@@ -221,69 +203,7 @@ describe('settings relay status', () => {
     },
   );
 
-  it('shows every potential gateway in priority order', () => {
-    relayStore.destroy();
-    relayStore.relayConfigs.set([]);
-    relayStore.addRelay({
-      label: 'Fedora',
-      url: '',
-      token: '0123456789abcdef0123456789abcdef',
-      transport: 'hybrid',
-      gatewayUrl: 'wss://own.example.test',
-      gatewayUrls: [
-        'wss://own.example.test',
-        'wss://community-a.example.test',
-        'wss://community-b.example.test',
-      ],
-    });
-
-    render(SettingsView);
-
-    const candidates = screen.getByRole('list', { name: 'Gateway candidates for Fedora' });
-    expect(within(candidates).getAllByRole('listitem').map((item) => item.textContent)).toEqual([
-      'wss://own.example.test',
-      'wss://community-a.example.test',
-      'wss://community-b.example.test',
-    ]);
-  });
-
-  it('names the gateway carrying each relay, and the direct path that replaces it', async () => {
-    let report: (status: TransportStatus, detail?: TransportStatusDetail) => void = () => {};
-    let deliver: (message: Record<string, unknown>) => void = () => {};
-    transportHijack.current = (_relay, handlers) => ({
-      kind: 'gateway',
-      connect: () => {
-        report = handlers.onStatus;
-        deliver = handlers.onMessage;
-        handlers.onStatus('connecting');
-      },
-      send: () => true,
-      close: () => {},
-    });
-    relayStore.destroy();
-    relayStore.relayConfigs.set([]);
-    relayStore.addRelay({
-      label: 'Fedora',
-      url: '',
-      token: '0123456789abcdef0123456789abcdef',
-      transport: 'hybrid',
-      gatewayUrl: 'wss://own.example.test',
-      gatewayUrls: ['wss://own.example.test', 'wss://community-a.example.test'],
-    });
-    render(SettingsView);
-
-    // The configured head was skipped, so the list order is not the answer to
-    // "which gateway am I on": the live session names itself.
-    report('connected', { path: 'gateway', gatewayUrl: 'wss://community-a.example.test' });
-    deliver({ type: 'push_config', protocol: 3, capabilities: [], agent_profiles: [] });
-
-    expect(await screen.findByText('Connection: gateway community-a.example.test')).toBeInTheDocument();
-
-    report('connected', { path: 'webrtc', gatewayUrl: 'wss://community-a.example.test' });
-    expect(await screen.findByText('Connection: direct, via community-a.example.test')).toBeInTheDocument();
-  });
-
-  it('names the relay URL when no gateway carries the connection', async () => {
+  it('names the relay URL carrying the connection', async () => {
     render(SettingsView);
     const socket = MockWebSocket.instances[0];
     socket.open();
@@ -291,7 +211,7 @@ describe('settings relay status', () => {
     expect(await screen.findByText('Connection: relay URL fedora.example')).toBeInTheDocument();
   });
 
-  it('shows active and latest gateway versions without regressing to an older upstream', async () => {
+  it('shows the relay release version and an available update', async () => {
     render(SettingsView);
     const socket = MockWebSocket.instances[0];
     socket.open();
@@ -299,39 +219,14 @@ describe('settings relay status', () => {
       type: 'push_config',
       protocol: 3,
       release_version: '0.15.0',
-      capabilities: [],
+      version: 'abc1234',
+      capabilities: ['self_update'],
       agent_profiles: [],
-      update: { state: 'available', available_version: '0.16.0', upstream_version: '0.16.0' },
-      hybrid: {
-        gateway_url: 'wss://own.example.test',
-        gateway_urls: ['wss://own.example.test'],
-        gateway_version: '0.15.0',
-        gateway_revision: 'gateway-revision',
-        gateway_available_version: '0.16.0',
-      },
+      update: { state: 'available', available_version: '0.16.0', upstream_version: '0.16.0', available_revision: 'a'.repeat(12) },
     });
 
-    expect(await screen.findByText('Gateway: 0.15.0 · Latest: 0.16.0')).toBeInTheDocument();
-    socket.server({
-      type: 'update_status',
-      update: { state: 'current', upstream_version: '0.14.0' },
-    });
-    expect(await screen.findByText('Gateway: 0.15.0 · Latest: 0.16.0')).toBeInTheDocument();
-    socket.server({
-      type: 'push_config',
-      protocol: 3,
-      release_version: '0.17.0',
-      capabilities: [],
-      agent_profiles: [],
-      update: { state: 'current', upstream_version: '0.16.0' },
-      hybrid: {
-        gateway_url: 'wss://own.example.test',
-        gateway_urls: ['wss://own.example.test'],
-        gateway_version: '0.17.0',
-        gateway_available_version: '0.17.0',
-      },
-    });
-    expect(await screen.findByText('Gateway: 0.17.0 · Latest: 0.17.0')).toBeInTheDocument();
+    expect(await screen.findByText(/v0\.15\.0/)).toBeInTheDocument();
+    expect(await screen.findByText('Update v0.16.0 available')).toBeInTheDocument();
   });
 
   it('shows the complete one-time update command for an older relay', async () => {
@@ -358,7 +253,7 @@ describe('settings relay status', () => {
     expect(screen.queryByText(/assets \d+/i)).not.toBeInTheDocument();
     expect(screen.getAllByRole('heading', { level: 3 }).at(-1)).toHaveTextContent('About');
   });
-  it('routes a legacy app deployment owner to Update Help before scheduling', async () => {
+  it('routes a relay without self-update support to Update Help before scheduling', async () => {
     const user = userEvent.setup();
     render(SettingsView);
     const socket = MockWebSocket.instances[0];
@@ -367,7 +262,7 @@ describe('settings relay status', () => {
       type: 'push_config',
       protocol: 3,
       release_version: '0.13.2',
-      capabilities: ['self_update', 'app_deploy'],
+      capabilities: [],
       agent_profiles: [],
       update: {
         state: 'available',
@@ -376,14 +271,6 @@ describe('settings relay status', () => {
         available_revision: 'f'.repeat(12),
         target_revision: 'f'.repeat(40),
         can_install: true,
-      },
-      app_deploy: {
-        configured: true,
-        origin: location.origin,
-        project: 'herdr-app',
-        branch: 'main',
-        revision: 'abc1234',
-        state: 'idle',
       },
     });
 
@@ -562,8 +449,7 @@ describe('settings relay status', () => {
     });
   });
 
-  it('confirms a separate app deployment through its authorized relay', async () => {
-    const user = userEvent.setup();
+  it('explains that a relay-hosted app updates with the relay serving it', async () => {
     appUpdateStatus.set({
       state: 'deployment-required',
       currentVersion: APP_VERSION,
@@ -583,65 +469,15 @@ describe('settings relay status', () => {
       protocol: 3,
       release_version: '9.0.0',
       revision: 'abc123',
-      capabilities: ['self_update', 'app_deploy'],
+      capabilities: ['self_update'],
       agent_profiles: [],
-      app_deploy: {
-        configured: true,
-        origin: location.origin,
-        project: 'herdr-app',
-        branch: 'main',
-        revision: 'f'.repeat(40),
-        state: 'idle',
-      },
     });
 
-    await user.click(await screen.findByRole('button', { name: 'Update Herdr' }));
-    const dialog = screen.getByRole('dialog', { name: 'Update Herdr' });
-    expect(dialog).toHaveTextContent('Publish the phone app from Fedora');
-    await user.click(within(dialog).getByRole('button', { name: 'Start Update' }));
-    const command = socket.sent.map((payload) => JSON.parse(payload))
-      .find((message) => message.type === 'deploy_app_update');
-
-    expect(command).toMatchObject({
-      expected_version: '9.0.0',
-      expected_revision: 'f'.repeat(40),
-      expected_origin: location.origin,
-    });
-    socket.server({
-      type: 'command_result',
-      request_id: command.request_id,
-      ok: true,
-      phase: 'scheduled',
-      data: {
-        app_deploy: {
-          configured: true,
-          origin: location.origin,
-          project: 'herdr-app',
-          branch: 'main',
-          revision: 'f'.repeat(40),
-          state: 'scheduled',
-          target_version: '9.0.0',
-        },
-      },
-    });
-    const publishing = /Publishing v9\.0\.0 from Fedora and waiting for this app origin to update\. This can take up to two minutes\./;
-    expect(await screen.findByText(publishing)).toBeInTheDocument();
-
-    socket.server({
-      type: 'app_deploy_status',
-      app_deploy: {
-        configured: true,
-        origin: location.origin,
-        project: 'herdr-app',
-        branch: 'main',
-        revision: 'f'.repeat(40),
-        state: 'deploying',
-        target_version: '9.0.0',
-      },
-    });
-    await waitFor(() => expect(screen.getByText(publishing)).toBeInTheDocument());
+    expect(await screen.findByText(/this app origin still serves/)).toBeInTheDocument();
+    expect(screen.getByText(/Update the relay that hosts this origin/)).toBeInTheDocument();
+    expect(socket.sent.map((payload) => JSON.parse(payload)).some((message) => message.type === 'deploy_app_update')).toBe(false);
   });
-  it('deploys the owner app before updating its relay', async () => {
+  it('updates the relay hosting this app origin', async () => {
     const user = userEvent.setup();
     appUpdateStatus.set({
       state: 'deployment-required',
@@ -662,7 +498,7 @@ describe('settings relay status', () => {
       protocol: 3,
       release_version: '8.0.0',
       revision: 'abc123',
-      capabilities: ['self_update', 'app_deploy'],
+      capabilities: ['self_update'],
       agent_profiles: [],
       update: {
         state: 'available',
@@ -674,19 +510,11 @@ describe('settings relay status', () => {
         can_install: true,
         mode: 'plugin',
       },
-      app_deploy: {
-        configured: true,
-        origin: location.origin,
-        project: 'herdr-app',
-        branch: 'main',
-        revision: 'abc123',
-        state: 'idle',
-      },
     });
 
-    await user.click(await screen.findByRole('button', { name: 'Update Herdr' }));
-    const dialog = screen.getByRole('dialog', { name: 'Update Herdr' });
-    expect(dialog).toHaveTextContent('Publish the phone app first, then update Fedora');
+    await user.click(await screen.findByRole('button', { name: 'Update Relays' }));
+    const dialog = screen.getByRole('dialog', { name: 'Update Relays' });
+    expect(dialog).toHaveTextContent('Update Fedora first');
     await user.click(within(dialog).getByRole('button', { name: 'Start Update' }));
     const commands = socket.sent.map((payload) => JSON.parse(payload));
     const command = commands.find((message) => message.type === 'install_update');
@@ -694,9 +522,7 @@ describe('settings relay status', () => {
     expect(command).toMatchObject({
       expected_version: '9.0.0',
       expected_revision: 'f'.repeat(40),
-      expected_origin: location.origin,
     });
-    expect(commands.some((message) => message.type === 'deploy_app_update')).toBe(false);
   });
 
 });

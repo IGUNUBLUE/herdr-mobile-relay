@@ -1,4 +1,3 @@
-import { canRendezvous, RELAY_ID_LENGTH } from './gateway-credentials';
 import type { RelayConfig } from './types';
 
 export const RELAYS_KEY = 'lerdr_relays';
@@ -113,12 +112,8 @@ export function relayLabelFromUrl(url: string): string {
   }
 }
 
-export function makeRelayId(label: string, url: string, gatewayUrl = '', gatewayRelayId = ''): string {
-  // A hybrid relay has no URL of its own, so its identity is the gateway it
-  // answers on plus the label from its setup link. An invited entry also has
-  // the computer's rendezvous id, which keeps two same-named computers apart.
-  const target = url || gatewayUrl;
-  return `${label || relayLabelFromUrl(target)}-${target}${gatewayRelayId ? `-${gatewayRelayId}` : ''}`
+export function makeRelayId(label: string, url: string): string {
+  return `${label || relayLabelFromUrl(url)}-${url}`
     .toLowerCase()
     .replace(/^wss?:\/\//, '')
     .replace(/[^a-z0-9]+/g, '-')
@@ -150,35 +145,11 @@ function safeSocketOrigin(value: string, pageProtocol: string): string | null {
   }
 }
 
-/**
- * Ordered gateway origins: unusable entries are dropped and repeats collapsed,
- * so the failover never dials the same address twice in one pass.
- */
-function gatewayOrigins(values: readonly string[], pageProtocol: string): string[] {
-  const origins: string[] = [];
-  for (const value of values) {
-    const origin = safeSocketOrigin(String(value || ''), pageProtocol);
-    if (!origin || origins.includes(origin)) continue;
-    origins.push(origin);
-  }
-  return origins;
-}
-
 export function normalizeRelayConfig(relay: Partial<RelayConfig>): RelayConfig {
   const url = String(relay.url || '').trim();
-  // The primary leads: a relay that advertises a new gateway address while it
-  // is connected is fresher than the list stored beside it, and a config
-  // written before the list existed carries the primary alone. Stored entries
-  // were checked against the page protocol when they were imported, so
-  // re-reading them uses the permissive rule and a LAN gateway paired over
-  // plain http keeps its ws: address.
-  const listed = Array.isArray(relay.gatewayUrls) ? relay.gatewayUrls : [];
-  const gateways = gatewayOrigins([String(relay.gatewayUrl || ''), ...listed], 'http:');
-  const gatewayUrl = gateways[0] || '';
-  const label = String(relay.label || relayLabelFromUrl(url || gatewayUrl)).trim();
-  const rendezvous = isRelayId(relay.gatewayRelayId) && isRendezvousKey(relay.rendezvousKey);
+  const label = String(relay.label || relayLabelFromUrl(url)).trim();
   const config: RelayConfig = {
-    id: relay.id || makeRelayId(label, url, gatewayUrl, rendezvous ? relay.gatewayRelayId : ''),
+    id: relay.id || makeRelayId(label, url),
     label,
     url,
     token: relay.token || '',
@@ -186,24 +157,7 @@ export function normalizeRelayConfig(relay: Partial<RelayConfig>): RelayConfig {
   // Only ever written when true: `loadRelayConfigs` normalizes stored entries
   // on every read, and a legacy entry must round-trip unchanged.
   if (relay.paired) config.paired = true;
-  // Legacy entries keep their exact stored shape: no transport field at all.
-  if (relay.transport !== 'hybrid' && (url || !gatewayUrl)) return config;
-  config.transport = 'hybrid';
-  config.gatewayUrl = gatewayUrl;
-  if (gateways.length) config.gatewayUrls = gateways;
-  if (rendezvous) {
-    config.gatewayRelayId = relay.gatewayRelayId;
-    config.rendezvousKey = relay.rendezvousKey;
-  }
   return config;
-}
-
-function isRelayId(value: unknown): value is string {
-  return typeof value === 'string' && value.length === RELAY_ID_LENGTH && /^[A-Za-z0-9_-]+$/.test(value);
-}
-
-function isRendezvousKey(value: unknown): value is string {
-  return typeof value === 'string' && /^[A-Za-z0-9_-]{43}$/.test(value);
 }
 
 export function loadRelayConfigs(storage: Storage = localStorage): RelayConfig[] {
@@ -214,7 +168,7 @@ export function loadRelayConfigs(storage: Storage = localStorage): RelayConfig[]
       if (Array.isArray(parsed)) {
         return parsed
           .filter((relay): relay is Partial<RelayConfig> => Boolean(
-            relay && typeof relay === 'object' && (relay.url || relay.gatewayUrl),
+            relay && typeof relay === 'object' && relay.url,
           ))
           .map(normalizeRelayConfig);
       }
@@ -245,12 +199,10 @@ export interface QuickSetupInvitation {
 
 /**
  * An invitation must tell the invited device where the computer is: its
- * direct relay URL, or the gateway rendezvous this device can derive from the
- * relay key or received in its own invitation.
+ * direct relay URL.
  */
 export function canInviteFrom(relay: RelayConfig): boolean {
-  if (relay.url) return true;
-  return relay.transport === 'hybrid' && canRendezvous(relay);
+  return Boolean(relay.url);
 }
 
 export function quickSetupInvitation(locationValue: Pick<Location, 'hash'>): QuickSetupInvitation | null {
@@ -279,26 +231,9 @@ export function quickSetupConfig(locationValue: Pick<Location, 'hash' | 'protoco
   if (token.length < 16 || token.length > 512) return null;
   if (!['http:', 'https:'].includes(locationValue.protocol)) return null;
   const label = (params.get('label') || 'This computer').trim().slice(0, 48) || 'This computer';
-  const configuredGateways = params.get('gateways');
-  // `gateway=` was never part of a public phone-app release. Reject it rather
-  // than silently treating an incomplete gateway link as a direct relay link.
-  if (params.has('gateway')) return null;
-  if (configuredGateways !== null) {
-    // The complete ordered list decides both the primary and every fallback.
-    // The separator stays literal; each entry is percent-encoded on its own.
-    const gatewayUrls = gatewayOrigins(configuredGateways.split(','), locationValue.protocol);
-    if (!gatewayUrls.length) return null;
-    const config: Omit<RelayConfig, 'id'> = {
-      label, url: '', token: invitation ? '' : token, transport: 'hybrid', gatewayUrl: gatewayUrls[0], gatewayUrls,
-    };
-    if (!invitation) return config;
-    // An invited device holds no relay key, so the link must carry what the
-    // gateway challenge needs; without it the entry could never connect.
-    const gatewayRelayId = params.get('relay_id');
-    const rendezvousKey = params.get('rendezvous');
-    if (!isRelayId(gatewayRelayId) || !isRendezvousKey(rendezvousKey)) return null;
-    return { ...config, gatewayRelayId, rendezvousKey };
-  }
+  // `gateway`/`gateways=` links belong to the retired gateway transport.
+  // Reject them rather than silently treating one as a direct relay link.
+  if (params.has('gateway') || params.has('gateways')) return null;
   const configuredRelay = params.get('relay');
   let url = `${locationValue.protocol === 'https:' ? 'wss:' : 'ws:'}//${locationValue.host}`;
   if (configuredRelay) {
@@ -340,40 +275,18 @@ export function importQuickSetup(
   const setup = quickSetupConfig(locationValue);
   if (!setup) return null;
   const invitation = quickSetupInvitation(locationValue);
-  // A shared gateway hosts many computers. A link that names the computer's
-  // rendezvous id is matched on it; a keyed entry made from a setup link has
-  // no id to compare, so its label decides. Any shared entry counts: a relay
-  // that gained a gateway or reordered its list updates its entry instead of
-  // pairing itself a second time.
-  const sameComputer = (relay: RelayConfig): boolean => {
-    if (setup.gatewayRelayId) {
-      return relay.gatewayRelayId
-        ? relay.gatewayRelayId === setup.gatewayRelayId
-        : Boolean(relay.token) && relay.label === setup.label;
-    }
-    return relay.token === setup.token || relay.label === setup.label;
-  };
-  const existing = setup.transport === 'hybrid'
-    ? relays.find((relay) => relay.transport === 'hybrid'
-      && (relay.gatewayUrls ?? [relay.gatewayUrl ?? '']).some((entry) => setup.gatewayUrls?.includes(entry))
-      && sameComputer(relay))
-    // A quick tunnel mints a new hostname on every relay restart, but the
-    // relay's key persists. The same key is the same relay, so the stored
-    // entry - and the device credential enrolled under its id - follows the
-    // relay to its new address instead of pairing a second time and being
-    // refused: the relay's one-use bootstrap invitation is already consumed.
-    : relays.find((relay) => relay.url === setup.url)
-      ?? relays.find((relay) => Boolean(setup.token) && relay.token === setup.token);
+  // The relay's key persists across address changes. The same key is the same
+  // relay, so the stored entry - and the device credential enrolled under its
+  // id - follows the relay to its new address instead of pairing a second time
+  // and being refused: the relay's one-use bootstrap invitation is already
+  // consumed.
+  const existing = relays.find((relay) => relay.url === setup.url)
+    ?? relays.find((relay) => Boolean(setup.token) && relay.token === setup.token);
   const next = normalizeRelayConfig({
     id: existing?.id,
     label: existing?.label || setup.label,
     url: setup.url,
     token: invitation && existing ? existing.token : setup.token,
-    transport: invitation && existing ? existing.transport : setup.transport,
-    gatewayUrl: invitation && existing ? existing.gatewayUrl : setup.gatewayUrl,
-    gatewayUrls: invitation && existing ? existing.gatewayUrls : setup.gatewayUrls,
-    gatewayRelayId: setup.gatewayRelayId ?? existing?.gatewayRelayId,
-    rendezvousKey: setup.rendezvousKey ?? existing?.rendezvousKey,
     // An invitation link is an encrypted pairing, and the entry it creates
     // carries no relay key. Recording that here is the only way to tell such a
     // relay apart from a tokenless one once its credential is gone.

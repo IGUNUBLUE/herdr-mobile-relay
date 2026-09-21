@@ -112,18 +112,13 @@ describe('protocol and setup parsing', () => {
       protocol: 'https:',
       host: 'app.example.com',
     } as Location)).toBeNull();
+    // Gateway-transport links belong to a retired transport: reject them
+    // rather than silently pairing one as a direct relay.
     expect(quickSetupConfig({
       hash: '#setup=0123456789abcdef0123456789abcdef&label=Fedora&gateways=wss%3A%2F%2Fgw.example.com',
       protocol: 'https:',
       host: 'app.example.com',
-    } as Location)).toEqual({
-      label: 'Fedora',
-      url: '',
-      token: '0123456789abcdef0123456789abcdef',
-      transport: 'hybrid',
-      gatewayUrl: 'wss://gw.example.com',
-      gatewayUrls: ['wss://gw.example.com'],
-    });
+    } as Location)).toBeNull();
     expect(quickSetupConfig({
       hash: '#setup=0123456789abcdef0123456789abcdef&gateways=wss%3A%2F%2Fgw.example.com%2Fconnect%3Fkey%3Dleak',
       protocol: 'https:',

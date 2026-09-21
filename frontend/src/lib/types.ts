@@ -80,31 +80,9 @@ export interface AgentInventoryStatus {
 export interface RelayConfig {
   id: string;
   label: string;
-  /** Direct relay WebSocket URL. Empty for gateway-reachable computers. */
+  /** Direct relay WebSocket URL. */
   url: string;
   token: string;
-  /**
-   * Which path reaches this computer. A missing value means the legacy setup:
-   * a plain WSS URL in `url`. `'hybrid'` means the computer is reachable
-   * through `gatewayUrl`, with a direct WebRTC upgrade attempted on top.
-   */
-  transport?: 'websocket' | 'hybrid';
-  /** Preferred gateway address, e.g. `wss://gw.example.com`. Hybrid relays only. */
-  gatewayUrl?: string;
-  /**
-   * Every gateway this computer answers on, most preferred first, and always
-   * starting with `gatewayUrl`. A config stored before the list existed
-   * normalizes to its single primary, so both fields always agree.
-   */
-  gatewayUrls?: string[];
-  /**
-   * Gateway rendezvous for an entry that holds no relay key. Both values are
-   * derived one-way from the relay key by the controller that issued the
-   * invitation, so the invited device can reach the computer through its
-   * gateway without being able to bootstrap-pair with it.
-   */
-  gatewayRelayId?: string;
-  rendezvousKey?: string;
   /**
    * This computer was entered through an encrypted pairing: a device invitation
    * link, or a credential enrolled against it. An invitation-paired entry keeps
@@ -445,16 +423,10 @@ export interface RelayConnectionView {
   relay: RelayConfig;
   status: RelayStatus;
   /**
-   * Physical path currently carrying traffic. `gateway` means the blind WSS
-   * fallback, `webrtc` the direct DataChannel, `websocket` the legacy relay
-   * URL. Empty until the first successful connection.
+   * Physical path currently carrying traffic. Empty until the first
+   * successful connection.
    */
   path: TransportKind | '';
-  /**
-   * Gateway carrying the session, or the one that signalled a direct path.
-   * Empty on the relay-URL path and before the first successful connection.
-   */
-  activeGatewayUrl: string;
   host: string;
   /** The relay user's home directory, so paths print as `~/…`. */
   home: string;
@@ -462,11 +434,7 @@ export interface RelayConnectionView {
   version: string;
   releaseVersion: string;
   revision: string;
-  /** Build version reported by the active gateway through the encrypted relay. */
-  gatewayVersion?: string;
-  gatewayAvailableVersion?: string;
   update: RelayUpdateStatus;
-  appDeploy: AppDeploymentStatus;
   inventory: AgentInventoryStatus;
   capabilities: string[];
   herdrStatus: HerdrStatus;
@@ -503,7 +471,6 @@ export type RelayUpdateState =
   | 'blocked'
   | 'scheduled'
   | 'preparing'
-  | 'deploying_app'
   | 'installing'
   | 'restarting'
   | 'succeeded'
@@ -524,20 +491,6 @@ export interface RelayUpdateStatus {
   can_install: boolean;
   mode: string;
   reason: string;
-  error: string;
-}
-
-export interface AppDeploymentStatus {
-  configured: boolean;
-  origin: string;
-  project: string;
-  branch: string;
-  revision: string;
-  reason: string;
-  state: 'idle' | 'scheduled' | 'deploying' | 'succeeded' | 'failed';
-  target_version: string;
-  target_revision: string;
-  checked_at: number;
   error: string;
 }
 

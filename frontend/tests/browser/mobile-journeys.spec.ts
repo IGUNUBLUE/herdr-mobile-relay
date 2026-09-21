@@ -1102,7 +1102,6 @@ test('keeps update controls steady while app and relay checks are in flight', as
 
 test('confirms and tracks one relay update through its verified reconnect', async ({ page }) => {
   await boot(page, [fedora]);
-  const origin = new URL(page.url()).origin;
   await expect.poll(() => socketCount(page)).toBe(1);
   await handshake(page, 0, {
     release_version: '0.7.0',
@@ -1137,7 +1136,6 @@ test('confirms and tracks one relay update through its verified reconnect', asyn
   expect(install).toMatchObject({
     expected_version: '0.8.0',
     expected_revision: 'f'.repeat(40),
-    expected_origin: origin,
     protocol: 3,
   });
   await server(page, 0, {
@@ -1370,49 +1368,27 @@ test('keeps a failed relay online and offers an explicit close action', async ({
   await expect(progress).toHaveCount(0);
   await expect(page.getByRole('img', { name: 'Fedora relay connected' })).toBeVisible();
 });
-test('offers the one-time Terminal bootstrap instead of retrying a legacy deploy-first failure', async ({ page }) => {
-  const availableUpdate = {
-    state: 'available',
-    current_version: '0.13.1',
-    current_revision: 'abc1234',
-    available_version: APP_RELEASE,
-    available_revision: 'f'.repeat(40),
-    target_revision: 'f'.repeat(40),
-    upstream_version: APP_RELEASE,
-    can_install: true,
-    mode: 'plugin',
-  };
+test('offers the one-time Terminal bootstrap for a relay without self-update', async ({ page }) => {
   await boot(page, [fedora]);
   await expect.poll(() => socketCount(page)).toBe(1);
-  await setAutoCommands(page, true);
   await handshake(page, 0, {
     release_version: '0.13.1',
-    capabilities: ['directory_browser', 'self_update', 'app_deploy'],
-    update: availableUpdate,
-    app_deploy: {
-      configured: false,
-      state: 'idle',
+    capabilities: ['directory_browser'],
+    update: {
+      state: 'available',
+      current_version: '0.13.1',
+      current_revision: 'abc1234',
+      available_version: APP_RELEASE,
+      upstream_version: APP_RELEASE,
+      can_install: false,
     },
   });
 
   await page.getByRole('button', { name: /Settings/ }).click();
-  await page.getByRole('button', { name: 'Update Relays' }).click();
-  await page.getByRole('dialog', { name: 'Update Relays' }).getByRole('button', { name: 'Start Update' }).click();
-  await expect(page.getByRole('dialog', { name: 'Updating Lerdr' })).toBeVisible();
-  await server(page, 0, {
-    type: 'update_status',
-    update: {
-      ...availableUpdate,
-      state: 'failed',
-      error: 'deploy target app before relay: No HTTPS app deployment origin is configured',
-    },
-  });
-
-  const progress = page.getByRole('dialog', { name: 'Update needs attention' });
-  await expect(progress).toContainText('Manual update required');
-  await expect(progress).toContainText('LERDR_NO_AUTO_SETUP=1 herdr plugin install');
-  await expect(progress.getByRole('button', { name: 'Copy Update Command' })).toBeVisible();
-  await expect(progress.getByRole('button', { name: 'Try Again' })).toHaveCount(0);
+  await expect(page.getByText('Manual update required')).toBeVisible();
+  await page.getByRole('button', { name: 'How to update Fedora' }).click();
+  const help = page.getByRole('dialog', { name: 'Update Fedora' });
+  await expect(help).toContainText('LERDR_NO_AUTO_SETUP=1 herdr plugin install');
 });
 
 
@@ -1422,20 +1398,10 @@ test('does not poll the app origin after its deployment target is loaded', async
     if (new URL(request.url()).pathname === '/version.json') versionRequests.push(request.url());
   });
   await boot(page, [fedora]);
-  const origin = new URL(page.url()).origin;
   await expect.poll(() => socketCount(page)).toBe(1);
   await handshake(page, 0, {
     release_version: APP_RELEASE,
-    capabilities: ['directory_browser', 'self_update', 'app_deploy'],
-    app_deploy: {
-      configured: true,
-      origin,
-      project: 'herdr-app',
-      branch: 'main',
-      revision: 'f'.repeat(40),
-      state: 'succeeded',
-      target_version: APP_RELEASE,
-    },
+    capabilities: ['directory_browser', 'self_update'],
   });
   await page.waitForTimeout(300);
   const settledRequestCount = versionRequests.length;
@@ -1445,69 +1411,32 @@ test('does not poll the app origin after its deployment target is loaded', async
   expect(versionRequests).toHaveLength(settledRequestCount);
 });
 
-test('confirms deployment when an authorized relay has the upstream app bundle', async ({ page }) => {
+test('explains that a relay-hosted app updates with its relay', async ({ page }) => {
   await boot(page, [fedora]);
-  const origin = new URL(page.url()).origin;
   await expect.poll(() => socketCount(page)).toBe(1);
   await handshake(page, 0, {
     release_version: '9.0.0',
     revision: 'abc1234',
-    capabilities: ['directory_browser', 'self_update', 'app_deploy'],
+    capabilities: ['directory_browser', 'self_update'],
     update: {
       state: 'current',
       current_version: '9.0.0',
       upstream_version: '9.0.0',
     },
-    app_deploy: {
-      configured: true,
-      origin,
-      project: 'herdr-app',
-      branch: 'main',
-      revision: 'f'.repeat(40),
-      state: 'idle',
-    },
   });
 
   await page.getByRole('button', { name: /Settings/ }).click();
   await expect(page.getByText(`Version 9.0.0 is released, but this app origin still serves ${APP_RELEASE}.`)).toBeVisible();
-  await page.getByRole('button', { name: 'Update Herdr' }).click();
-  const dialog = page.getByRole('dialog', { name: 'Update Herdr' });
-  await expect(dialog).toContainText('Publish the phone app from Fedora');
-  await dialog.getByRole('button', { name: 'Start Update' }).click();
-
-  await expect.poll(async () =>
-    (await commands(page)).some((command) => command.type === 'deploy_app_update')).toBe(true);
-  expect((await commands(page)).find((command) => command.type === 'deploy_app_update')).toMatchObject({
-    expected_version: '9.0.0',
-    expected_revision: 'f'.repeat(40),
-    expected_origin: origin,
-  });
-  const publishing = 'Publishing v9.0.0 from Fedora and waiting for this app origin to update. This can take up to two minutes.';
-  for (const state of ['scheduled', 'deploying']) {
-    await server(page, 0, {
-      type: 'app_deploy_status',
-      app_deploy: {
-        configured: true,
-        origin,
-        project: 'herdr-app',
-        branch: 'main',
-        revision: 'f'.repeat(40),
-        state,
-        target_version: '9.0.0',
-      },
-    });
-    await expect(page.getByText(publishing)).toBeVisible();
-  }
+  await expect(page.getByText('This app is served by a relay. Update the relay that hosts this origin and the app reloads with it.')).toBeVisible();
 });
 
-test('deploys a Pages app before updating its owner relay', async ({ page }) => {
+test('updates the relay hosting this app origin', async ({ page }) => {
   await boot(page, [fedora]);
-  const origin = new URL(page.url()).origin;
   await expect.poll(() => socketCount(page)).toBe(1);
   await handshake(page, 0, {
     release_version: '8.0.0',
     revision: 'abc1234',
-    capabilities: ['directory_browser', 'self_update', 'app_deploy'],
+    capabilities: ['directory_browser', 'self_update'],
     update: {
       state: 'available',
       current_version: '8.0.0',
@@ -1519,20 +1448,12 @@ test('deploys a Pages app before updating its owner relay', async ({ page }) => 
       can_install: true,
       mode: 'plugin',
     },
-    app_deploy: {
-      configured: true,
-      origin,
-      project: 'herdr-app',
-      branch: 'main',
-      revision: 'abc1234',
-      state: 'idle',
-    },
   });
 
   await page.getByRole('button', { name: /Settings/ }).click();
-  await page.getByRole('button', { name: 'Update Herdr' }).click();
-  const dialog = page.getByRole('dialog', { name: 'Update Herdr' });
-  await expect(dialog).toContainText('Publish the phone app first, then update Fedora');
+  await page.getByRole('button', { name: 'Update Relays' }).click();
+  const dialog = page.getByRole('dialog', { name: 'Update Relays' });
+  await expect(dialog).toContainText('Update Fedora first');
   await dialog.getByRole('button', { name: 'Start Update' }).click();
 
   await expect.poll(async () =>
@@ -1540,7 +1461,6 @@ test('deploys a Pages app before updating its owner relay', async ({ page }) => 
   expect((await commands(page)).find((command) => command.type === 'install_update')).toMatchObject({
     expected_version: '9.0.0',
     expected_revision: 'f'.repeat(40),
-    expected_origin: origin,
   });
   expect((await commands(page)).some((command) => command.type === 'deploy_app_update')).toBe(false);
 });

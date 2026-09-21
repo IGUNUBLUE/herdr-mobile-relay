@@ -128,16 +128,11 @@
       .join(' · ');
   }
 
-  const APP_DEPLOY_SETUP_COMMAND = 'herdr plugin action invoke configure-app-deploy --plugin lerdr.events';
-
-
   type SafeUpdateAction =
     | {
-      kind: 'deploy_app' | 'install_relay';
+      kind: 'install_relay';
       relayId: string;
       targetVersion: string;
-      appRelayId: string;
-      phoneAppRequired: boolean;
       phoneTarget: { version: string; assets: number; build: string } | null;
       description: string;
     }
@@ -157,13 +152,6 @@
   const pushPolicies = relayStore.pushPolicies;
   const pushTests = relayStore.pushTests;
   const appUpdate = appUpdateStatus;
-  function appPhoneTarget(version: string) {
-    return {
-      version,
-      assets: $appUpdate.deployedVersion === version ? $appUpdate.deployedAssets : 0,
-      build: $appUpdate.deployedVersion === version ? ($appUpdate.deployedBuild || '') : '',
-    };
-  }
   let previousAppUpdate = $state<AppUpdateStatus | null>(null);
   let checkingUpdates = $state(false);
   const appUpdateChecking = $derived(checkingUpdates || $appUpdate.state === 'checking');
@@ -223,30 +211,8 @@
     && connection.capabilities.includes('speech_voice_management')));
   const manualRow = $derived(relayRows.find(({ relay }) => relay.id === manualRelayId));
   const removalRow = $derived(relayRows.find(({ relay }) => relay.id === removalRelayId));
-  const appDeploymentOwner = $derived(relayRows.find(({ relay, connection }) => (
-    !isReadOnlyRelay(relay.id)
-    && connection?.status === 'connected'
-    && connection.capabilities.includes('app_deploy')
-    && connection.appDeploy.configured
-    && connection.appDeploy.origin === location.origin
-  )));
-  // The owner relay is behind the released app version but can self-update to
-  // exactly that version, so one action can deploy the app before updating it.
-  const ownerUpdateReady = $derived.by(() => {
-    const connection = appDeploymentOwner?.connection;
-    if (!connection
-      || connection.releaseVersion === $appUpdate.upstreamVersion
-      || relayNeedsManualBootstrap(connection)) return false;
-    const update = connection.update;
-    return connection.capabilities.includes('self_update')
-      && update.state === 'available'
-      && update.can_install
-      && Boolean(update.target_revision)
-      && update.available_version === $appUpdate.upstreamVersion;
-  });
   const safeUpdateAction = $derived.by((): SafeUpdateAction | null => {
     if (appUpdateChecking || $appUpdate.state === 'failed') return null;
-    const targetVersion = $appUpdate.upstreamVersion;
     if ($appUpdate.state === 'reload-ready') {
       return {
         kind: 'reload_app',
@@ -259,33 +225,6 @@
         description: `Load the verified phone app v${$appUpdate.deployedVersion}.`,
       };
     }
-    if ($appUpdate.state === 'deployment-required') {
-      const owner = appDeploymentOwner;
-      if (!owner?.connection || !targetVersion) return null;
-      if (owner.connection.releaseVersion === targetVersion
-        && ['scheduled', 'deploying'].includes(owner.connection.appDeploy.state)) return null;
-      if (owner.connection.releaseVersion === targetVersion) {
-        return {
-          kind: 'deploy_app',
-          relayId: owner.relay.id,
-          targetVersion,
-          appRelayId: owner.relay.id,
-          phoneAppRequired: true,
-          phoneTarget: appPhoneTarget(targetVersion),
-          description: `Publish the phone app from ${owner.relay.label}, then continue with any remaining relay updates.`,
-        };
-      }
-      if (!ownerUpdateReady) return null;
-      return {
-        kind: 'install_relay',
-        relayId: owner.relay.id,
-        targetVersion,
-        appRelayId: owner.relay.id,
-        phoneAppRequired: true,
-        phoneTarget: appPhoneTarget(targetVersion),
-        description: `Publish the phone app first, then update ${owner.relay.label} and continue with the remaining relays.`,
-      };
-    }
     const installable = relayRows.filter(({ relay, connection }) => (
       !isReadOnlyRelay(relay.id)
       && connection?.status === 'connected'
@@ -295,14 +234,12 @@
       && connection.update.can_install
       && Boolean(connection.update.target_revision)
     ));
-    const selected = installable.find(({ relay }) => relay.id === appDeploymentOwner?.relay.id) || installable[0];
+    const selected = installable[0];
     if (!selected?.connection) return null;
     return {
       kind: 'install_relay',
       relayId: selected.relay.id,
       targetVersion: selected.connection.update.available_version,
-      appRelayId: '',
-      phoneAppRequired: false,
       phoneTarget: null,
       description: `Update ${selected.relay.label} first, then continue safely with each remaining relay.`,
     };
@@ -365,9 +302,7 @@
 
   function updateActionLabel(action: SafeUpdateAction | null): string {
     if (action?.kind === 'reload_app') return 'Load Update';
-    if (action?.kind === 'install_relay' && !action.appRelayId) return 'Update Relays';
-    if (!action && $appUpdate.state !== 'deployment-required') return 'Update Relays';
-    return 'Update Herdr';
+    return 'Update Relays';
   }
 
   function addRelay(event: SubmitEvent) {
@@ -457,9 +392,6 @@
     }
     if (update.state === 'preparing') {
       return { label: 'Verifying update…', detail: 'Checking release identity and transport compatibility.', warning: true };
-    }
-    if (update.state === 'deploying_app') {
-      return { label: 'Publishing phone app…', detail: 'Waiting for the app origin to serve the verified bundle.', warning: true };
     }
     if (update.state === 'installing') {
       return { label: 'Installing update…', detail: 'The phone connection may briefly disconnect.', warning: true };
@@ -554,22 +486,11 @@
         .map(({ relay }) => relay.id)
         .filter((relayId) => relayId !== action.relayId && !isReadOnlyRelay(relayId)),
     ];
-    beginUpdateProgress(action.targetVersion, relayIds, action.relayId, action.appRelayId, {
-      phoneAppRequired: action.phoneAppRequired,
-      phoneTarget: action.phoneTarget,
-      phoneState: action.phoneAppRequired ? 'publishing' : 'loaded',
-    });
+    beginUpdateProgress(action.targetVersion, relayIds, action.relayId);
     busyRelayId = action.relayId;
     try {
-      if (action.kind === 'deploy_app') {
-        await relayStore.deployAppUpdate(action.relayId, action.targetVersion);
-        relayStore.showToast('Publishing the phone app. This screen will resume after it reloads.');
-      } else {
-        await relayStore.installRelayUpdate(action.relayId);
-        relayStore.showToast(action.appRelayId
-          ? 'Publishing the phone app before safely updating its relay.'
-          : 'Update scheduled. Remaining relays will follow.');
-      }
+      await relayStore.installRelayUpdate(action.relayId);
+      relayStore.showToast('Update scheduled. Remaining relays will follow.');
     } catch (error) {
       relayStore.showToast((error as Error).message, true);
       setUpdateProgressError(action.relayId, error);
@@ -649,15 +570,10 @@
     return url.replace(/^\w+:\/\//, '').split('/')[0];
   }
 
-  /**
-   * Which physical path is carrying this relay right now. A configured gateway
-   * list says what the phone may use; this says what it is using.
-   */
+  /** Which transport is carrying this relay right now. */
   function relayPathLabel(connection: RelayConnectionView | undefined, relay: RelayConfig): string {
     if (!connection || connection.status !== 'connected') return '';
-    if (connection.path === 'websocket') return `relay URL ${originHost(relay.url)}`;
-    const gateway = originHost(connection.activeGatewayUrl || relay.gatewayUrl || '');
-    return connection.path === 'webrtc' ? `direct, via ${gateway}` : `gateway ${gateway}`;
+    return `relay URL ${originHost(relay.url)}`;
   }
 </script>
 
@@ -703,7 +619,6 @@
         {@const update = relayUpdateMeta(connection)}
         {@const manualUpdate = Boolean(connection && relayNeedsManualBootstrap(connection))}
         {@const currentRelay = connection?.relay || relay}
-        {@const gateways = currentRelay.gatewayUrls || []}
         {@const connectionPath = relayPathLabel(connection, currentRelay)}
         {@const herdr = connection?.herdrStatus}
         {@const herdrFeatureWarnings = herdrWarnings(herdr?.features)}
@@ -716,16 +631,7 @@
           <div class="relay-info">
             <strong>{relay.label}</strong>
             {#if connectionPath}<small>Connection: {connectionPath}</small>{/if}
-            {#if gateways.length}
-              <small>Gateway: {connection?.gatewayVersion || 'unknown'} · Latest: {connection?.update.available_version || connection?.gatewayAvailableVersion || connection?.releaseVersion || 'unknown'}</small>
-              <ol aria-label={`Gateway candidates for ${relay.label}`}>
-                {#each gateways as gateway (gateway)}
-                  <li>{gateway}</li>
-                {/each}
-              </ol>
-            {:else}
-              <span>{currentRelay.url}</span>
-            {/if}
+            <span>{currentRelay.url}</span>
             <small>Push: {pushStatusLabel(connection)}</small>
             {#if connection?.authRejected}
               <small class="error" role="alert">
@@ -777,7 +683,7 @@
               <Button
                 variant="secondary"
                 size="sm"
-                disabled={connectionStatus !== 'connected' || busyRelayId === relay.id || ['scheduled', 'preparing', 'deploying_app', 'installing', 'restarting'].includes(connection.update.state)}
+                disabled={connectionStatus !== 'connected' || busyRelayId === relay.id || ['scheduled', 'preparing', 'installing', 'restarting'].includes(connection.update.state)}
                 aria-label={`Check ${relay.label} for updates`}
                 onclick={() => checkRelayUpdate(relay.id)}
               >Check</Button>
@@ -874,7 +780,7 @@
           >{item}</button>
         {/each}
       </fieldset>
-      <p class="hint">Lines kept in the terminal view. Direct connections honor the selected limit; gateway transport caps each read at 1,000 lines to bound relayed traffic. Use Copy or Conversation History for clean response text.</p>
+      <p class="hint">Lines kept in the terminal view. Use Copy or Conversation History for clean response text.</p>
       <fieldset class="choice-grid history-grid refresh-grid">
         <legend>Terminal Refresh</legend>
         {#each TERMINAL_REFRESH_OPTIONS as item (item)}
@@ -1031,28 +937,7 @@
             <p class="warning" role="status">
               Version {appUpdateForLayout.upstreamVersion} is released, but this app origin still serves {appUpdateForLayout.deployedVersion}.
             </p>
-            {#if appDeploymentOwner}
-              {#if ['scheduled', 'preparing', 'deploying_app', 'installing', 'restarting'].includes(appDeploymentOwner.connection?.update.state || '')}
-                <p class="hint" role="status">Publishing v{appUpdateForLayout.upstreamVersion} and waiting for this app origin to update. This can take up to two minutes; the relay remains online.</p>
-              {:else if ['scheduled', 'deploying'].includes(appDeploymentOwner.connection?.appDeploy.state || '')}
-                <p class="hint" role="status">Publishing v{appUpdateForLayout.upstreamVersion} from {appDeploymentOwner.relay.label} and waiting for this app origin to update. This can take up to two minutes.</p>
-              {:else if appDeploymentOwner.connection?.appDeploy.state === 'failed'}
-                <p class="warning" role="status">Deployment failed: {appDeploymentOwner.connection.appDeploy.error}</p>
-              {:else if appDeploymentOwner.connection?.releaseVersion !== appUpdateForLayout.upstreamVersion}
-                {#if appDeploymentOwner.connection && relayNeedsManualBootstrap(appDeploymentOwner.connection)}
-                  <p class="warning" role="status">{appDeploymentOwner.relay.label} needs the one-time Terminal bootstrap shown in Update Help before it can deploy this app version.</p>
-                {:else if ownerUpdateReady}
-                  <p class="hint">{appDeploymentOwner.relay.label} can deploy the app and update to {appUpdateForLayout.upstreamVersion} in one safe step.</p>
-                {:else}
-                  <p class="hint">No installable v{appUpdateForLayout.upstreamVersion} relay update is available from {appDeploymentOwner.relay.label} yet.</p>
-                {/if}
-              {:else}
-                <p class="hint">{appDeploymentOwner.relay.label} is authorized to deploy this app origin.</p>
-              {/if}
-            {:else}
-              <p class="hint">This is a separately hosted app. Configure one relay as its deployment owner:</p>
-              <pre class="update-command"><code>{APP_DEPLOY_SETUP_COMMAND}</code></pre>
-            {/if}
+            <p class="hint">This app is served by a relay. Update the relay that hosts this origin and the app reloads with it.</p>
           {:else if appUpdateForLayout.state === 'checking'}
             <p class="hint" role="status">Checking this app origin and the upstream release…</p>
           {:else if appUpdateForLayout.state === 'failed'}
@@ -1088,7 +973,7 @@
           </Button>
         {/if}
       </div>
-      <p class="hint">Relay-hosted apps update with their relay. A separately hosted Pages app can be deployed only by its configured owner relay.</p>
+      <p class="hint">Relay-hosted apps update with their relay: when the relay serving this origin installs a release, the app reloads on the new bundle.</p>
     </div>
   </SettingsSection>
 </main>
@@ -1099,7 +984,7 @@
   title={updateActionLabel(pendingUpdateAction)}
   description={pendingUpdateAction?.description || 'No safe update path is currently available.'}
 >
-  <p class="hint">Herdr selects the safe order automatically: publish the phone app first when required, then update each relay one at a time while preserving running agents.</p>
+  <p class="hint">Herdr selects the safe order automatically: each relay updates one at a time while preserving running agents, and the app reloads when the relay serving it is ready.</p>
   <div class="dialog-actions">
     <Button disabled={!pendingUpdateAction || Boolean(busyRelayId)} onclick={startSafeUpdate}>
       {pendingUpdateAction?.kind === 'reload_app' ? 'Load Update' : 'Start Update'}

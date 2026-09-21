@@ -22,10 +22,9 @@ const clientKeyInfo = encoder.encode('herdr-e2ee-v2 c2s');
 const serverKeyInfo = encoder.encode('herdr-e2ee-v2 s2c');
 
 /**
- * Encrypted-frame encoding. `json` is the original text envelope spoken by the
- * browser WebSocket path. `binary` prefixes raw ciphertext with a fixed header
- * and is used by the gateway and WebRTC paths, where dropping base64 (+33 %)
- * and the JSON envelope directly reduces relayed bandwidth.
+ * Encrypted-frame encoding. `json` is the text envelope spoken by the browser
+ * WebSocket path. `binary` prefixes raw ciphertext with a fixed header and
+ * drops the base64 (+33 %) and JSON envelope overhead.
  */
 export type E2EECodec = 'json' | 'binary';
 

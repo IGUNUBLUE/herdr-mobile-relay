@@ -95,7 +95,6 @@
   const typedPushOpens = new Set<string>();
   const typedPushTimeouts = new Map<string, ReturnType<typeof setTimeout>>();
   const automaticUpdateChecks = new Set<string>();
-  const awaitedDeployments = new Set<string>();
   let visibilityRevision = $state(0);
   let conversationHistoryComponent = $state<typeof import('$components/ConversationHistory.svelte')['default'] | null>(null);
   let conversationHistoryLoadError = $state(false);
@@ -177,7 +176,7 @@
     let meta = activeAgent ? terminalSecondaryLabel(activeAgent) : '';
     if (activeConnection?.status === 'connected' && activeConnection.path) {
       meta += meta ? ' · ' : '';
-      meta += activeConnection.path === 'webrtc' ? 'p2p' : activeConnection.path === 'gateway' ? 'relayed' : 'ws';
+      meta += 'ws';
     }
     return meta;
   });
@@ -450,32 +449,6 @@
           : null;
         void reloadUpdatedSameOriginApp(pending.version, target);
       }
-    }
-  });
-
-  $effect(() => {
-    for (const connection of $connections.values()) {
-      const deployment = connection.appDeploy;
-      if (
-        connection.status !== 'connected'
-        || deployment.state !== 'succeeded'
-        || deployment.origin !== location.origin
-        || !deployment.target_version
-      ) continue;
-      // A relay announces its last successful deployment forever; without this
-      // guard every store emission would restart the two-minute wait for a
-      // stale target the origin will never serve again.
-      const identity = `${deployment.target_version}:${deployment.target_revision}`;
-      if (awaitedDeployments.has(identity)) continue;
-      awaitedDeployments.add(identity);
-      const target = $appUpdates.deployedVersion === deployment.target_version
-        ? {
-          version: deployment.target_version,
-          assets: $appUpdates.deployedAssets,
-          build: $appUpdates.deployedBuild || '',
-        }
-        : null;
-      void reloadUpdatedSameOriginApp(deployment.target_version, target);
     }
   });
 

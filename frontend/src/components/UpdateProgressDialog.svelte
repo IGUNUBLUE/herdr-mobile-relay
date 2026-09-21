@@ -45,7 +45,6 @@
     'checking',
     'scheduled',
     'preparing',
-    'deploying_app',
     'installing',
     'restarting',
   ]);
@@ -117,8 +116,8 @@
   );
   const complete = $derived(Boolean(totalItems && completedItems === totalItems));
   const focusRow = $derived(rows.find((row) => row.tone === 'active' && row.connection) || null);
-  const focusSteps = $derived(focusRow && $plan ? relaySteps(focusRow, $plan) : []);
-  const focusStepIndex = $derived(focusRow && $plan ? relayStepIndex(focusRow, $plan) : -1);
+  const focusSteps = $derived(focusRow ? relaySteps() : []);
+  const focusStepIndex = $derived(focusRow ? relayStepIndex(focusRow) : -1);
   const title = $derived(failed
     ? 'Update needs attention'
     : complete
@@ -177,7 +176,7 @@
     }
     const clientError = currentPlan.errors[relayId];
     if (clientError) {
-      const manual = Boolean(connection && relayNeedsManualBootstrap(connection, clientError));
+      const manual = Boolean(connection && relayNeedsManualBootstrap(connection));
       return {
         ...base,
         label: manual ? 'Manual update required' : 'Update could not start',
@@ -265,7 +264,6 @@
     if (state === 'checking') return { label: 'Checking release…', detail: 'Looking for the exact verified target.', tone: 'active', score: .05 };
     if (state === 'scheduled') return { label: 'Update scheduled…', detail: 'The background update worker is starting.', tone: 'active', score: .1 };
     if (state === 'preparing') return { label: 'Verifying release…', detail: 'Downloading and checking the signed release bundle.', tone: 'active', score: .25 };
-    if (state === 'deploying_app') return { label: 'Publishing phone app…', detail: 'Waiting for the app origin to serve the verified bundle.', tone: 'active', score: .45 };
     if (state === 'installing') return { label: 'Installing relay…', detail: 'Running agents and saved configuration remain intact.', tone: 'active', score: .65 };
     return { label: 'Restarting relay…', detail: 'The phone connection may briefly disconnect.', tone: 'active', score: .85 };
   }
@@ -284,35 +282,20 @@
     if (currentPlan.phoneState === 'failed' || currentPlan.phoneError) {
       return { label: 'Phone app failed to load', detail: currentPlan.phoneError || 'The new bundle did not acknowledge its expected build identity.', tone: 'danger', score: 0 };
     }
-    if (currentPlan.appRelayId && currentPlan.errors[currentPlan.appRelayId]) {
-      return { label: 'Phone app deployment could not start', detail: currentPlan.errors[currentPlan.appRelayId], tone: 'danger', score: 0 };
+    if (currentApp.deployedVersion === currentPlan.targetVersion) {
+      return { label: 'Loading updated phone app…', detail: 'The verified bundle is live. This page will acknowledge it only after initialization.', tone: 'active', score: .85 };
     }
-    const owner = currentPlan.appRelayId ? currentConnections.get(currentPlan.appRelayId) : undefined;
-    if (owner?.appDeploy.state === 'failed') {
-      return { label: 'Phone app deployment failed', detail: owner.appDeploy.error || 'The public app could not be verified.', tone: 'danger', score: 0 };
-    }
-    if (owner?.update.state === 'failed' && owner.appDeploy.state !== 'succeeded') {
-      return { label: 'Phone app deployment failed', detail: owner.update.error || 'The update stopped before publishing the app.', tone: 'danger', score: 0 };
-    }
-    if (owner?.appDeploy.state === 'succeeded' || currentApp.deployedVersion === currentPlan.targetVersion) {
-      return { label: 'Loading updated phone app…', detail: 'The verified bundle is public. This page will acknowledge it only after initialization.', tone: 'active', score: .85 };
-    }
-    return { label: 'Publishing phone app…', detail: 'The release is being published before the phone can load it.', tone: 'active', score: .4 };
+    return { label: 'Waiting for phone app…', detail: 'The app reloads once the relay serving it finishes its update.', tone: 'active', score: .4 };
   }
 
-  function relaySteps(row: RelayProgressRow, currentPlan: UpdateProgressPlan): string[] {
-    const steps = ['Verify release'];
-    if (currentPlan.appRelayId === row.id) steps.push('Publish phone app');
-    steps.push('Install relay', 'Reconnect');
-    return steps;
+  function relaySteps(): string[] {
+    return ['Verify release', 'Install relay', 'Reconnect'];
   }
 
-  function relayStepIndex(row: RelayProgressRow, currentPlan: UpdateProgressPlan): number {
+  function relayStepIndex(row: RelayProgressRow): number {
     const state = row.connection?.update.state;
-    const hasAppStep = currentPlan.appRelayId === row.id;
-    if (state === 'deploying_app') return hasAppStep ? 1 : 0;
-    if (state === 'installing') return hasAppStep ? 2 : 1;
-    if (state === 'restarting' || row.connection?.status !== 'connected') return hasAppStep ? 3 : 2;
+    if (state === 'installing') return 1;
+    if (state === 'restarting' || row.connection?.status !== 'connected') return 2;
     return 0;
   }
 
