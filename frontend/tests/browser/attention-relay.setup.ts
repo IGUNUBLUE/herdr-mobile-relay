@@ -270,6 +270,9 @@ export default async function setup() {
   };
   const socketServer = createServer((connection) => {
     connection.setEncoding('utf8');
+    // The relay may hang up before the fixture finishes writing its response;
+    // without a handler the EPIPE error event would crash the test process.
+    connection.on('error', () => {});
     let pending = '';
     const handle = (line: string) => {
       let request: { id?: string; method?: string; params?: Record<string, unknown> };
