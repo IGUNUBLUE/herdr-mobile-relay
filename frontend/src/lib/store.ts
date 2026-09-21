@@ -1975,7 +1975,7 @@ class RelayStore {
   }
 
 
-  private agentTargetPayload(agent: Agent): { target: FrontendTargetRef; server_session_id: string } | null {
+  private agentTargetPayload(agent: Agent | null | undefined): { target: FrontendTargetRef; server_session_id: string } | null {
     const target = targetRefForAgent(agent);
     return target ? { target, server_session_id: target.server_session_id } : null;
   }
