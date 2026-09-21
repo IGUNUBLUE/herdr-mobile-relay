@@ -14,6 +14,14 @@ import (
 
 const defaultPaneWatchInterval = 250 * time.Millisecond
 
+// paneWatchAckTimeout bounds how long a delivered frame may wait for its
+// pane_applied ack. The ack gate keeps deltas ordered, but without a timeout a
+// single lost ack would silence the watch forever — and since acknowledged
+// stays stale, every later delta would fail the client's base-fingerprint
+// check. Expiring the gate resets the chain: the next poll forces a fresh
+// full frame with ack_required, which rebuilds acknowledged on ack.
+const paneWatchAckTimeout = 4 * time.Second
+
 // paneResizeSettleWindow bounds how long after an actual leased-width change
 // pane frames are marked resize_settling. Full-screen agents re-render their
 // transcript on SIGWINCH and can push redrawn rows into the scrollback for a
@@ -26,6 +34,7 @@ type paneWatchFrame struct {
 	frameFingerprint    string
 	classificationAgent string
 	resizeSettling      bool
+	sentAt              time.Time
 }
 
 type paneWatch struct {
@@ -124,6 +133,7 @@ func (s *Server) runPaneWatch(watch *paneWatch, knownFingerprint string) {
 			if message == nil {
 				watch.acknowledged = frame
 			} else {
+				frame.sentAt = time.Now()
 				watch.pending = frame
 			}
 			watch.mu.Unlock()
@@ -158,8 +168,16 @@ func (s *Server) pollPaneWatch(watch *paneWatch) {
 	}
 	watch.mu.Lock()
 	if watch.pending != nil {
-		watch.mu.Unlock()
-		return
+		if time.Since(watch.pending.sentAt) < paneWatchAckTimeout {
+			watch.mu.Unlock()
+			return
+		}
+		// The ack never landed: drop the gate and clear acknowledged plus the
+		// probe fingerprint so the next read emits a full ack_required frame
+		// instead of a delta the client cannot chain onto its stale base.
+		watch.pending = nil
+		watch.acknowledged = nil
+		watch.probeFingerprint = ""
 	}
 	previousProbe := watch.probeFingerprint
 	acknowledged := watch.acknowledged
@@ -198,6 +216,7 @@ func (s *Server) pollPaneWatch(watch *paneWatch) {
 		watch.mu.Unlock()
 		return
 	}
+	frame.sentAt = time.Now()
 	watch.pending = frame
 	watch.mu.Unlock()
 	s.hub.Send(watch.client, message)

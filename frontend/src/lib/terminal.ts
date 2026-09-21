@@ -50,9 +50,21 @@ const TERMINAL_SCHEMES: Record<TerminalScheme, TerminalSchemeSpec> = {
 // state set from the theme preference. Terminal views repaint their cached
 // frame when it changes.
 let scheme = TERMINAL_SCHEMES.dark;
+// Bump on every scheme change so cached rows rendered under the old palette
+// cannot leak into the next paint.
+let schemeVersion = 0;
 
 export function setTerminalScheme(next: TerminalScheme): void {
   scheme = TERMINAL_SCHEMES[next];
+  schemeVersion += 1;
+  terminalRowCache.clear();
+  lineBackgroundCache.clear();
+}
+
+// Lets callers detect a repaint-worthy scheme change without diffing the
+// (lazily built) html blob: rows rendered under an old epoch are stale.
+export function terminalSchemeEpoch(): number {
+  return schemeVersion;
 }
 
 export const TERMINAL_SEPARATOR_TOKEN = '\uE000HERDR_SEPARATOR\uE000';
@@ -363,17 +375,25 @@ const OPEN_CODE_COMPLETED_PATTERN = new RegExp(
 const OPEN_CODE_ACTIVITY_PATTERN = /^\s*(?:┃(?:\s|$)|\+\s|→\s)/u;
 
 export function latestCompletedResponse(content: unknown): string {
-  const lines = String(content ?? '')
-    .replace(/\r/g, '')
-    .split('\n')
-    .map((line) => stripAnsi(trimTerminalChrome(line, true)).replace(/[ \t]+$/u, ''));
-  return latestOpenCodeResponse(lines);
+  const rawLines = String(content ?? '').replace(/\r/g, '').split('\n');
+  // ANSI-stripping every scrollback line each frame was the expensive part:
+  // clean on demand so the backward scans only touch lines until a match.
+  const cleaned = new Array<string>(rawLines.length);
+  const lineAt = (index: number) => {
+    let line = cleaned[index];
+    if (line === undefined) {
+      line = stripAnsi(trimTerminalChrome(rawLines[index], true)).replace(/[ \t]+$/u, '');
+      cleaned[index] = line;
+    }
+    return line;
+  };
+  return latestOpenCodeResponse(rawLines.length, lineAt);
 }
 
-function latestOpenCodeResponse(lines: string[]): string {
+function latestOpenCodeResponse(count: number, lineAt: (index: number) => string): string {
   let end = -1;
-  for (let index = lines.length - 1; index >= 0; index -= 1) {
-    if (OPEN_CODE_COMPLETED_PATTERN.test(lines[index])) {
+  for (let index = count - 1; index >= 0; index -= 1) {
+    if (OPEN_CODE_COMPLETED_PATTERN.test(lineAt(index))) {
       end = index;
       break;
     }
@@ -382,17 +402,19 @@ function latestOpenCodeResponse(lines: string[]): string {
 
   let start = -1;
   for (let index = end - 1; index >= 0; index -= 1) {
-    if (OPEN_CODE_ACTIVITY_PATTERN.test(lines[index])) {
+    if (OPEN_CODE_ACTIVITY_PATTERN.test(lineAt(index))) {
       start = index + 1;
       break;
     }
   }
   if (start < 0) return '';
-  const completionIndent = lines[end].match(/^ */u)?.[0].length || 0;
+  const completionIndent = lineAt(end).match(/^ */u)?.[0].length || 0;
   const completionPrefix = ' '.repeat(completionIndent);
-  const response = lines
-    .slice(start, end)
-    .map((line) => completionPrefix && line.startsWith(completionPrefix) ? line.slice(completionIndent) : line);
+  const response: string[] = [];
+  for (let index = start; index < end; index += 1) {
+    const line = lineAt(index);
+    response.push(completionPrefix && line.startsWith(completionPrefix) ? line.slice(completionIndent) : line);
+  }
   while (response.length && !response.at(-1)?.trim()) response.pop();
   return response.join('\n').trim();
 }
@@ -691,6 +713,18 @@ export function ansiToHtml(
 
 
 export function ansiLineBackground(line: string): string {
+  // Keyed by the line alone: building a composite key would copy the whole
+  // line into a new string per row per frame — pure GC churn on long
+  // scrollback. The epoch lives in the entry so a scheme change stale-misses.
+  const cached = lineBackgroundCache.get(line);
+  if (cached && cached.epoch === schemeVersion) return cached.background;
+  const background = ansiLineBackgroundUncached(line);
+  if (lineBackgroundCache.size >= TERMINAL_ROW_CACHE_LIMIT) trimRowCache(lineBackgroundCache);
+  lineBackgroundCache.set(line, { epoch: schemeVersion, background });
+  return background;
+}
+
+function ansiLineBackgroundUncached(line: string): string {
   let background = '';
   const parts = line.split(/\x1b\[([0-9;]*)m/g);
   for (let index = 0; index < parts.length; index += 1) {
@@ -713,6 +747,21 @@ export function ansiLineBackground(line: string): string {
     }
   }
   return background;
+}
+
+// Both render caches are append-only Maps, so iteration order is insertion
+// order: dropping the oldest quarter keeps the hot tail of scrollback instead
+// of restarting every entry on each full pass.
+const TERMINAL_ROW_CACHE_LIMIT = 8_000;
+const lineBackgroundCache = new Map<string, { epoch: number; background: string }>();
+
+function trimRowCache<T>(cache: Map<string, T>): void {
+  let remaining = Math.ceil(TERMINAL_ROW_CACHE_LIMIT / 4);
+  for (const key of cache.keys()) {
+    cache.delete(key);
+    remaining -= 1;
+    if (remaining <= 0) return;
+  }
 }
 
 export function ansiLineBackgroundIndent(line: string): number {
@@ -894,6 +943,13 @@ function responsiveTerminalGridLine(line: string, maxColumns: number): string {
   return line;
 }
 
+// A frame re-render touches every row, but pane deltas only change a handful
+// of tail lines: cache the finished row so a stable scrollback line costs a
+// string key lookup instead of a grapheme walk, ANSI parse, and HTML build.
+// Keyed by every input that shapes the row, including the line-resolved
+// background (the neighbor fill makes it contextual) and the scheme epoch.
+const terminalRowCache = new Map<string, { variant: string; row: RenderedTerminalRow }>();
+
 export function terminalHtmlRows(
   text: string,
   normalizeLightPalette = false,
@@ -913,6 +969,12 @@ export function terminalHtmlRows(
         separator: true,
       };
     }
+    // Same reasoning as lineBackgroundCache: the variant string is small and
+    // fixed-size, so the only per-row allocation on a cache hit is this key —
+    // the raw line itself is never copied into a lookup key.
+    const variant = `${schemeVersion}\x00${normalizeLightPalette ? 1 : 0}${preserveLineEnds ? 1 : 0}\x00${maxFixedGridColumns}\x00${backgrounds[index] || ''}`;
+    const cached = terminalRowCache.get(line);
+    if (cached && cached.variant === variant) return cached.row;
     const renderedLine = preserveLineEnds
       ? (line.endsWith('\r') ? line.slice(0, -1) : line)
       : trimAnsiLineEnd(line);
@@ -938,7 +1000,7 @@ export function terminalHtmlRows(
     ].filter(Boolean).join(' ');
     const style = background ? ` style="${ansiLineBackgroundStyle(renderedLine, background)}"` : '';
     // ansiToHtml escapes every text segment before it emits controlled span markup.
-    return {
+    const row = {
       html: `<span class="${classes}"${style}>${ansiToHtml(renderedLine, normalizeRow, normalizeDarkText, fixedGrid || wideGrid)}</span>`,
       text: renderedText,
       columns,
@@ -946,6 +1008,9 @@ export function terminalHtmlRows(
       wideGrid,
       separator: false,
     };
+    if (terminalRowCache.size >= TERMINAL_ROW_CACHE_LIMIT) trimRowCache(terminalRowCache);
+    terminalRowCache.set(line, { variant, row });
+    return row;
   });
 }
 
@@ -1006,35 +1071,42 @@ export function renderTerminalContent(
   if (format !== 'ansi') {
     const plainDisplay = display
       .replaceAll(TERMINAL_SEPARATOR_TOKEN, '────────');
+    const plainRows = plainDisplay.split('\n').map((line) => {
+      const columns = terminalTextColumns(line);
+      const boxCell = hasTerminalBoxCell(line);
+      const fixedGrid = preserveLayout
+        && boxCell
+        && (maxFixedGridColumns < 1 || columns <= maxFixedGridColumns);
+      const wideGrid = preserveLayout
+        && boxCell
+        && maxFixedGridColumns >= 1
+        && columns > maxFixedGridColumns;
+      const classes = `ansi-line${fixedGrid ? ' terminal-grid-line' : ''}${wideGrid ? ' terminal-wide-grid' : ''}`;
+      return {
+        html: `<span class="${classes}">${linkifyTerminalText(line)}</span>`,
+        text: line,
+        columns,
+        fixedGrid,
+        wideGrid,
+        separator: false,
+      };
+    });
     return {
       display,
-      html: linkifyTerminalText(plainDisplay),
-      rows: plainDisplay.split('\n').map((line) => {
-        const columns = terminalTextColumns(line);
-        const boxCell = hasTerminalBoxCell(line);
-        const fixedGrid = preserveLayout
-          && boxCell
-          && (maxFixedGridColumns < 1 || columns <= maxFixedGridColumns);
-        const wideGrid = preserveLayout
-          && boxCell
-          && maxFixedGridColumns >= 1
-          && columns > maxFixedGridColumns;
-        const classes = `ansi-line${fixedGrid ? ' terminal-grid-line' : ''}${wideGrid ? ' terminal-wide-grid' : ''}`;
-        return {
-          html: `<span class="${classes}">${linkifyTerminalText(line)}</span>`,
-          text: line,
-          columns,
-          fixedGrid,
-          wideGrid,
-          separator: false,
-        };
-      }),
+      // Lazy: the live view renders rows individually, so the joined blob is
+      // only built when a caller (tests, snapshots) actually reads it.
+      get html() {
+        return linkifyTerminalText(plainDisplay);
+      },
+      rows: plainRows,
     };
   }
   const rows = terminalHtmlRows(display, true, preserveLayout, maxFixedGridColumns);
   return {
     display,
-    html: rows.map((row) => row.html).join(''),
+    get html() {
+      return rows.map((row) => row.html).join('');
+    },
     rows,
   };
 }
