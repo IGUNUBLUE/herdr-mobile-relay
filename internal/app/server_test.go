@@ -1335,6 +1335,7 @@ func TestProductionEventInventoryRecoveryDrainsRefreshAcrossReconnect(t *testing
 	}
 	pollReady := make(chan struct{})
 	pollFailed := make(chan struct{})
+	releaseEnrichment := make(chan struct{})
 	var inventoryCalls atomic.Int32
 	serverDone := make(chan error, 1)
 	go func() {
@@ -1363,13 +1364,20 @@ func TestProductionEventInventoryRecoveryDrainsRefreshAcrossReconnect(t *testing
 				switch request.Method {
 				case "agent.list":
 					call := inventoryCalls.Add(1)
-					if call == 2 {
-						close(pollFailed)
-						serveErr = encoder.Encode(map[string]any{
-							"id":    request.ID,
-							"error": map[string]any{"code": "server_not_running", "message": "Herdr stopped"},
-						})
-						return
+					select {
+					case <-releaseEnrichment:
+						// The event recovery barrier is open; poll normally again.
+					default:
+						if call >= 2 {
+							if call == 2 {
+								close(pollFailed)
+							}
+							serveErr = encoder.Encode(map[string]any{
+								"id":    request.ID,
+								"error": map[string]any{"code": "server_not_running", "message": "Herdr stopped"},
+							})
+							return
+						}
 					}
 					serveErr = encoder.Encode(map[string]any{
 						"id": request.ID,
@@ -1426,9 +1434,10 @@ func TestProductionEventInventoryRecoveryDrainsRefreshAcrossReconnect(t *testing
 		_ = server.hub.Shutdown(ctx)
 	}()
 	server.setInventoryPublisher(ctx)
+	pollCtx, stopPoll := context.WithCancel(ctx)
 	pollDone := make(chan struct{})
 	go func() {
-		server.poller.Run(ctx)
+		server.poller.Run(pollCtx)
 		close(pollDone)
 	}()
 	select {
@@ -1457,7 +1466,6 @@ func TestProductionEventInventoryRecoveryDrainsRefreshAcrossReconnect(t *testing
 	waitCommittedState("ready")
 
 	enteredEnrichment := make(chan struct{})
-	releaseEnrichment := make(chan struct{})
 	var firstEnrichment atomic.Bool
 	server.poller.SetEnrich(func(context.Context, []*coordinator.AgentState) {
 		if !firstEnrichment.CompareAndSwap(false, true) {
@@ -1546,6 +1554,16 @@ func TestProductionEventInventoryRecoveryDrainsRefreshAcrossReconnect(t *testing
 		t.Fatal("production poll did not publish its failure")
 	}
 	waitCommittedState("error")
+	// Stop the reconcile poll before reading the handshake: with the poller
+	// gone, no inventory poll can re-commit "ready" ahead of the blocked event
+	// recovery, so the error snapshot and both post-release batches stay
+	// deterministic.
+	stopPoll()
+	select {
+	case <-pollDone:
+	case <-ctx.Done():
+		t.Fatal("production poll did not stop")
+	}
 	conn := dial()
 	client := <-connected
 	for index := 0; index < 5; index++ {
