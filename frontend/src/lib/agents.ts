@@ -26,18 +26,29 @@ export function agentNeedsInspection(agent: Partial<Agent> | null | undefined): 
   return rawBlocked(agent) && !['approval', 'question', 'chat'].includes(kind);
 }
 
-export function agentStatusGroup(agent: Partial<Agent> | null | undefined): 'attention' | 'blocked' | 'working' | 'done' | 'ready' | 'other' {
-  const status = String(agent?.status || 'unknown').trim().toLowerCase().replace(/[_-]+/g, ' ');
+type AgentStatusGroup = 'attention' | 'blocked' | 'working' | 'done' | 'ready' | 'other';
+
+// Agent objects are immutable by convention — merges always produce new
+// objects — so the group can be cached on the object identity itself.
+const statusGroupCache = new WeakMap<Partial<Agent>, AgentStatusGroup>();
+
+export function agentStatusGroup(agent: Partial<Agent> | null | undefined): AgentStatusGroup {
+  if (!agent || typeof agent !== 'object') return 'other';
+  const cached = statusGroupCache.get(agent);
+  if (cached) return cached;
+  const status = String(agent.status || 'unknown').trim().toLowerCase().replace(/[_-]+/g, ' ');
+  let group: AgentStatusGroup;
   if (status.includes('blocked')) {
     const kind = attentionKind(agent);
-    if (kind === 'approval' || kind === 'question') return 'blocked';
-    if (kind === 'chat') return 'ready';
-    return 'attention';
-  }
-  if (/(working|running|progress|busy)/.test(status)) return 'working';
-  if (/(done|complete|finish|success|unread)/.test(status)) return 'done';
-  if (status === 'idle' || status === 'ready') return 'ready';
-  return 'other';
+    if (kind === 'approval' || kind === 'question') group = 'blocked';
+    else if (kind === 'chat') group = 'ready';
+    else group = 'attention';
+  } else if (/(working|running|progress|busy)/.test(status)) group = 'working';
+  else if (/(done|complete|finish|success|unread)/.test(status)) group = 'done';
+  else if (status === 'idle' || status === 'ready') group = 'ready';
+  else group = 'other';
+  statusGroupCache.set(agent, group);
+  return group;
 }
 
 export function agentStatusTone(agent: Partial<Agent> | null | undefined): 'danger' | 'warning' | 'success' | 'muted' {
@@ -275,7 +286,7 @@ export function mergeAgentDetails(previous: Agent | undefined, next: Agent): Age
   const hasAttentionKind = Object.prototype.hasOwnProperty.call(next, 'attention_kind');
   const hasInteraction = Object.prototype.hasOwnProperty.call(next, 'interaction');
   const hasQuestionLayout = Object.prototype.hasOwnProperty.call(next, 'question_layout');
-  return {
+  const merged: Agent = {
     ...previous,
     ...next,
     tab_id: next.tab_id || previous.tab_id || '',
@@ -294,6 +305,25 @@ export function mergeAgentDetails(previous: Agent | undefined, next: Agent): Age
     interaction: blocked && !hasAttentionKind && !hasInteraction ? previous.interaction : next.interaction,
     question_layout: blocked && !hasAttentionKind && !hasQuestionLayout ? previous.question_layout : next.question_layout,
   };
+  // Snapshots arrive as fresh JSON objects, so nested fields need a value
+  // comparison — otherwise an unchanged agent keeps a new identity and every
+  // keyed row and per-agent cache re-runs on identical data.
+  return mergedAgentEquals(previous, merged) ? previous : merged;
+}
+
+function agentFieldValueEqual(previous: unknown, next: unknown): boolean {
+  if (previous === next) return true;
+  if (typeof previous !== 'object' || previous === null
+    || typeof next !== 'object' || next === null) return false;
+  return JSON.stringify(previous) === JSON.stringify(next);
+}
+
+function mergedAgentEquals(previous: Agent, merged: Agent): boolean {
+  const keys = new Set([...Object.keys(previous), ...Object.keys(merged)]);
+  for (const key of keys) {
+    if (!agentFieldValueEqual(previous[key], merged[key])) return false;
+  }
+  return true;
 }
 
 export function mergeAgentList(

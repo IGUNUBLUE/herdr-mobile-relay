@@ -125,6 +125,10 @@ android-init:
 	cargo tauri android init
 	sed -i 's/manifestPlaceholders\["usesCleartextTraffic"\] = "false"/manifestPlaceholders["usesCleartextTraffic"] = "true"/' \
 	  src-tauri/gen/android/app/build.gradle.kts
+	sed -i 's/isMinifyEnabled = true/isMinifyEnabled = true\n            isShrinkResources = true/' \
+	  src-tauri/gen/android/app/build.gradle.kts
+	sed -i 's/versionName = tauriProperties.getProperty("tauri.android.versionName", "1.0")/versionName = tauriProperties.getProperty("tauri.android.versionName", "1.0")\n        resConfigs("en")/' \
+	  src-tauri/gen/android/app/build.gradle.kts
 	sed -i 's/android:launchMode="singleTask"/android:launchMode="singleTask"\n            android:windowSoftInputMode="adjustResize"/' \
 	  src-tauri/gen/android/app/src/main/AndroidManifest.xml
 

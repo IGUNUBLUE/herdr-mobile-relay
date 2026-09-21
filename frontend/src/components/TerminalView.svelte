@@ -623,7 +623,16 @@
     }).finally(() => {
       if (mounted) slashCatalogLoading = false;
     });
-    const measurePane = () => requestPaneSizeLease(false);
+    // window.resize and visualViewport.resize both fire for rotation and the
+    // on-screen keyboard; coalesce the pair into one measurement per frame.
+    let measurePaneFrame = 0;
+    const measurePane = () => {
+      if (measurePaneFrame) return;
+      measurePaneFrame = requestAnimationFrame(() => {
+        measurePaneFrame = 0;
+        requestPaneSizeLease(false);
+      });
+    };
     const realtimeDeltaEnabled = () => Boolean(
       $connections.get(agent.relay_id)?.capabilities.includes('pane_realtime_delta'),
     );
@@ -694,6 +703,7 @@
       releasePaneSizeLease(false);
       virtualRowObserver?.disconnect();
       if (virtualWindowFrame) cancelAnimationFrame(virtualWindowFrame);
+      if (measurePaneFrame) cancelAnimationFrame(measurePaneFrame);
       stopWakeLock();
     };
   });

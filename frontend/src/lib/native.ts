@@ -60,13 +60,21 @@ export async function nativeNotificationPermissionState(): Promise<'granted' | '
   }
 }
 
+/**
+ * Cached once the OS grants notification permission: steady-state notifies
+ * then cost a single IPC hop instead of check-then-post. A notify failure
+ * re-arms the check in case the grant was revoked.
+ */
+let notificationPermissionGranted = false;
+
 /** Prompts for the OS notification permission; resolves with the outcome. */
 export async function requestNativeNotificationPermission(): Promise<boolean> {
   const invoke = tauriInvoke();
   if (!invoke) return false;
   try {
     const state = await invoke<string>('plugin:notification|request_permission');
-    return state === 'granted';
+    notificationPermissionGranted = state === 'granted';
+    return notificationPermissionGranted;
   } catch {
     return false;
   }
@@ -83,19 +91,27 @@ export async function nativeNotify(
   const invoke = tauriInvoke();
   if (!invoke) return false;
   try {
-    // Option<bool>: null means the state is still "prompt" — request it.
-    let granted = await invoke<boolean | null>(
-      'plugin:notification|is_permission_granted',
-    );
-    if (granted !== true) {
-      const state = await invoke<string>('plugin:notification|request_permission');
-      granted = state === 'granted';
+    if (!notificationPermissionGranted) {
+      // Option<bool>: null means the state is still "prompt" — request it.
+      let granted = await invoke<boolean | null>(
+        'plugin:notification|is_permission_granted',
+      );
+      if (granted !== true) {
+        const state = await invoke<string>('plugin:notification|request_permission');
+        granted = state === 'granted';
+      }
+      if (!granted) return false;
+      notificationPermissionGranted = true;
     }
-    if (!granted) return false;
     const { title, ...rest } = notification;
-    await invoke('plugin:notification|notify', {
-      options: { title, ...rest },
-    });
+    try {
+      await invoke('plugin:notification|notify', {
+        options: { title, ...rest },
+      });
+    } catch (error) {
+      notificationPermissionGranted = false;
+      throw error;
+    }
     return true;
   } catch {
     return false;

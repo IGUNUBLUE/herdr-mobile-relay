@@ -23,7 +23,9 @@
 
   let query = $state('');
   let input = $state<HTMLInputElement>();
-  const groups = $derived(workspaceGroups(agents));
+  // The dialog is mounted permanently; grouping the full inventory on every
+  // agents publish while closed is work nobody sees.
+  const groups = $derived(open ? workspaceGroups(agents) : []);
   const needle = $derived(query.trim().toLocaleLowerCase());
   function visibleAgents(group: WorkspaceGroup): Agent[] {
     if (!needle || workspaceMetadataSearchText(group).includes(needle)) return group.agents;

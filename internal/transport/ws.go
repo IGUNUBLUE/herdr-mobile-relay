@@ -553,26 +553,35 @@ func (h *Hub) pushPrepared(clients []*ClientConn, messages []preparedMessage) {
 }
 
 func (h *Hub) push(client *ClientConn, data []byte, kind string, replaceable bool) bool {
-	result := client.buf.pushTyped(data, kind, replaceable)
+	result, items, bytes := client.buf.pushTyped(data, kind, replaceable)
 	if result == pushRejected {
 		return false
 	}
 	if result == pushCoalesced {
 		h.coalesced.Add(1)
 	}
-	observeAtomicMax(&h.outboundHighWaterItem, uint64(client.buf.Len()))
-	observeAtomicMax(&h.outboundHighWaterByte, uint64(client.buf.Bytes()))
+	observeAtomicMax(&h.outboundHighWaterItem, uint64(items))
+	observeAtomicMax(&h.outboundHighWaterByte, uint64(bytes))
 	return true
 }
 
 func encodeMessage(message any) ([]byte, string, bool, error) {
+	// Producers overwhelmingly build map[string]any envelopes, so the kind
+	// is cheaper to read off the value than to re-parse the whole payload.
+	kind := ""
+	if envelope, ok := message.(map[string]any); ok {
+		kind, _ = envelope["type"].(string)
+	}
 	data, err := json.Marshal(message)
 	if err != nil {
 		return nil, "", false, err
 	}
-	kind := messageType(data)
+	if kind == "" {
+		kind = messageType(data)
+	}
 	replaceable := kind == "agents" || kind == "inventory_status" || kind == "update_status" ||
-		kind == "app_deploy_status" || kind == "herdr_status"
+		kind == "app_deploy_status" || kind == "herdr_status" ||
+		kind == "pane_content" || kind == "pane_unchanged" || kind == "pane_resync"
 	return data, kind, replaceable, nil
 }
 

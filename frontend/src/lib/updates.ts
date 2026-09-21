@@ -1,5 +1,6 @@
 import { get, writable } from 'svelte/store';
 import { APP_ASSET_VERSION, APP_BUILD_ID, APP_VERSION } from './config';
+import { isNativeShell } from './native';
 import type { AppDeploymentStatus, AppUpdateStatus, RelayConnectionView, RelayUpdateStatus } from './types';
 
 const APP_UPDATE_INTERVAL_MS = 24 * 60 * 60 * 1_000;
@@ -259,6 +260,18 @@ export async function checkAppUpdate(
   fetcher: typeof fetch = fetch,
   now = Date.now(),
 ): Promise<AppUpdateStatus> {
+  // The shell loads its bundled assets, so /version.json can only ever echo
+  // the running build — app updates there arrive through the OS package.
+  if (isNativeShell()) {
+    const status: AppUpdateStatus = {
+      ...get(appUpdateStatus),
+      state: 'current',
+      checkedAt: now,
+      error: '',
+    };
+    appUpdateStatus.set(status);
+    return status;
+  }
   if (checking) return checking;
   appUpdateStatus.update((status) => ({ ...status, state: 'checking', error: '' }));
   checking = (async () => {
@@ -292,6 +305,12 @@ function requiredAssetPending(): boolean {
 }
 
 export function initializeAppUpdates(): () => void {
+  // In the native shell the reload markers, pending phone targets, and the
+  // 24 h version.json poll all describe the bundled build — none can move.
+  if (isNativeShell()) {
+    void checkAppUpdate();
+    return () => {};
+  }
   const requiredAssetChange = () => {
     const dataset = document.documentElement.dataset;
     if (dataset.herdrLoadFailed || dataset.herdrLoadTimedOut) setPhoneUpdateError('The required app asset did not load. Use Load Update to try again.');

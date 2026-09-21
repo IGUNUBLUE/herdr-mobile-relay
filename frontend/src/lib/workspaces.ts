@@ -116,7 +116,30 @@ function groupCwd(agents: Agent[]): string {
   return paths.sort((left, right) => left.length - right.length || left.localeCompare(right))[0];
 }
 
+const NO_WORKSPACES: RelayWorkspace[] = [];
+const workspaceGroupsCache = new WeakMap<Agent[], WeakMap<RelayWorkspace[], WorkspaceGroup[]>>();
+
+/**
+ * Memoized on the input array identities: the agent list's status buckets,
+ * the rail, and the jump dialog all group the same published arrays, so a
+ * repeated call with the same arrays shares one pass. Callers treat the
+ * result as immutable.
+ */
 export function workspaceGroups(agents: Agent[], workspaces: RelayWorkspace[] = []): WorkspaceGroup[] {
+  const workspacesKey = workspaces.length ? workspaces : NO_WORKSPACES;
+  let byWorkspaces = workspaceGroupsCache.get(agents);
+  if (!byWorkspaces) {
+    byWorkspaces = new WeakMap();
+    workspaceGroupsCache.set(agents, byWorkspaces);
+  }
+  const cached = byWorkspaces.get(workspacesKey);
+  if (cached) return cached;
+  const computed = computeWorkspaceGroups(agents, workspaces);
+  byWorkspaces.set(workspacesKey, computed);
+  return computed;
+}
+
+function computeWorkspaceGroups(agents: Agent[], workspaces: RelayWorkspace[]): WorkspaceGroup[] {
   const grouped = new Map<string, { agents: Agent[]; workspace: RelayWorkspace | null }>();
   for (const workspace of workspaces) {
     const key = `${workspace.relay_id}\u0000${workspace.workspace_id}`;

@@ -49,35 +49,39 @@ func (b *sendBuffer) Push(data []byte) bool {
 }
 
 func (b *sendBuffer) PushTyped(data []byte, kind string, replaceable bool) bool {
-	return b.pushTyped(data, kind, replaceable) != pushRejected
+	result, _, _ := b.pushTyped(data, kind, replaceable)
+	return result != pushRejected
 }
 
-func (b *sendBuffer) pushTyped(data []byte, kind string, replaceable bool) pushResult {
+// pushTyped queues one serialized message and reports the resulting buffer
+// occupancy so callers can update metrics without a second lock hold. The
+// buffer takes ownership of data: producers hand over freshly encoded bytes
+// and must not retain or mutate them after pushing.
+func (b *sendBuffer) pushTyped(data []byte, kind string, replaceable bool) (pushResult, int, int) {
 	b.mu.Lock()
 	defer b.mu.Unlock()
 	if b.closed {
-		return pushRejected
+		return pushRejected, len(b.items), b.bytes
 	}
-	copyData := append([]byte(nil), data...)
 	if replaceable && len(b.items) > 0 {
 		tail := &b.items[len(b.items)-1]
 		if tail.replaceable && tail.messageType == kind {
-			nextBytes := b.bytes - len(tail.data) + len(copyData)
+			nextBytes := b.bytes - len(tail.data) + len(data)
 			if nextBytes > b.maxBytes {
-				return pushRejected
+				return pushRejected, len(b.items), b.bytes
 			}
 			b.bytes = nextBytes
-			tail.data = copyData
-			return pushCoalesced
+			tail.data = data
+			return pushCoalesced, len(b.items), b.bytes
 		}
 	}
-	if len(b.items) >= b.maxItems || b.bytes+len(copyData) > b.maxBytes {
-		return pushRejected
+	if len(b.items) >= b.maxItems || b.bytes+len(data) > b.maxBytes {
+		return pushRejected, len(b.items), b.bytes
 	}
-	b.items = append(b.items, bufferedMessage{data: copyData, messageType: kind, replaceable: replaceable})
-	b.bytes += len(copyData)
+	b.items = append(b.items, bufferedMessage{data: data, messageType: kind, replaceable: replaceable})
+	b.bytes += len(data)
 	b.ready.Signal()
-	return pushQueued
+	return pushQueued, len(b.items), b.bytes
 }
 
 func (b *sendBuffer) Pop() ([]byte, bool) {

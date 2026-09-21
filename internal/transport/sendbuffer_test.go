@@ -1,6 +1,7 @@
 package transport
 
 import (
+	"strings"
 	"testing"
 )
 
@@ -103,13 +104,49 @@ func TestAgentUpdatesNeverCoalesce(t *testing.T) {
 	if replaceable || secondReplaceable {
 		t.Fatal("agent_update was marked replaceable")
 	}
-	if got := buf.pushTyped(first, kind, replaceable); got != pushQueued {
+	if got, _, _ := buf.pushTyped(first, kind, replaceable); got != pushQueued {
 		t.Fatalf("first push = %v, want queued", got)
 	}
-	if got := buf.pushTyped(second, secondKind, secondReplaceable); got != pushQueued {
+	if got, _, _ := buf.pushTyped(second, secondKind, secondReplaceable); got != pushQueued {
 		t.Fatalf("second push = %v, want queued", got)
 	}
 	if buf.Len() != 2 {
 		t.Fatalf("buffer length = %d, want both agent_update messages", buf.Len())
+	}
+}
+
+func TestPaneFramesCoalesce(t *testing.T) {
+	for _, kind := range []string{"pane_content", "pane_unchanged", "pane_resync"} {
+		_, _, replaceable, err := encodeMessage(map[string]any{"type": kind, "pane_id": "pane-1"})
+		if err != nil {
+			t.Fatal(err)
+		}
+		if !replaceable {
+			t.Fatalf("%s was not marked replaceable", kind)
+		}
+	}
+
+	buf := newSendBuffer(4, 1<<20)
+	first, kind, replaceable, err := encodeMessage(map[string]any{
+		"type": "pane_content", "pane_id": "pane-1", "content": "first",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	second, _, _, err := encodeMessage(map[string]any{
+		"type": "pane_content", "pane_id": "pane-1", "content": "second",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got, _, _ := buf.pushTyped(first, kind, replaceable); got != pushQueued {
+		t.Fatalf("first push = %v, want queued", got)
+	}
+	if got, _, _ := buf.pushTyped(second, kind, replaceable); got != pushCoalesced {
+		t.Fatalf("second push = %v, want coalesced", got)
+	}
+	data, ok := buf.Pop()
+	if !ok || !strings.Contains(string(data), `"content":"second"`) {
+		t.Fatalf("coalesced frame = %q, %v; want latest content", data, ok)
 	}
 }

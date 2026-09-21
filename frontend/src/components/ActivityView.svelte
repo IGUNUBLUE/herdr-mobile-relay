@@ -19,7 +19,8 @@
     return String(activity.kind || '').toLocaleLowerCase() !== 'working';
   }
   const displayedActivities = $derived($activities.filter(activityIsDisplayable));
-  const visible = $derived(displayedActivities.filter((activity) => activityMatchesSearch(activity, search.trim())));
+  const searchNeedle = $derived(search.trim().toLowerCase());
+  const visible = $derived(displayedActivities.filter((activity) => activityMatchesSearch(activity, searchNeedle)));
   const daily = $derived(dailyActivitySummary($activities, $agents, now));
 
   onMount(() => {
