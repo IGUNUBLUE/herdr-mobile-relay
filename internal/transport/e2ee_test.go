@@ -224,9 +224,9 @@ func assertVectorRecord(t *testing.T, sender, receiver *e2eeSession, record e2ee
 	if string(opened) != record.Plaintext {
 		t.Fatalf("opened plaintext = %q, want %q", opened, record.Plaintext)
 	}
-	// The binary codec is what the gateway and WebRTC paths carry; the phone
-	// sniffs its header to tell sealed frames from the JSON handshake, so the
-	// exact bytes are a cross-language contract.
+	// The binary codec is the wire format; the phone sniffs its header to tell
+	// sealed frames from the JSON handshake, so the exact bytes are a
+	// cross-language contract.
 	binaryFrame, err := CodecBinary.encodeFrame(record.Sequence, decodeVectorField(t, record.Ciphertext))
 	if err != nil {
 		t.Fatal(err)
@@ -277,12 +277,12 @@ func TestE2EESessionEncryptsAuthenticatesAndOrdersFrames(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	plaintext := []byte(`{"type":"submit_prompt","text":"cloudflare must not see this"}`)
+	plaintext := []byte(`{"type":"submit_prompt","text":"the network path must not see this"}`)
 	frame, err := client.seal(plaintext)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if bytes.Contains(frame, []byte("cloudflare")) || bytes.Contains(frame, []byte("submit_prompt")) {
+	if bytes.Contains(frame, []byte("network path")) || bytes.Contains(frame, []byte("submit_prompt")) {
 		t.Fatalf("encrypted frame exposed plaintext: %s", frame)
 	}
 	opened, err := server.open(frame)

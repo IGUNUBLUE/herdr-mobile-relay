@@ -17,7 +17,6 @@ import (
 	"time"
 
 	relayrelease "github.com/IGUNUBLUE/lerdr/internal/release"
-	"github.com/IGUNUBLUE/lerdr/internal/setuphelper"
 )
 
 const (
@@ -37,8 +36,6 @@ type Job struct {
 	TargetRevision    string `json:"target_revision"`
 	StatePath         string `json:"state_path"`
 	HealthURL         string `json:"health_url"`
-	DeployAppFirst    bool   `json:"deploy_app_first,omitempty"`
-	ExpectedAppOrigin string `json:"expected_app_origin,omitempty"`
 }
 
 type State struct {
@@ -68,7 +65,6 @@ type stagedRelease struct {
 
 type Worker struct {
 	Prepare func(context.Context, Job) (stagedRelease, error)
-	Deploy  func(context.Context, Job, stagedRelease) error
 	Install func(context.Context, Job) error
 	Verify  func(context.Context, string, relayrelease.Manifest) error
 }
@@ -131,20 +127,6 @@ func (w Worker) Run(ctx context.Context, jobPath string) error {
 		return fail(job.StatePath, state, fmt.Errorf("prepare target release: %w", prepareErr))
 	}
 	defer os.RemoveAll(staged.Root)
-
-	if job.DeployAppFirst {
-		state.State = "deploying_app"
-		if err := writeState(job.StatePath, state); err != nil {
-			return fmt.Errorf("write app deployment state: %w", err)
-		}
-		deploy := w.Deploy
-		if deploy == nil {
-			deploy = deployStagedApp
-		}
-		if err := deploy(ctx, job, staged); err != nil {
-			return fail(job.StatePath, state, fmt.Errorf("deploy target app before relay: %w", err))
-		}
-	}
 
 	state.State = "installing"
 	if err := writeState(job.StatePath, state); err != nil {
@@ -315,14 +297,6 @@ func validateJob(job Job) error {
 	}
 	if job.StatePath == "" || !filepath.IsAbs(job.StatePath) {
 		return errors.New("state_path must be absolute")
-	}
-	if job.DeployAppFirst {
-		origin, originErr := setuphelper.NormalizeOrigin(job.ExpectedAppOrigin, false)
-		if originErr != nil || origin != job.ExpectedAppOrigin {
-			return errors.New("expected_app_origin must be a canonical HTTPS origin")
-		}
-	} else if job.ExpectedAppOrigin != "" {
-		return errors.New("expected_app_origin requires an app-first update")
 	}
 	health, err := url.Parse(job.HealthURL)
 	if err != nil || health.Scheme != "http" || !isLoopback(health.Hostname()) {

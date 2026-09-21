@@ -123,10 +123,6 @@ func TestWorkerRunsPluginInstallAndPersistsSuccess(t *testing.T) {
 			calls = append(calls, "prepare:"+got.TargetVersion)
 			return workerTestStagedRelease(t, got), nil
 		},
-		Deploy: func(context.Context, Job, stagedRelease) error {
-			t.Fatal("app deployment ran for a relay-only update")
-			return nil
-		},
 		Install: func(_ context.Context, got Job) error {
 			calls = append(calls, "install:"+got.TargetRevision)
 			return nil
@@ -191,93 +187,6 @@ func TestWorkerInstallFailureIsRetryable(t *testing.T) {
 	}
 	if _, err := os.Stat(jobPath); err != nil {
 		t.Fatalf("failed job was removed: %v", err)
-	}
-}
-
-func TestWorkerDeploysVerifiedAppBeforeInstallingRelay(t *testing.T) {
-	jobPath, job := writeWorkerTestJob(t)
-	job.DeployAppFirst = true
-	job.ExpectedAppOrigin = "https://app.example.test"
-	if err := writeJSONAtomic(jobPath, job); err != nil {
-		t.Fatal(err)
-	}
-	var calls []string
-	assertState := func(want string) {
-		state, err := readState(job.StatePath)
-		if err != nil {
-			t.Fatal(err)
-		}
-		if state.State != want {
-			t.Fatalf("state during %s callback = %#v", want, state)
-		}
-	}
-	worker := Worker{
-		Prepare: func(_ context.Context, got Job) (stagedRelease, error) {
-			assertState("preparing")
-			calls = append(calls, "prepare")
-			return workerTestStagedRelease(t, got), nil
-		},
-		Deploy: func(_ context.Context, got Job, staged stagedRelease) error {
-			assertState("deploying_app")
-			if got.ExpectedAppOrigin != "https://app.example.test" ||
-				staged.Manifest.Version != job.TargetVersion {
-				t.Fatalf("deployment input = %#v, %#v", got, staged.Manifest)
-			}
-			calls = append(calls, "deploy")
-			return nil
-		},
-		Install: func(context.Context, Job) error {
-			assertState("installing")
-			calls = append(calls, "install")
-			return nil
-		},
-		Verify: func(context.Context, string, relayrelease.Manifest) error {
-			assertState("restarting")
-			calls = append(calls, "verify")
-			return nil
-		},
-	}
-	if err := worker.Run(t.Context(), jobPath); err != nil {
-		t.Fatal(err)
-	}
-	if !reflect.DeepEqual(calls, []string{"prepare", "deploy", "install", "verify"}) {
-		t.Fatalf("worker calls = %v", calls)
-	}
-}
-
-func TestWorkerLeavesRelayUntouchedWhenAppDeploymentFails(t *testing.T) {
-	jobPath, job := writeWorkerTestJob(t)
-	job.DeployAppFirst = true
-	job.ExpectedAppOrigin = "https://app.example.test"
-	if err := writeJSONAtomic(jobPath, job); err != nil {
-		t.Fatal(err)
-	}
-	installed := false
-	worker := Worker{
-		Prepare: func(_ context.Context, got Job) (stagedRelease, error) {
-			return workerTestStagedRelease(t, got), nil
-		},
-		Deploy: func(context.Context, Job, stagedRelease) error {
-			return errors.New("injected Pages verification failure")
-		},
-		Install: func(context.Context, Job) error {
-			installed = true
-			return nil
-		},
-	}
-	err := worker.Run(t.Context(), jobPath)
-	if err == nil || !strings.Contains(err.Error(), "injected Pages verification failure") {
-		t.Fatalf("worker error = %v", err)
-	}
-	if installed {
-		t.Fatal("relay install ran after app deployment failure")
-	}
-	state, readErr := readState(job.StatePath)
-	if readErr != nil {
-		t.Fatal(readErr)
-	}
-	if state.State != "failed" || !strings.Contains(state.Error, "injected Pages verification failure") {
-		t.Fatalf("state = %#v", state)
 	}
 }
 
@@ -448,12 +357,10 @@ func writeWorkerTestRelease(t *testing.T, root, version, revision string) {
 		"LICENSE",
 		"README.md",
 		"relay/common.sh",
-		"relay/lerdr-service.sh",
 		"relay/plugin-on-event.sh",
 		"relay/setup-link.sh",
-		"relay/stable-setup.sh",
-		"relay/stable-teardown.sh",
-		"relay/start.sh",
+		"relay/tailscale-serve.sh",
+		"relay/tailscale-service.sh",
 	}
 	for _, name := range files {
 		filename := filepath.Join(root, filepath.FromSlash(name))

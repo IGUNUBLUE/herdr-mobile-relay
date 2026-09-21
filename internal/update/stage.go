@@ -18,7 +18,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/IGUNUBLUE/lerdr/internal/appdeploy"
 	relayrelease "github.com/IGUNUBLUE/lerdr/internal/release"
 )
 
@@ -27,7 +26,6 @@ const (
 	maxChecksumBytes       = 1 * 1024 * 1024
 	maxArchiveBytes        = 128 * 1024 * 1024
 	maxExtractedBytes      = 256 * 1024 * 1024
-	appReloadSignalGrace   = 2 * time.Second
 	maxArchiveEntries      = 4096
 )
 
@@ -112,28 +110,6 @@ func prepareTargetReleaseFrom(
 	prepared.Manifest = manifest
 	keep = true
 	return prepared, nil
-}
-
-func deployStagedApp(ctx context.Context, job Job, staged stagedRelease) error {
-	err := appdeploy.RunConfiguredAtOrigin(
-		ctx,
-		filepath.Dir(job.StatePath),
-		filepath.Join(staged.Root, "release", "web"),
-		staged.Manifest.Version,
-		staged.Manifest.Revision,
-		job.ExpectedAppOrigin,
-	)
-	if err != nil {
-		return err
-	}
-	timer := time.NewTimer(appReloadSignalGrace)
-	defer timer.Stop()
-	select {
-	case <-ctx.Done():
-		return ctx.Err()
-	case <-timer.C:
-		return nil
-	}
 }
 
 func downloadBytes(ctx context.Context, client *http.Client, endpoint string, maximum int64) ([]byte, error) {

@@ -5,22 +5,11 @@ import (
 	"fmt"
 	"log/slog"
 	"net"
-	"net/url"
 	"os"
 	"path/filepath"
 	"runtime"
 	"strconv"
 	"strings"
-)
-
-// Accepted LERDR_GATEWAY_SELECTION values.
-const (
-	// GatewaySelectionOrdered registers with the first healthy entry in
-	// configured order: an explicit list is a priority, not a preference.
-	GatewaySelectionOrdered = "ordered"
-	// GatewaySelectionLatency ranks healthy entries by measured round trip. It
-	// only fits interchangeable endpoints, such as the community gateway list.
-	GatewaySelectionLatency = "latency"
 )
 
 type Config struct {
@@ -40,19 +29,6 @@ type Config struct {
 	ReleaseRoot    string
 	ServiceName    string
 
-	// GatewayURL is the configured tie-break leader, kept equal to
-	// GatewayURLs[0] so readers that only know one gateway keep working. The
-	// transport may select another healthy entry at runtime.
-	GatewayURL  string
-	GatewayURLs []string
-	// GatewaySelection is how the transport picks among GatewayURLs: "ordered"
-	// registers with the first healthy entry in configured order, "latency"
-	// with the lowest-latency healthy one. The loader normalises it, so no
-	// reader validates it again.
-	GatewaySelection    string
-	WebRTCUDPPort       int
-	ForceRelayTransport bool
-	PortMappingEnabled  bool
 	// RearmBootstrap starts every process with an empty device list and a fresh
 	// one-use bootstrap invitation. Only the quick-tunnel flow sets it: its app
 	// origin changes each launch, so no enrolled credential can be presented again.
@@ -77,10 +53,7 @@ func Load() (*Config, error) {
 		LogFormat:    relayEnvOr("RELAY_LOG_FORMAT", "text"),
 		ServiceName:  relayEnvOr("RELAY_SERVICE_NAME", defaultServiceName()),
 
-		WebRTCUDPPort:       relayEnvIntOr("WEBRTC_UDP_PORT", 0),
-		ForceRelayTransport: relayEnvBoolOr("TRANSPORT_FORCE_RELAY", false),
-		PortMappingEnabled:  relayEnvBoolOr("REACHABILITY_PORT_MAPPING", true),
-		RearmBootstrap:      relayEnvBoolOr("RELAY_REARM_BOOTSTRAP", false),
+		RearmBootstrap: relayEnvBoolOr("RELAY_REARM_BOOTSTRAP", false),
 	}
 
 	logLevel, err := parseLogLevel(relayEnv("RELAY_LOG_LEVEL"))
@@ -96,15 +69,6 @@ func Load() (*Config, error) {
 			}
 		}
 	}
-
-	// LERDR_GATEWAY_URL is an ordered candidate list. The relay probes the
-	// entries concurrently; LERDR_GATEWAY_SELECTION decides what the order
-	// means. A single value is one entry and behaves exactly as it always did.
-	cfg.GatewayURLs = parseGatewayURLs(relayEnv("GATEWAY_URL"))
-	if len(cfg.GatewayURLs) > 0 {
-		cfg.GatewayURL = cfg.GatewayURLs[0]
-	}
-	cfg.GatewaySelection = parseGatewaySelection(relayEnv("GATEWAY_SELECTION"))
 
 	cfg.ConfigHome = envOr("XDG_CONFIG_HOME", filepath.Join(homeDir(), ".config"))
 	cacheHome := envOr("XDG_CACHE_HOME", filepath.Join(homeDir(), ".cache"))
@@ -158,15 +122,6 @@ func (c *Config) validate() error {
 	}
 	if c.Port < 1 || c.Port > 65535 {
 		return fmt.Errorf("invalid port %d", c.Port)
-	}
-	for _, gateway := range c.GatewayURLs {
-		parsed, err := url.Parse(gateway)
-		if err != nil || parsed.Host == "" || (parsed.Scheme != "ws" && parsed.Scheme != "wss") {
-			return fmt.Errorf("invalid gateway url %q: want ws:// or wss:// base url", gateway)
-		}
-	}
-	if len(c.GatewayURLs) > 0 && c.Token == "" {
-		return fmt.Errorf("gateway url requires a relay key: the gateway path derives its credentials from it")
 	}
 	return nil
 }
@@ -276,30 +231,6 @@ func homeDir() string {
 		return "/tmp"
 	}
 	return h
-}
-
-// parseGatewayURLs splits the ordered gateway list. Empty entries are dropped
-// so a trailing comma or a stray space in a hand-edited env file configures a
-// working relay instead of a phantom gateway.
-func parseGatewayURLs(raw string) []string {
-	var urls []string
-	for _, entry := range strings.Split(raw, ",") {
-		if trimmed := strings.TrimRight(strings.TrimSpace(entry), "/"); trimmed != "" {
-			urls = append(urls, trimmed)
-		}
-	}
-	return urls
-}
-
-// parseGatewaySelection normalises the selection rule. Only the community
-// gateway list is a set of interchangeable endpoints where latency ranking is
-// the point; a hand-listed gateway is a choice the relay must honour, so
-// absent, empty and unrecognised values all mean configured order.
-func parseGatewaySelection(raw string) string {
-	if strings.ToLower(strings.TrimSpace(raw)) == GatewaySelectionLatency {
-		return GatewaySelectionLatency
-	}
-	return GatewaySelectionOrdered
 }
 
 func parseLogLevel(raw string) (slog.Level, error) {

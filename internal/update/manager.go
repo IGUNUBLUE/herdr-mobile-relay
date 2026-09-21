@@ -25,17 +25,7 @@ import (
 const canonicalAPI = "https://api.github.com/repos/IGUNUBLUE/lerdr"
 const canonicalWeb = "https://github.com/IGUNUBLUE/lerdr"
 
-var appDeployEnvironmentKeys = [...]string{
-	"LERDR_APP_DEPLOY_ORIGIN",
-	"HERDR_APP_DEPLOY_ORIGIN",
-	"LERDR_CLOUDFLARE_PAGES_PROJECT",
-	"HERDR_CLOUDFLARE_PAGES_PROJECT",
-	"LERDR_CLOUDFLARE_PAGES_BRANCH",
-	"HERDR_CLOUDFLARE_PAGES_BRANCH",
-	"LERDR_APP_DEPLOY_NPX",
-	"HERDR_APP_DEPLOY_NPX",
-	"LERDR_APP_DEPLOY_NODE_DIR",
-	"HERDR_APP_DEPLOY_NODE_DIR",
+var workerEnvironmentKeys = [...]string{
 	"LERDR_RELAY_ENV",
 	"HERDR_RELAY_ENV",
 	"HERDR_PLUGIN_CONFIG_DIR",
@@ -205,8 +195,6 @@ func (m *Manager) Check(ctx context.Context) State {
 func (m *Manager) Schedule(
 	ctx context.Context,
 	expectedVersion, expectedRevision string,
-	deployAppFirst bool,
-	expectedAppOrigin string,
 ) (string, State, error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
@@ -242,8 +230,6 @@ func (m *Manager) Schedule(
 		TargetRevision:    m.metadata.Revision,
 		StatePath:         m.statePath(),
 		HealthURL:         m.healthURL,
-		DeployAppFirst:    deployAppFirst,
-		ExpectedAppOrigin: expectedAppOrigin,
 	}
 	if err := writeJSONAtomic(jobPath, job); err != nil {
 		return "", m.publicState(m.state), fmt.Errorf("persist update job: %w", err)
@@ -507,8 +493,8 @@ func updateWorkerLaunch(
 	goos, label, executable, jobPath string,
 	lookupEnv func(string) (string, bool),
 ) workerLaunch {
-	assignments := make([]string, 0, len(appDeployEnvironmentKeys))
-	for _, key := range appDeployEnvironmentKeys {
+	assignments := make([]string, 0, len(workerEnvironmentKeys))
+	for _, key := range workerEnvironmentKeys {
 		value, present := lookupEnv(key)
 		if present && strings.TrimSpace(value) != "" {
 			assignments = append(assignments, key+"="+value)
@@ -715,7 +701,7 @@ func parseSemver(value string) ([3]int, bool) {
 func validState(value string) bool {
 	switch value {
 	case "current", "checking", "available", "blocked", "scheduled", "preparing",
-		"deploying_app", "installing", "restarting", "recovering", "succeeded",
+		"installing", "restarting", "recovering", "succeeded",
 		"failed", "rolled_back", "unsupported":
 		return true
 	default:
@@ -725,7 +711,7 @@ func validState(value string) bool {
 
 func transientUpdateState(value string) bool {
 	switch value {
-	case "scheduled", "preparing", "deploying_app", "installing", "restarting", "recovering":
+	case "scheduled", "preparing", "installing", "restarting", "recovering":
 		return true
 	default:
 		return false

@@ -49,8 +49,7 @@ func (c *ClientConn) Identity() (AuthenticatedIdentity, bool) {
 func (c *ClientConn) ID() string               { return c.id }
 func (c *ClientConn) Context() context.Context { return c.ctx }
 
-// Transport reports the path this client is connected over: TransportWebSocket,
-// TransportGateway, or TransportWebRTC.
+// Transport reports the path this client is connected over.
 func (c *ClientConn) Transport() string { return c.transport }
 
 type MessageHandler func(client *ClientConn, msg map[string]any, admitted func())
@@ -166,9 +165,8 @@ func (h *Hub) HandleWebSocket(w http.ResponseWriter, r *http.Request) {
 
 // Serve runs one logical connection for its whole lifetime: encrypted
 // handshake, registration under the admission barrier, read pump, and close.
-// Every transport — browser WebSocket, gateway-relayed, WebRTC DataChannel —
-// enters the hub here, so admission ordering, send buffers, slow-client
-// eviction, metrics, and shutdown are shared.
+// Every client enters the hub here, so admission ordering, send buffers,
+// slow-client eviction, metrics, and shutdown are shared.
 func (h *Hub) Serve(parent context.Context, conn FrameConn) {
 	h.mu.Lock()
 	if h.closing {
@@ -580,7 +578,7 @@ func encodeMessage(message any) ([]byte, string, bool, error) {
 		kind = messageType(data)
 	}
 	replaceable := kind == "agents" || kind == "inventory_status" || kind == "update_status" ||
-		kind == "app_deploy_status" || kind == "herdr_status" ||
+		kind == "herdr_status" ||
 		kind == "pane_content" || kind == "pane_unchanged" || kind == "pane_resync"
 	return data, kind, replaceable, nil
 }

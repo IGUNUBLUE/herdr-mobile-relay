@@ -3,8 +3,6 @@ package transport
 import (
 	"context"
 	"errors"
-	"sync"
-	"time"
 
 	"github.com/coder/websocket"
 )
@@ -31,25 +29,14 @@ const (
 // sits in the application range so no proxy rewrites it.
 const UnauthorizedCloseCode = 4401
 
-// DeviceUnauthorizedReason carries CloseUnauthorized across gateway
-// multiplexing, which has no native close code.
-const DeviceUnauthorizedReason = "device_unauthorized"
-
-// Transport names reported by FrameConn implementations. They are surfaced in
-// logs, metrics, and the signaling gate that only accepts WebRTC negotiation
-// from a relayed connection.
-const (
-	TransportWebSocket = "websocket"
-	TransportGateway   = "gateway"
-	TransportWebRTC    = "webrtc"
-)
+// TransportWebSocket is the transport name reported by FrameConn
+// implementations. It is surfaced in logs and metrics.
+const TransportWebSocket = "websocket"
 
 // FrameConn is a logical-frame duplex connection. Exactly one complete logical
-// frame is returned per ReadFrame and consumed per WriteFrame; chunking,
-// reassembly, and multiplexing belong to the implementation. The hub, the
+// frame is returned per ReadFrame and consumed per WriteFrame. The hub, the
 // admission ordering, the send buffers, slow-client eviction, metrics, and the
-// encrypted handshake are all written against this interface so that
-// WebSocket, gateway-relayed, and WebRTC connections share one code path.
+// encrypted handshake are all written against this interface.
 type FrameConn interface {
 	// ReadFrame blocks until one logical frame arrives. It returns
 	// ErrFrameConnClosed when the peer closed the connection cleanly.
@@ -123,99 +110,3 @@ func (c *webSocketConn) Codec() FrameCodec { return CodecJSON }
 
 func (c *webSocketConn) TransportName() string { return TransportWebSocket }
 
-// pipeConn is an in-process FrameConn pair used by the gateway and WebRTC
-// adapters to hand a demultiplexed logical stream to the hub. Writes are
-// delivered to the owning multiplexer through send; reads come from a bounded
-// queue the multiplexer fills.
-type pipeConn struct {
-	codec     FrameCodec
-	name      string
-	send      func(ctx context.Context, frame []byte) error
-	closeFunc func(status CloseStatus, reason string)
-	inbound   chan []byte
-	closed    chan struct{}
-	closeOnce sync.Once
-}
-
-// newPipeConn builds a FrameConn whose reads are fed by Deliver and whose
-// writes are forwarded to send. queue bounds how many logical frames may wait
-// for the hub before the peer is considered unreadably slow.
-func newPipeConn(
-	codec FrameCodec,
-	name string,
-	queue int,
-	send func(ctx context.Context, frame []byte) error,
-	closeFunc func(status CloseStatus, reason string),
-) *pipeConn {
-	return &pipeConn{
-		codec:     codec,
-		name:      name,
-		send:      send,
-		closeFunc: closeFunc,
-		inbound:   make(chan []byte, queue),
-		closed:    make(chan struct{}),
-	}
-}
-
-// Deliver queues one inbound logical frame. It reports false when the
-// connection is closed or the reader is too far behind.
-func (c *pipeConn) Deliver(frame []byte) bool {
-	select {
-	case <-c.closed:
-		return false
-	default:
-	}
-	select {
-	case c.inbound <- frame:
-		return true
-	case <-c.closed:
-		return false
-	default:
-		return false
-	}
-}
-
-func (c *pipeConn) ReadFrame(ctx context.Context) ([]byte, error) {
-	select {
-	case frame := <-c.inbound:
-		return frame, nil
-	case <-c.closed:
-		return nil, ErrFrameConnClosed
-	case <-ctx.Done():
-		return nil, ctx.Err()
-	}
-}
-
-func (c *pipeConn) WriteFrame(ctx context.Context, frame []byte) error {
-	select {
-	case <-c.closed:
-		return ErrFrameConnClosed
-	default:
-	}
-	return c.send(ctx, frame)
-}
-
-func (c *pipeConn) Close(status CloseStatus, reason string) {
-	c.closeOnce.Do(func() {
-		close(c.closed)
-		if c.closeFunc != nil {
-			c.closeFunc(status, reason)
-		}
-	})
-}
-
-func (c *pipeConn) CloseNow() { c.Close(CloseNormal, "") }
-
-// Shutdown ends the logical connection without notifying the peer, for use
-// when the underlying multiplexed link already failed.
-func (c *pipeConn) Shutdown() {
-	c.closeOnce.Do(func() { close(c.closed) })
-}
-
-func (c *pipeConn) Codec() FrameCodec { return c.codec }
-
-func (c *pipeConn) TransportName() string { return c.name }
-
-// frameWriteTimeout bounds a single logical write on multiplexed transports so
-// one stalled peer cannot pin a multiplexer goroutine.
-const frameWriteTimeout = 5 * time.Second

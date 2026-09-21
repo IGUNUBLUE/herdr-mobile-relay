@@ -12,7 +12,6 @@ import (
 const (
 	Version                       = 3
 	EncryptedWebSocketSubprotocol = "herdr-e2ee-v2"
-	HybridTransportCapability     = "herdr-hybrid-v2"
 )
 
 type TargetRef struct {
@@ -115,7 +114,6 @@ var actionCatalog = map[string]ActionMetadata{
 	"clarify_question":         mutateAction("clarify_question", true, true),
 	"clear_activities":         mutateAction("clear_activities", false, false),
 	"copy_agent_response":      mutateAction("copy_agent_response", false, false),
-	"deploy_app_update":        mutateAction("deploy_app_update", false, false),
 	"create_device_invitation": mutateAction("create_device_invitation", false, true),
 	"device_list":              readAction("device_list"),
 	"get_activity":             readAction("get_activity"),
@@ -159,9 +157,6 @@ var actionCatalog = map[string]ActionMetadata{
 	"upload_chunk":             mutateAction("upload_chunk", false, true),
 	"upload_finish":            mutateAction("upload_finish", false, true),
 	"watch_pane":               readAction("watch_pane"),
-	"webrtc_close":             readAction("webrtc_close"),
-	"webrtc_ice":               readAction("webrtc_ice"),
-	"webrtc_offer":             readAction("webrtc_offer"),
 	"workspace_close":          mutateAction("workspace_close", true, true),
 	"workspace_create":         mutateAction("workspace_create", true, true),
 	"workspace_file":           readAction("workspace_file"),
@@ -231,7 +226,6 @@ type Inbound struct {
 	NotifyFinished       bool            `json:"notify_finished,omitempty"`
 	Endpoints            []string        `json:"endpoints,omitempty"`
 	Origin               string          `json:"origin,omitempty"`
-	ExpectedOrigin       string          `json:"expected_origin,omitempty"`
 	ExpectedVersion      string          `json:"expected_version,omitempty"`
 	ExpectedRevision     string          `json:"expected_revision,omitempty"`
 	Subscription         json.RawMessage `json:"subscription,omitempty"`
@@ -466,7 +460,6 @@ type PushConfig struct {
 	ReleaseVersion string      `json:"release_version"`
 	Revision       string      `json:"revision"`
 	Update         any         `json:"update"`
-	AppDeploy      any         `json:"app_deploy"`
 	Capabilities   []string    `json:"capabilities"`
 	HerdrStatus    HerdrStatus `json:"herdr_status"`
 	// SpeechLanguages lists the languages this host has a voice for, so the
@@ -474,10 +467,6 @@ type PushConfig struct {
 	SpeechLanguages []string `json:"speech_languages,omitempty"`
 	Inventory       any      `json:"inventory"`
 	AgentProfiles   any      `json:"agent_profiles"`
-	// Hybrid advertises the gateway + direct WebRTC descriptor to an app that
-	// connected over the legacy WSS URL, so the bridge window needs no QR
-	// re-scan. Omitted entirely when the relay has no gateway configured.
-	Hybrid map[string]any `json:"hybrid,omitempty"`
 }
 
 const AgentResponseCopyCapability = "agent_response_copy"
