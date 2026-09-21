@@ -8,7 +8,26 @@ import (
 	"net"
 	"path/filepath"
 	"testing"
+	"time"
 )
+
+// bootstrapEvents collects the events Bootstrap surfaced, whether they were
+// already drained into buffered or are still in flight on the stream. Both
+// sources form a single ordered delivery; which one carries a given event is
+// a scheduling detail the tests must not assume.
+func bootstrapEvents(t *testing.T, stream *EventStream, buffered []Event) []Event {
+	t.Helper()
+	if len(buffered) > 0 {
+		return buffered
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	event, err := stream.Next(ctx)
+	if err != nil {
+		t.Fatalf("stream.Next() after empty bootstrap drain: %v", err)
+	}
+	return []Event{event}
+}
 
 func TestEventClientBootstrapsWithBufferedEvents(t *testing.T) {
 	socketPath := filepath.Join(t.TempDir(), "herdr.sock")
@@ -97,11 +116,12 @@ func TestEventClientBootstrapsWithBufferedEvents(t *testing.T) {
 	if snapshot.Protocol != 19 || len(snapshot.Agents) != 1 {
 		t.Fatalf("snapshot = %#v", snapshot)
 	}
-	if len(buffered) != 1 || buffered[0].Event != "pane.closed" {
-		t.Fatalf("buffered events = %#v", buffered)
+	events := bootstrapEvents(t, stream, buffered)
+	if len(events) != 1 || events[0].Event != "pane.closed" {
+		t.Fatalf("bootstrapped events = %#v", events)
 	}
 	cache := NewSessionCache(snapshot)
-	changed, err := cache.Apply(buffered[0])
+	changed, err := cache.Apply(events[0])
 	if err != nil || !changed {
 		t.Fatalf("Apply() changed=%v err=%v", changed, err)
 	}
@@ -208,8 +228,9 @@ func TestEventBootstrapFallsBackFromUnsupportedOptionalSubscription(t *testing.T
 		t.Fatalf("Bootstrap() error = %v", err)
 	}
 	defer stream.Close()
-	if snapshot.Protocol != 1 || len(buffered) != 1 || buffered[0].Event != "pane.closed" {
-		t.Fatalf("snapshot=%+v buffered=%+v", snapshot, buffered)
+	events := bootstrapEvents(t, stream, buffered)
+	if snapshot.Protocol != 1 || len(events) != 1 || events[0].Event != "pane.closed" {
+		t.Fatalf("snapshot=%+v events=%+v", snapshot, events)
 	}
 	if supported != 0 || unsupported != 1 {
 		t.Fatalf("capability callbacks supported=%d unsupported=%d", supported, unsupported)
