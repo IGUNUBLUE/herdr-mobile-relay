@@ -3,6 +3,11 @@
 Notable user-facing changes to Lerdr are documented here. The
 project follows [Semantic Versioning](https://semver.org/).
 
+> Releases through [0.21.3] were published upstream as **Herdr Mobile
+> Relay** by Christophe Vidal in
+> [`0cv/herdr-mobile-relay`](https://github.com/0cv/herdr-mobile-relay);
+> Lerdr continues that history under its new name (see NOTICE).
+
 ## [Unreleased]
 
 ## [0.26.3] - 2026-09-21

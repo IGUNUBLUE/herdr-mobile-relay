@@ -4,6 +4,12 @@ How to build, run, and test this project from a checkout, and how to fix the
 local runtime problems that come up while doing it. Read this if you are changing
 the relay rather than using it.
 
+This repository began as a fork of
+[`0cv/herdr-mobile-relay`](https://github.com/0cv/herdr-mobile-relay) by
+Christophe Vidal and retains the upstream relay architecture, pairing model,
+and release history through v0.21.3 (see NOTICE and CHANGELOG.md). It is now
+maintained independently.
+
 ## Running from a checkout
 
 ```bash
