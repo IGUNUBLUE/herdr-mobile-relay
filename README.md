@@ -18,12 +18,12 @@ as a signed Android APK and as an installable PWA everywhere else.
    the relay itself.
 2. **Computer**: `herdr plugin install IGUNUBLUE/lerdr` — needs Herdr 0.7.5+
    (0.9.0 recommended), Git, `curl`; Linux or macOS.
-3. **Pair**: pick a transport in the setup menu — the phone app cannot reach
-   the relay without one. **Tailscale Serve** (tailnet-only; see
-   [docs/tailscale.md](docs/tailscale.md) for its requirements) or **Community
-   WebRTC Gateway** (no account) are the recommended paths; Cloudflare tunnels
-   and self-hosted gateways work too — then scan the printed QR from the app's
-   Settings.
+3. **Pair**: Lerdr uses [Tailscale](https://tailscale.com) as its only
+   transport — the computer and the phone must be on the same tailnet. The
+   setup menu publishes the relay on this machine's tailnet HTTPS name and
+   prints a QR; scan it from the app's Settings. See
+   [docs/tailscale.md](docs/tailscale.md) for the requirements on both ends —
+   without them the app cannot reach the relay at all.
 
 [QUICKSTART.md](QUICKSTART.md) has pairing detail and troubleshooting.
 
@@ -56,14 +56,14 @@ above are the PWA at a phone viewport. Regenerate them with
 
 [Feature tour](docs/mobile-app.md) ·
 [Android build & sign](docs/android-tauri.md) ·
-[Transports](docs/transports.md) · [Tailscale](docs/tailscale.md) ·
+[Tailscale transport](docs/tailscale.md) ·
 [Security](docs/security.md) · [Development](docs/development.md) ·
 [Changelog](CHANGELOG.md)
 
-Everything between phone and relay is encrypted end to end; tunnels and
-gateways see connection metadata only, never plaintext. Paired devices are
-controller or read-only reader, mutations default to controller-only.
-[Details →](docs/security.md)
+Everything between phone and relay is encrypted end to end on top of
+WireGuard; Tailscale's coordination server sees connection metadata only,
+never plaintext. Paired devices are controller or read-only reader, mutations
+default to controller-only. [Details →](docs/security.md)
 
 ## Acknowledgments
 

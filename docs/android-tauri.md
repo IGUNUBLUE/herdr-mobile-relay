@@ -11,7 +11,7 @@ F-Droid is possible later but needs a reproducible-build recipe in
 
 ## What works in the shell
 
-- Everything the PWA does: pairing, E2EE, WSS/WebRTC to the relay, terminal,
+- Everything the PWA does: pairing, E2EE, WSS to the relay, terminal,
   approvals, uploads, Tailscale endpoints (`wss://host.tailnet.ts.net` works —
   the Tailscale Android app provides the VPN underneath).
 - Blocked-agent, finished, and relay-status alerts post **local
@@ -164,8 +164,8 @@ maps cleanly onto F-Droid's build variants.
   Cleartext is enabled (`usesCleartextTraffic=true`, patched by
   `make android-init`) so LAN relays can serve plain `ws://` — the E2EE
   handshake still protects payload confidentiality, but transport metadata
-  is visible on the local network. Prefer `wss://` (Tailscale Serve,
-  gateway) whenever possible.
+  is visible on the local network. Prefer `wss://` (Tailscale Serve)
+  whenever possible.
 - Capabilities (`src-tauri/capabilities/default.json`) grant only
   `core:default` plus each plugin's `default` set: notification,
   haptics, barcode-scanner (camera check/request + scan + cancel),
