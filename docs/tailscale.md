@@ -12,15 +12,15 @@ APK — can only load and stay connected while the phone is on the same tailnet;
 there is no public URL and no fallback path. If Tailscale is off on either
 side, the app cannot reach the relay at all.
 
-Linux only for now. The phone side works with any Tailscale client, but the
-relay-side scripts have only been exercised against Linux `tailscaled`.
+Linux and macOS on the computer; the phone side works with any Tailscale
+client.
 
 ## Requirements — this computer
 
 | Requirement | Why |
 | --- | --- |
-| Linux | The scripts are Linux-only today; other platforms report an explicit error. |
-| Tailscale installed and logged in (`tailscale status` works) | `tailscaled` terminates tailnet TLS locally. Follow [Install Tailscale on Linux](https://tailscale.com/kb/1031/install-linux). |
+| Linux or macOS | The scripts drive `tailscaled` on both. |
+| Tailscale installed and logged in (`tailscale status` works) | `tailscaled` terminates tailnet TLS locally. Follow [Install Tailscale on Linux](https://tailscale.com/kb/1031/install-linux) — on macOS install Tailscale.app or `brew install tailscale` + `sudo brew services start tailscaled`. |
 | MagicDNS enabled on the tailnet | Provides the `machine.tailnet.ts.net` name the app connects to. On by default for new tailnets — check https://login.tailscale.com/admin/dns or follow [the MagicDNS guide](https://tailscale.com/kb/1081/magicdns). |
 | HTTPS Certificates enabled on the tailnet | One toggle at https://login.tailscale.com/admin/dns → *HTTPS Certificates* — see [Enabling HTTPS](https://tailscale.com/kb/1153/enabling-https). Without it Serve cannot issue the `*.ts.net` certificate. |
 | Serve approved for this node | The first `tailscale serve` on a machine prints a one-time approval link (`https://login.tailscale.com/f/serve?node=…`) and waits until you open it while logged into the admin console. Background: [Tailscale Serve](https://tailscale.com/kb/1242/tailscale-serve). |
@@ -75,8 +75,9 @@ Add to Home Screen.
 make tailscale-service-install
 ```
 
-Installs `lerdr.service` as a systemd user unit running only the
-relay — there is no tunnel process to supervise, because `tailscaled` owns the
+Installs the relay as a user service — `lerdr.service` (systemd) on Linux,
+`com.lerdr.service` (LaunchAgent) on macOS — running only the
+relay. There is no tunnel process to supervise, because `tailscaled` owns the
 tailnet listener and persists the serve configuration across reboots. Pairings
 survive restarts too: the hostname is stable, so the one-use bootstrap does not
 need re-arming after each launch.

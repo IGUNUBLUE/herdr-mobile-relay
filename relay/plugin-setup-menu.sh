@@ -195,7 +195,7 @@ render_menu() {
     echo ""
     menu_item t "Tailscale Serve"
     echo "     Publish the relay on this machine's tailnet HTTPS name via"
-    echo "     tailscale serve (Linux only), then print the private setup QR."
+    echo "     tailscale serve (Linux and macOS), then print the private setup QR."
     echo ""
     echo "Stable Cloudflare tunnel"
     echo ""

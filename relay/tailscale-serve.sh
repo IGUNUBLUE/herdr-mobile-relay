@@ -10,8 +10,8 @@ set -euo pipefail
 #   relay/tailscale-serve.sh status    show serve config and endpoint health
 #   relay/tailscale-serve.sh link      reprint the setup QR without changes
 #
-# Linux only for now: the phone side works on any Tailscale client, but this
-# script has only been exercised against Linux tailscaled.
+# Linux and macOS: works against a Homebrew tailscaled or the Tailscale.app
+# GUI client. The phone side works on any Tailscale client.
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 
@@ -24,14 +24,21 @@ ENV_FILE="$(relay_env_file "$SCRIPT_DIR")"
 PORT="${LERDR_RELAY_PORT:-${HERDR_RELAY_PORT:-8375}}"
 COMMAND="${1:-start}"
 
-if [ "$(uname -s)" != "Linux" ]; then
-    echo "✗ The Tailscale transport currently supports Linux only."
-    exit 1
+# The CLI ships standalone (Homebrew/package manager) and inside Tailscale.app.
+TAILSCALE_BIN="${LERDR_TAILSCALE_BIN:-${HERDR_TAILSCALE_BIN:-}}"
+if [ -z "$TAILSCALE_BIN" ] && command -v tailscale >/dev/null 2>&1; then
+    TAILSCALE_BIN="$(command -v tailscale)"
 fi
-
-if ! command -v tailscale >/dev/null 2>&1; then
+if [ -z "$TAILSCALE_BIN" ] && [ -x "/Applications/Tailscale.app/Contents/MacOS/Tailscale" ]; then
+    TAILSCALE_BIN="/Applications/Tailscale.app/Contents/MacOS/Tailscale"
+fi
+if [ -z "$TAILSCALE_BIN" ]; then
     echo "✗ tailscale is not installed."
     echo "  Install it and sign this machine into your tailnet: https://tailscale.com/download"
+    if [ "$(uname -s)" = "Darwin" ]; then
+        echo "  macOS: brew install tailscale && sudo brew services start tailscaled,"
+        echo "  or install Tailscale.app from the App Store / tailscale.com."
+    fi
     exit 1
 fi
 
@@ -40,7 +47,7 @@ fi
 tailscale_fqdn() {
     local status_json fqdn
 
-    if ! status_json="$(tailscale status --json 2>/dev/null)"; then
+    if ! status_json="$("$TAILSCALE_BIN" status --json 2>/dev/null)"; then
         echo "✗ tailscale status failed — is tailscaled running and this machine logged in?" >&2
         return 1
     fi
@@ -63,16 +70,16 @@ tailscale_fqdn() {
 
 # The serve config already forwards tailnet HTTPS to this relay port.
 serve_proxies_relay() {
-    tailscale serve status 2>/dev/null |
+    "$TAILSCALE_BIN" serve status 2>/dev/null |
         grep -qE "proxy https?://(127\.0\.0\.1|localhost):$PORT([/:[:space:]]|$)"
 }
 
 configure_serve() {
     local output
 
-    # tailscale serve blocks while the node lacks Serve/HTTPS-cert approval,
+    # "$TAILSCALE_BIN" serve blocks while the node lacks Serve/HTTPS-cert approval,
     # printing a one-time enable URL first; that wait is the intended flow.
-    if ! output="$(tailscale serve --bg --yes "$PORT" 2>&1)"; then
+    if ! output="$("$TAILSCALE_BIN" serve --bg --yes "$PORT" 2>&1)"; then
         printf '%s\n' "$output" >&2
         if printf '%s' "$output" | grep -q "Serve is not enabled"; then
             echo "" >&2
@@ -129,9 +136,9 @@ case "$COMMAND" in
         FQDN="$(tailscale_fqdn)"
         if serve_proxies_relay; then
             echo "▸ Tailscale Serve already proxies tailnet HTTPS to 127.0.0.1:$PORT"
-        elif tailscale serve status 2>/dev/null | grep -q .; then
+        elif "$TAILSCALE_BIN" serve status 2>/dev/null | grep -q .; then
             echo "✗ tailscale serve is already configured for a different target:"
-            tailscale serve status
+            "$TAILSCALE_BIN" serve status
             echo ""
             echo "  Refusing to replace it. Free the tailnet listener first:"
             echo "  relay/tailscale-serve.sh off    (or: tailscale serve --https=443 off)"
@@ -166,24 +173,24 @@ case "$COMMAND" in
         print_setup_link "$FQDN"
         ;;
     off)
-        if ! tailscale serve status 2>/dev/null | grep -q .; then
+        if ! "$TAILSCALE_BIN" serve status 2>/dev/null | grep -q .; then
             echo "Tailscale Serve has no configuration; nothing to stop."
             exit 0
         fi
-        tailscale serve status
+        "$TAILSCALE_BIN" serve status
         echo ""
-        tailscale serve --https=443 off
+        "$TAILSCALE_BIN" serve --https=443 off
         echo "Stopped serving on the tailnet. The relay itself is untouched."
         ;;
     status)
         FQDN="$(tailscale_fqdn)"
         echo "Tailnet name: $FQDN"
         echo ""
-        if ! tailscale serve status 2>/dev/null | grep -q .; then
+        if ! "$TAILSCALE_BIN" serve status 2>/dev/null | grep -q .; then
             echo "Tailscale Serve: no configuration (run relay/tailscale-serve.sh start)"
         else
             echo "Tailscale Serve:"
-            tailscale serve status
+            "$TAILSCALE_BIN" serve status
             echo ""
             if curl -fsS --max-time 5 "https://$FQDN/healthz" >/dev/null 2>&1; then
                 echo "Endpoint: https://$FQDN healthy"
