@@ -30,12 +30,12 @@ const (
 var ErrConcurrent = errors.New("another update is already running")
 
 type Job struct {
-	ReleaseRoot       string `json:"release_root"`
-	HerdrBin          string `json:"herdr_bin"`
-	TargetVersion     string `json:"target_version"`
-	TargetRevision    string `json:"target_revision"`
-	StatePath         string `json:"state_path"`
-	HealthURL         string `json:"health_url"`
+	ReleaseRoot    string `json:"release_root"`
+	HerdrBin       string `json:"herdr_bin"`
+	TargetVersion  string `json:"target_version"`
+	TargetRevision string `json:"target_revision"`
+	StatePath      string `json:"state_path"`
+	HealthURL      string `json:"health_url"`
 }
 
 type State struct {

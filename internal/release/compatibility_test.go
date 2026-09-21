@@ -55,4 +55,3 @@ func TestValidateUpgradeCompatibilityAllowsBridgeCutover(t *testing.T) {
 		t.Fatal(err)
 	}
 }
-

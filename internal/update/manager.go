@@ -224,12 +224,12 @@ func (m *Manager) Schedule(
 	}
 	jobPath := filepath.Join(m.runtimeDir, fmt.Sprintf("update-job-%d.json", time.Now().UnixNano()))
 	job := Job{
-		ReleaseRoot:       m.releaseRoot,
-		HerdrBin:          m.herdrBin,
-		TargetVersion:     m.metadata.Version,
-		TargetRevision:    m.metadata.Revision,
-		StatePath:         m.statePath(),
-		HealthURL:         m.healthURL,
+		ReleaseRoot:    m.releaseRoot,
+		HerdrBin:       m.herdrBin,
+		TargetVersion:  m.metadata.Version,
+		TargetRevision: m.metadata.Revision,
+		StatePath:      m.statePath(),
+		HealthURL:      m.healthURL,
 	}
 	if err := writeJSONAtomic(jobPath, job); err != nil {
 		return "", m.publicState(m.state), fmt.Errorf("persist update job: %w", err)

@@ -109,4 +109,3 @@ func (c *webSocketConn) CloseNow() { c.conn.CloseNow() }
 func (c *webSocketConn) Codec() FrameCodec { return CodecJSON }
 
 func (c *webSocketConn) TransportName() string { return TransportWebSocket }
-
