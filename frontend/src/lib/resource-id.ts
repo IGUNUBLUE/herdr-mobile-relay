@@ -51,7 +51,8 @@ export function normalizeFrontendTargetRef(value: unknown): FrontendTargetRef | 
   return normalizedTarget(value, true);
 }
 
-export function targetRefForAgent(agent: Partial<Agent>): FrontendTargetRef | null {
+export function targetRefForAgent(agent: Partial<Agent> | null | undefined): FrontendTargetRef | null {
+  if (!agent) return null;
   return normalizeFrontendTargetRef({
     relay_id: agent.relay_id,
     server_session_id: agent.server_session_id,
