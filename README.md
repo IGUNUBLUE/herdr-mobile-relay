@@ -18,10 +18,12 @@ as a signed Android APK and as an installable PWA everywhere else.
    the relay itself.
 2. **Computer**: `herdr plugin install IGUNUBLUE/lerdr` — needs Herdr 0.7.5+
    (0.9.0 recommended), Git, `curl`; Linux or macOS.
-3. **Pair**: pick a transport in the setup menu — **Tailscale Serve**
-   (tailnet-only) or **Community WebRTC Gateway** (no account) are the
-   recommended paths; Cloudflare tunnels and self-hosted gateways work too —
-   then scan the printed QR from the app's Settings.
+3. **Pair**: pick a transport in the setup menu — the phone app cannot reach
+   the relay without one. **Tailscale Serve** (tailnet-only; see
+   [docs/tailscale.md](docs/tailscale.md) for its requirements) or **Community
+   WebRTC Gateway** (no account) are the recommended paths; Cloudflare tunnels
+   and self-hosted gateways work too — then scan the printed QR from the app's
+   Settings.
 
 [QUICKSTART.md](QUICKSTART.md) has pairing detail and troubleshooting.
 
