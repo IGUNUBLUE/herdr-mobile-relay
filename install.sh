@@ -212,10 +212,10 @@ legacy_root_entry_allowed() {
             [ -d "$entry_path" ] && [ ! -L "$entry_path" ]
             ;;
         cache:activity.jsonl|cache:activity.tombstones|cache:post-install.sh|cache:post-install.log|\
-        cache:approval-verification*|cache:notification-approval-fix-test-*)
+        cache:triage-state.json|cache:approval-verification*|cache:notification-approval-fix-test-*)
             [ -f "$entry_path" ] && [ ! -L "$entry_path" ]
             ;;
-        cache:claude-history|cache:uploads|cache:push)
+        cache:claude-history|cache:conversation-history|cache:uploads|cache:push|cache:audit|cache:speech)
             [ -d "$entry_path" ] && [ ! -L "$entry_path" ]
             ;;
         *)
